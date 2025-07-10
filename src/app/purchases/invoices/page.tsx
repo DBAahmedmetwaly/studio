@@ -25,6 +25,7 @@ interface InvoiceItem {
 interface Item {
     id: string;
     name: string;
+    unit: string;
     price?: number;
 }
 
@@ -43,6 +44,7 @@ export default function PurchaseInvoicePage() {
   const [items, setItems] = useState<InvoiceItem[]>([]);
   const [newItem, setNewItem] = useState({ id: "", name: "", qty: 1, price: 0 });
   const [subtotal, setSubtotal] = useState(0);
+  const [discount, setDiscount] = useState(0);
   const [tax, setTax] = useState(0);
   const [total, setTotal] = useState(0);
   const [invoiceText, setInvoiceText] = useState("");
@@ -54,11 +56,11 @@ export default function PurchaseInvoicePage() {
 
   useEffect(() => {
     const newSubtotal = items.reduce((acc, item) => acc + item.total, 0);
-    const newTax = newSubtotal * 0.14;
+    const newTax = (newSubtotal - discount) * 0.14; // Tax calculated after discount
     setSubtotal(newSubtotal);
     setTax(newTax);
-    setTotal(newSubtotal + newTax);
-  }, [items]);
+    setTotal(newSubtotal - discount + newTax);
+  }, [items, discount]);
 
   const handleAddItem = () => {
     if (!newItem.id || newItem.qty <= 0 || newItem.price <= 0) return;
@@ -118,6 +120,7 @@ export default function PurchaseInvoicePage() {
   }
 
   const loading = loadingItems || loadingSuppliers || loadingWarehouses;
+  const getUnitForItem = (itemId: string) => availableItems.find(i => i.id === itemId)?.unit || 'قطعة';
 
   return (
     <>
@@ -207,6 +210,7 @@ export default function PurchaseInvoicePage() {
                     <TableHeader>
                     <TableRow>
                         <TableHead className="w-[40%]">الصنف</TableHead>
+                        <TableHead className="text-center">الوحدة</TableHead>
                         <TableHead className="text-center">الكمية</TableHead>
                         <TableHead className="text-center">سعر الوحدة</TableHead>
                         <TableHead className="text-center">الإجمالي</TableHead>
@@ -217,6 +221,7 @@ export default function PurchaseInvoicePage() {
                     {items.map((item, index) => (
                         <TableRow key={item.id}>
                         <TableCell>{item.name}</TableCell>
+                        <TableCell className="text-center">{getUnitForItem(item.id)}</TableCell>
                         <TableCell className="text-center">{item.qty}</TableCell>
                         <TableCell className="text-center">ج.م {item.price.toFixed(2)}</TableCell>
                         <TableCell className="text-center">ج.م {item.total.toFixed(2)}</TableCell>
@@ -238,6 +243,7 @@ export default function PurchaseInvoicePage() {
                                 </SelectContent>
                             </Select>
                         </TableCell>
+                        <TableCell></TableCell>
                         <TableCell>
                             <Input type="number" placeholder="الكمية" value={newItem.qty} onChange={e => setNewItem({...newItem, qty: parseInt(e.target.value) || 1})} />
                         </TableCell>
@@ -261,6 +267,10 @@ export default function PurchaseInvoicePage() {
                         <div className="flex justify-between">
                             <span>الإجمالي الفرعي</span>
                             <span>ج.م {subtotal.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                            <span>الخصم</span>
+                            <Input type="number" value={discount} onChange={e => setDiscount(parseFloat(e.target.value) || 0)} className="h-8 max-w-[120px] text-left" placeholder="0.00"/>
                         </div>
                         <div className="flex justify-between">
                             <span>ضريبة القيمة المضافة (14%)</span>

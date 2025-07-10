@@ -8,7 +8,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -23,12 +22,19 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLab
 import { AddEntityDialog } from '@/components/add-entity-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
+const EXPENSE_TYPES = [
+    "إيجار", "رواتب", "كهرباء ومياه", "مواصلات", "تسويق وإعلان", "صيانة", "مستلزمات مكتبية", "مصروفات حكومية", "أخرى"
+];
+
+
 interface Expense {
     id?: string;
     date: string;
     amount: number;
     description: string;
     warehouseId?: string;
+    expenseType: string;
+    paidFromAccountId: string;
 }
 
 interface Warehouse {
@@ -36,16 +42,21 @@ interface Warehouse {
     name: string;
 }
 
-const ExpenseForm = ({ expense, onSave, onClose, warehouses }: { expense?: Expense, onSave: (data: Expense) => void, onClose: () => void, warehouses: Warehouse[] }) => {
+interface CashAccount {
+    id: string;
+    name: string;
+}
+
+const ExpenseForm = ({ expense, onSave, onClose, warehouses, cashAccounts }: { expense?: Expense, onSave: (data: Expense) => void, onClose: () => void, warehouses: Warehouse[], cashAccounts: CashAccount[] }) => {
     const [formData, setFormData] = useState<Omit<Expense, 'id'>>(
-        expense || { date: new Date().toISOString().split('T')[0], amount: 0, description: "" }
+        expense || { date: new Date().toISOString().split('T')[0], amount: 0, description: "", expenseType: "", paidFromAccountId: "" }
     );
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         onSave({ ...formData, amount: Number(formData.amount) });
         if (!expense) { // Clear form only if adding new
-            setFormData({ date: new Date().toISOString().split('T')[0], amount: 0, description: "" });
+            setFormData({ date: new Date().toISOString().split('T')[0], amount: 0, description: "", expenseType: "", paidFromAccountId: "" });
         }
         onClose();
     }
@@ -56,6 +67,17 @@ const ExpenseForm = ({ expense, onSave, onClose, warehouses }: { expense?: Expen
                  <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="expense-date" className="text-right">التاريخ</Label>
                     <Input id="expense-date" type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="col-span-3" required/>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="expense-type" className="text-right">نوع المصروف</Label>
+                    <Select value={formData.expenseType} onValueChange={v => setFormData({...formData, expenseType: v})} required>
+                        <SelectTrigger className="col-span-3">
+                            <SelectValue placeholder="اختر نوع المصروف" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {EXPENSE_TYPES.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="expense-amount" className="text-right">المبلغ</Label>
@@ -77,6 +99,17 @@ const ExpenseForm = ({ expense, onSave, onClose, warehouses }: { expense?: Expen
                         </SelectContent>
                     </Select>
                 </div>
+                 <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="paid-from" className="text-right">مدفوع من</Label>
+                    <Select value={formData.paidFromAccountId} onValueChange={v => setFormData({...formData, paidFromAccountId: v})} required>
+                        <SelectTrigger className="col-span-3">
+                            <SelectValue placeholder="اختر حساب الدفع" />
+                        </SelectTrigger>
+                        <SelectContent>
+                           {cashAccounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
             </div>
             <div className="flex justify-end">
                 <Button type="submit">
@@ -91,14 +124,20 @@ const ExpenseForm = ({ expense, onSave, onClose, warehouses }: { expense?: Expen
 export default function ExpensesPage() {
     const { data: expenses, loading: loadingExpenses, add, update, remove } = useFirebase<Expense>('expenses');
     const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
+    const { data: cashAccounts, loading: loadingCashAccounts } = useFirebase<CashAccount>('cashAccounts');
     const { toast } = useToast();
     
-    const loading = loadingExpenses || loadingWarehouses;
+    const loading = loadingExpenses || loadingWarehouses || loadingCashAccounts;
 
      const getWarehouseName = (warehouseId?: string) => {
         if (!warehouseId || warehouseId === 'none') return 'عام';
         return warehouses.find(w => w.id === warehouseId)?.name || 'غير معروف';
     };
+    
+    const getCashAccountName = (accountId: string) => {
+        return cashAccounts.find(acc => acc.id === accountId)?.name || 'غير معروف';
+    }
+
 
     const handleSave = async (data: Expense) => {
         try {
@@ -135,11 +174,11 @@ export default function ExpensesPage() {
             <CardHeader>
                 <CardTitle>إضافة مصروف جديد</CardTitle>
                 <CardDescription>
-                سجل المصروفات وقم بتحميلها على المخازن إن أمكن.
+                سجل المصروفات وصنفها وقم بتحميلها على المخازن إن أمكن.
                 </CardDescription>
             </CardHeader>
             <CardContent>
-                <ExpenseForm onSave={handleSave} onClose={()=>{}} warehouses={warehouses} />
+                <ExpenseForm onSave={handleSave} onClose={()=>{}} warehouses={warehouses} cashAccounts={cashAccounts} />
             </CardContent>
             </Card>
             
@@ -157,10 +196,11 @@ export default function ExpensesPage() {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="w-[150px]">التاريخ</TableHead>
+                                        <TableHead className="w-[120px]">التاريخ</TableHead>
+                                        <TableHead>النوع</TableHead>
                                         <TableHead>الوصف</TableHead>
-                                        <TableHead>المخزن/الجهة</TableHead>
-                                        <TableHead className="text-center w-[150px]">المبلغ</TableHead>
+                                        <TableHead>مدفوع من</TableHead>
+                                        <TableHead className="text-center w-[120px]">المبلغ</TableHead>
                                         <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -168,8 +208,9 @@ export default function ExpensesPage() {
                                     {expenses.map(expense => (
                                         <TableRow key={expense.id}>
                                             <TableCell>{new Date(expense.date).toLocaleDateString('ar-EG')}</TableCell>
+                                            <TableCell>{expense.expenseType}</TableCell>
                                             <TableCell>{expense.description}</TableCell>
-                                            <TableCell>{getWarehouseName(expense.warehouseId)}</TableCell>
+                                            <TableCell>{getCashAccountName(expense.paidFromAccountId)}</TableCell>
                                             <TableCell className="text-center">{expense.amount.toLocaleString()}</TableCell>
                                             <TableCell className="text-center">
                                                 <DropdownMenu>
@@ -191,7 +232,7 @@ export default function ExpensesPage() {
                                                                 </DropdownMenuItem>
                                                             }
                                                         >
-                                                            <ExpenseForm expense={expense} onSave={handleSave} onClose={() => {}} warehouses={warehouses} />
+                                                            <ExpenseForm expense={expense} onSave={handleSave} onClose={() => {}} warehouses={warehouses} cashAccounts={cashAccounts} />
                                                         </AddEntityDialog>
                                                         <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(expense.id!)}>
                                                             <Trash2 className="ml-2 h-4 w-4" />

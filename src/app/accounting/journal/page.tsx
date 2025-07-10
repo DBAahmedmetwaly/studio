@@ -26,13 +26,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 
 interface SaleInvoice {
-  id: string; date: string; customerName: string; total: number; warehouseId: string;
+  id: string; date: string; customerName: string; total: number; warehouseId: string; discount: number;
   items: { qty: number; cost?: number; price: number }[];
 }
-interface PurchaseInvoice { id: string; date: string; supplierName: string; total: number; warehouseId: string; }
-interface Expense { id: string; date: string; description: string; amount: number; warehouseId?: string; }
+interface PurchaseInvoice { id: string; date: string; supplierName: string; total: number; warehouseId: string; discount: number; }
+interface Expense { id: string; date: string; description: string; amount: number; warehouseId?: string; expenseType: string; paidFromAccountId: string;}
 interface ExceptionalIncome { id: string; date: string; description: string; amount: number; warehouseId?: string; }
 interface Warehouse { id: string; name: string; }
+interface CashAccount { id: string; name: string; }
 interface StockTransferRecord {
     id: string; date: string; fromSourceId: string; toSourceId: string;
     items: { id: string, name: string; qty: number, cost?:number }[];
@@ -58,8 +59,10 @@ export default function JournalPage() {
     const { data: warehouses, loading: l5 } = useFirebase<Warehouse>("warehouses");
     const { data: transfers, loading: l6 } = useFirebase<StockTransferRecord>("stockTransferRecords");
     const { data: itemsData, loading: l7 } = useFirebase<Item>("items");
+    const { data: cashAccounts, loading: l8 } = useFirebase<CashAccount>("cashAccounts");
 
-    const loading = l1 || l2 || l3 || l4 || l5 || l6 || l7;
+
+    const loading = l1 || l2 || l3 || l4 || l5 || l6 || l7 || l8;
     
     const itemsMap = useMemo(() => {
         const map = new Map<string, Item>();
@@ -70,26 +73,45 @@ export default function JournalPage() {
     const journalEntries = useMemo(() => {
         const entries: any[] = [];
         const getWarehouseName = (id?: string) => warehouses.find(w => w.id === id)?.name || 'عام';
+        const getCashAccountName = (id?: string) => cashAccounts.find(c => c.id === id)?.name || 'النقدية/البنك';
         
         // Sales Invoices
         sales.forEach(sale => {
             const costOfGoodsSold = sale.items.reduce((acc, item) => acc + (item.qty * (item.cost || item.price * 0.8)), 0);
+            const totalBeforeDiscount = sale.total + (sale.discount || 0);
+            // Accounts Receivable (Debit) for the final amount owed
             entries.push({ id: `sale-ar-${sale.id}`, date: sale.date, warehouseId: sale.warehouseId, number: `INV-${sale.id.slice(-4)}`, description: `فاتورة بيع للعميل ${sale.customerName}`, debit: sale.total, credit: 0, account: 'حسابات العملاء' });
-            entries.push({ id: `sale-rev-${sale.id}`, date: sale.date, warehouseId: sale.warehouseId, number: `INV-${sale.id.slice(-4)}`, description: `إيرادات من فاتورة بيع`, debit: 0, credit: sale.total, account: 'إيرادات المبيعات' });
+            // Sales Discount (Debit) if a discount was given
+            if (sale.discount > 0) {
+                 entries.push({ id: `sale-discount-${sale.id}`, date: sale.date, warehouseId: sale.warehouseId, number: `INV-${sale.id.slice(-4)}`, description: `خصم مسموح به على فاتورة بيع`, debit: sale.discount, credit: 0, account: 'خصم مسموح به' });
+            }
+            // Sales Revenue (Credit) for the full amount before discount
+            entries.push({ id: `sale-rev-${sale.id}`, date: sale.date, warehouseId: sale.warehouseId, number: `INV-${sale.id.slice(-4)}`, description: `إيرادات من فاتورة بيع`, debit: 0, credit: totalBeforeDiscount, account: 'إيرادات المبيعات' });
+            // COGS entry
             entries.push({ id: `sale-cogs-${sale.id}`, date: sale.date, warehouseId: sale.warehouseId, number: `INV-${sale.id.slice(-4)}`, description: `تكلفة بضاعة مباعة`, debit: costOfGoodsSold, credit: 0, account: 'تكلفة البضاعة المباعة' });
             entries.push({ id: `sale-inv-${sale.id}`, date: sale.date, warehouseId: sale.warehouseId, number: `INV-${sale.id.slice(-4)}`, description: `تخفيض المخزون من ${getWarehouseName(sale.warehouseId)}`, debit: 0, credit: costOfGoodsSold, account: `مخزون - ${getWarehouseName(sale.warehouseId)}` });
         });
 
         // Purchase Invoices
         purchases.forEach(p => {
-            entries.push({ id: `pur-inv-${p.id}`, date: p.date, warehouseId: p.warehouseId, number: `PUR-${p.id.slice(-4)}`, description: `فاتورة شراء من ${p.supplierName}`, debit: p.total, credit: 0, account: `مخزون - ${getWarehouseName(p.warehouseId)}` });
+             const totalBeforeDiscount = p.total + (p.discount || 0);
+            // Inventory (Debit) for the full value of goods
+            entries.push({ id: `pur-inv-${p.id}`, date: p.date, warehouseId: p.warehouseId, number: `PUR-${p.id.slice(-4)}`, description: `فاتورة شراء من ${p.supplierName}`, debit: totalBeforeDiscount, credit: 0, account: `مخزون - ${getWarehouseName(p.warehouseId)}` });
+            // Accounts Payable (Credit) for the final amount owed
             entries.push({ id: `pur-ap-${p.id}`, date: p.date, warehouseId: p.warehouseId, number: `PUR-${p.id.slice(-4)}`, description: `مستحقات للمورد ${p.supplierName}`, debit: 0, credit: p.total, account: 'حسابات الموردين' });
+             // Purchase Discount (Credit) if a discount was received
+            if (p.discount > 0) {
+                 entries.push({ id: `pur-discount-${p.id}`, date: p.date, warehouseId: p.warehouseId, number: `PUR-${p.id.slice(-4)}`, description: `خصم مكتسب على فاتورة شراء`, debit: 0, credit: p.discount, account: 'خصم مكتسب' });
+            }
         });
 
         // Expenses
         expenses.forEach(e => {
-            entries.push({ id: `exp-debit-${e.id}`, date: e.date, warehouseId: e.warehouseId, number: `EXP-${e.id.slice(-4)}`, description: e.description, debit: e.amount, credit: 0, account: e.warehouseId ? `مصروفات - ${getWarehouseName(e.warehouseId)}` : 'مصروفات عمومية' });
-            entries.push({ id: `exp-credit-${e.id}`, date: e.date, warehouseId: e.warehouseId, number: `EXP-${e.id.slice(-4)}`, description: `دفع مصروفات: ${e.description}`, debit: 0, credit: e.amount, account: 'النقدية/البنك' });
+            const expenseAccount = e.warehouseId && e.warehouseId !== 'none'
+                ? `${e.expenseType} - ${getWarehouseName(e.warehouseId)}`
+                : `${e.expenseType} (عام)`;
+            entries.push({ id: `exp-debit-${e.id}`, date: e.date, warehouseId: e.warehouseId, number: `EXP-${e.id.slice(-4)}`, description: e.description, debit: e.amount, credit: 0, account: expenseAccount });
+            entries.push({ id: `exp-credit-${e.id}`, date: e.date, warehouseId: e.warehouseId, number: `EXP-${e.id.slice(-4)}`, description: `دفع من ${getCashAccountName(e.paidFromAccountId)}`, debit: 0, credit: e.amount, account: getCashAccountName(e.paidFromAccountId) });
         });
         
         // Exceptional Incomes
@@ -116,7 +138,7 @@ export default function JournalPage() {
         });
 
         return entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [sales, purchases, expenses, exceptionalIncomes, transfers, warehouses, itemsMap]);
+    }, [sales, purchases, expenses, exceptionalIncomes, transfers, warehouses, itemsMap, cashAccounts]);
 
     const filteredEntries = useMemo(() => {
         return journalEntries.filter(entry => {

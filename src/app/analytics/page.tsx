@@ -26,6 +26,7 @@ interface PurchaseInvoice { id: string; supplierId: string, total: number; }
 interface Supplier { id: string; name: string; }
 interface Warehouse { id: string; name: string; }
 interface Customer { id: string; openingBalance: number; }
+interface Expense { id: string; amount: number; expenseType: string; }
 
 const chartConfig = {
   profit: {
@@ -47,6 +48,10 @@ const chartConfig = {
   sales: {
     label: "مبيعات",
     color: "hsl(var(--primary))",
+  },
+  expenses: {
+    label: "مصروفات",
+    color: "hsl(var(--chart-5))",
   }
 }
 
@@ -59,8 +64,9 @@ export default function AnalyticsPage() {
     const { data: suppliers, loading: loadingSuppliers } = useFirebase<Supplier>('suppliers');
     const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
     const { data: customers, loading: loadingCustomers } = useFirebase<Customer>('customers');
+    const { data: expenses, loading: loadingExpenses } = useFirebase<Expense>('expenses');
 
-    const loading = loadingItems || loadingSales || loadingPurchases || loadingSuppliers || loadingWarehouses || loadingCustomers;
+    const loading = loadingItems || loadingSales || loadingPurchases || loadingSuppliers || loadingWarehouses || loadingCustomers || loadingExpenses;
 
     const itemProfitData = useMemo(() => {
         return items.map(item => {
@@ -103,12 +109,21 @@ export default function AnalyticsPage() {
 
     const receivablesPayablesData = useMemo(() => {
         const totalReceivables = customers.reduce((acc, c) => acc + (c.openingBalance || 0), 0);
-        const totalPayables = suppliers.reduce((acc, s) => acc + (s.openingBalance || 0), 0);
+        const totalPayables = suppliers.reduce((acc, s) => acc + ((s as any).openingBalance || 0), 0);
         return [
             { name: 'ديون العملاء', value: totalReceivables, fill: "var(--color-receivables)" },
             { name: 'مستحقات الموردين', value: totalPayables, fill: "var(--color-payables)" },
         ]
     }, [customers, suppliers]);
+
+     const expenseByTypeData = useMemo(() => {
+        const expenseTotals: { [key: string]: number } = {};
+        expenses.forEach(expense => {
+            expenseTotals[expense.expenseType] = (expenseTotals[expense.expenseType] || 0) + expense.amount;
+        });
+        return Object.entries(expenseTotals).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value);
+    }, [expenses]);
+
 
     if (loading) {
         return (
@@ -147,10 +162,10 @@ export default function AnalyticsPage() {
                             cursor={false}
                             content={<ChartTooltipContent />}
                             />
-                            <Bar dataKey="profit" name="أرباح" fill="var(--color-profit)" radius={5}>
+                            <Bar dataKey="profit" name="أرباح" fill="var(--color-profit)" radius={5} stackId="a">
                                 <LabelList position="right" offset={8} className="fill-foreground" fontSize={12} />
                             </Bar>
-                             <Bar dataKey="loss" name="خسائر" fill="var(--color-loss)" radius={5}>
+                             <Bar dataKey="loss" name="خسائر" fill="var(--color-loss)" radius={5} stackId="a">
                                 <LabelList position="right" offset={8} className="fill-foreground" fontSize={12} />
                             </Bar>
                         </RechartsBarChart>
@@ -240,6 +255,38 @@ export default function AnalyticsPage() {
                                     className="fill-foreground"
                                     fontSize={12}
                                 />
+                            </Bar>
+                        </RechartsBarChart>
+                    </ChartContainer>
+                </CardContent>
+            </Card>
+
+             <Card className="lg:col-span-2">
+                <CardHeader>
+                    <CardTitle>توزيع المصروفات</CardTitle>
+                    <CardDescription>
+                        تحليل المصروفات حسب النوع
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                        <RechartsBarChart data={expenseByTypeData} layout="vertical" margin={{ right: 20 }}>
+                            <CartesianGrid horizontal={false} />
+                             <YAxis
+                                dataKey="name"
+                                type="category"
+                                tickLine={false}
+                                axisLine={false}
+                                tickMargin={10}
+                                width={80}
+                            />
+                            <XAxis type="number" hide />
+                            <ChartTooltip
+                            cursor={false}
+                            content={<ChartTooltipContent />}
+                            />
+                            <Bar dataKey="value" fill="var(--color-expenses)" radius={5}>
+                                <LabelList position="right" offset={8} className="fill-foreground" fontSize={12} />
                             </Bar>
                         </RechartsBarChart>
                     </ChartContainer>

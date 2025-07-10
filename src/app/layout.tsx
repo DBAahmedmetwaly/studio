@@ -17,7 +17,7 @@ const notoKufi = Noto_Kufi_Arabic({
 });
 
 export const metadata: Metadata = {
-  title: "محاسبة متعددة الفروع",
+  title: "المحاسب الذكي",
   description: "نظام المخازن والمحاسبة",
 };
 

@@ -26,19 +26,23 @@ import {
 } from "@/components/ui/table";
 import useFirebase from "@/hooks/use-firebase";
 import { Loader2 } from "lucide-react";
+import { useMemo } from "react";
 
 // Interfaces for Firebase data
 interface SaleInvoice {
   id: string;
   total: number;
+  discount: number;
 }
 interface PurchaseInvoice {
   id: string;
   total: number;
+  discount: number;
 }
 interface Expense {
   id: string;
   amount: number;
+  expenseType: string;
 }
 interface ExceptionalIncome {
     id: string;
@@ -74,12 +78,34 @@ function IncomeStatement() {
 
   const loading = loadingSales || loadingPurchases || loadingExpenses || loadingExceptionalIncomes;
 
-  const totalRevenue = sales.reduce((acc, sale) => acc + sale.total, 0);
-  const costOfGoodsSold = purchases.reduce((acc, purchase) => acc + purchase.total, 0);
-  const totalExpenses = expenses.reduce((acc, expense) => acc + expense.amount, 0);
-  const totalExceptionalIncome = exceptionalIncomes.reduce((acc, income) => acc + income.amount, 0);
+  const {
+      totalRevenue,
+      totalSalesDiscount,
+      costOfGoodsSold,
+      totalPurchaseDiscount,
+      totalExceptionalIncome,
+      expensesByType,
+      totalExpenses
+  } = useMemo(() => {
+      const totalRevenue = sales.reduce((acc, sale) => acc + sale.total + (sale.discount || 0), 0);
+      const totalSalesDiscount = sales.reduce((acc, sale) => acc + (sale.discount || 0), 0);
+      const costOfGoodsSold = purchases.reduce((acc, purchase) => acc + purchase.total + (purchase.discount || 0), 0);
+      const totalPurchaseDiscount = purchases.reduce((acc, purchase) => acc + (purchase.discount || 0), 0);
+      const totalExceptionalIncome = exceptionalIncomes.reduce((acc, income) => acc + income.amount, 0);
+
+      const expensesByType: { [key: string]: number } = {};
+      expenses.forEach(expense => {
+          expensesByType[expense.expenseType] = (expensesByType[expense.expenseType] || 0) + expense.amount;
+      });
+      const totalExpenses = Object.values(expensesByType).reduce((acc, amount) => acc + amount, 0);
+      
+      return { totalRevenue, totalSalesDiscount, costOfGoodsSold, totalPurchaseDiscount, totalExceptionalIncome, expensesByType, totalExpenses };
+  }, [sales, purchases, expenses, exceptionalIncomes]);
+
   
-  const grossProfit = totalRevenue - costOfGoodsSold;
+  const netRevenue = totalRevenue - totalSalesDiscount;
+  const netCogs = costOfGoodsSold - totalPurchaseDiscount;
+  const grossProfit = netRevenue - netCogs;
   const netOperatingIncome = grossProfit - totalExpenses;
   const netIncome = netOperatingIncome + totalExceptionalIncome;
 
@@ -91,11 +117,19 @@ function IncomeStatement() {
     <Table>
       <TableBody>
         <TableRow>
-          <TableCell className="font-medium">إجمالي الإيرادات (المبيعات)</TableCell>
+          <TableCell className="font-medium">إجمالي الإيرادات</TableCell>
           <TableCell className="text-left">ج.م {totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
         </TableRow>
         <TableRow>
-          <TableCell className="font-medium">تكلفة البضاعة المباعة (المشتريات)</TableCell>
+          <TableCell className="pl-8 text-muted-foreground">(-) خصم مسموح به</TableCell>
+          <TableCell className="text-left text-destructive">- ج.م {totalSalesDiscount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+        </TableRow>
+         <TableRow className="font-semibold">
+          <TableCell>صافي الإيرادات</TableCell>
+          <TableCell className="text-left">ج.م {netRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+        </TableRow>
+        <TableRow>
+          <TableCell className="font-medium">تكلفة البضاعة المباعة</TableCell>
           <TableCell className="text-left text-destructive">- ج.م {costOfGoodsSold.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
         </TableRow>
         <TableRow>
@@ -103,9 +137,14 @@ function IncomeStatement() {
           <TableHead className="text-left">ج.م {grossProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableHead>
         </TableRow>
         <TableRow>
-          <TableCell className="font-medium">المصروفات العمومية</TableCell>
-          <TableCell className="text-left text-destructive">- ج.م {totalExpenses.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+            <TableCell colSpan={2} className="font-medium pt-4">المصروفات التشغيلية:</TableCell>
         </TableRow>
+        {Object.entries(expensesByType).map(([type, amount]) => (
+             <TableRow key={type}>
+                <TableCell className="pl-8 text-muted-foreground">{type}</TableCell>
+                <TableCell className="text-left text-destructive">- ج.م {amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+            </TableRow>
+        ))}
          <TableRow>
           <TableHead>صافي الدخل التشغيلي</TableHead>
           <TableHead className="text-left">ج.م {netOperatingIncome.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableHead>

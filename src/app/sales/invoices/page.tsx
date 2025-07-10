@@ -22,11 +22,13 @@ interface InvoiceItem {
   qty: number;
   price: number;
   total: number;
+  unit: string;
 }
 
 interface Item {
     id: string;
     name: string;
+    unit: string;
     price?: number;
     cost?: number;
 }
@@ -45,8 +47,9 @@ export default function SalesInvoicePage() {
     const { toast } = useToast();
     const router = useRouter();
     const [items, setItems] = useState<InvoiceItem[]>([]);
-    const [newItem, setNewItem] = useState({ id: "", name: "", qty: 1, price: 0 });
+    const [newItem, setNewItem] = useState({ id: "", name: "", qty: 1, price: 0, unit: "" });
     const [subtotal, setSubtotal] = useState(0);
+    const [discount, setDiscount] = useState(0);
     const [tax, setTax] = useState(0);
     const [total, setTotal] = useState(0);
     const [customerId, setCustomerId] = useState("");
@@ -62,11 +65,11 @@ export default function SalesInvoicePage() {
 
     useEffect(() => {
         const newSubtotal = items.reduce((acc, item) => acc + item.total, 0);
-        const newTax = newSubtotal * 0.14;
+        const newTax = (newSubtotal - discount) * 0.14; // Tax calculated after discount
         setSubtotal(newSubtotal);
         setTax(newTax);
-        setTotal(newSubtotal + newTax);
-    }, [items]);
+        setTotal(newSubtotal - discount + newTax);
+    }, [items, discount]);
 
     const handleAddItem = () => {
         if (!newItem.id || newItem.qty <= 0 || newItem.price < 0) return;
@@ -78,11 +81,12 @@ export default function SalesInvoicePage() {
         { 
             ...newItem,
             name: selectedItem.name,
+            unit: selectedItem.unit,
             total: newItem.qty * newItem.price,
             id: `${selectedItem.id}-${Date.now()}` // Use unique id for list
         },
         ]);
-        setNewItem({ id: "", name: "", qty: 1, price: 0 });
+        setNewItem({ id: "", name: "", qty: 1, price: 0, unit: "" });
     };
 
     const handleRemoveItem = (id: string) => {
@@ -100,6 +104,7 @@ export default function SalesInvoicePage() {
                 ...newItem,
                 id: itemId,
                 price: selectedItem.price || 0,
+                unit: selectedItem.unit,
             });
         }
     }
@@ -128,7 +133,7 @@ export default function SalesInvoicePage() {
                 customerName,
                 warehouseId,
                 items: items.map(item => ({
-                    id: item.id.split('-')[0], // axtract original item id
+                    id: item.id.split('-')[0], // extract original item id
                     name: item.name,
                     qty: item.qty,
                     price: item.price,
@@ -136,6 +141,7 @@ export default function SalesInvoicePage() {
                     cost: availableItems.find(i => i.id === item.id.split('-')[0])?.cost || 0
                 })),
                 subtotal,
+                discount,
                 tax,
                 total,
                 notes,
@@ -226,6 +232,7 @@ export default function SalesInvoicePage() {
                             <TableHeader>
                             <TableRow>
                                 <TableHead className="w-[40%]">الصنف</TableHead>
+                                <TableHead className="text-center">الوحدة</TableHead>
                                 <TableHead className="text-center">الكمية</TableHead>
                                 <TableHead className="text-center">سعر الوحدة</TableHead>
                                 <TableHead className="text-center">الإجمالي</TableHead>
@@ -236,6 +243,7 @@ export default function SalesInvoicePage() {
                             {items.map((item) => (
                                 <TableRow key={item.id}>
                                 <TableCell>{item.name}</TableCell>
+                                <TableCell className="text-center">{item.unit}</TableCell>
                                 <TableCell className="text-center">{item.qty}</TableCell>
                                 <TableCell className="text-center">ج.م {item.price.toFixed(2)}</TableCell>
                                 <TableCell className="text-center">ج.م {item.total.toFixed(2)}</TableCell>
@@ -257,6 +265,7 @@ export default function SalesInvoicePage() {
                                         </SelectContent>
                                     </Select>
                                 </TableCell>
+                                <TableCell></TableCell>
                                 <TableCell className="p-2">
                                     <Input type="number" placeholder="الكمية" value={newItem.qty} onChange={e => setNewItem({...newItem, qty: parseInt(e.target.value) || 1})} className="text-center" />
                                 </TableCell>
@@ -281,6 +290,10 @@ export default function SalesInvoicePage() {
                             <div className="flex justify-between">
                                 <span>الإجمالي الفرعي</span>
                                 <span>ج.م {subtotal.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <span>الخصم</span>
+                                <Input type="number" value={discount} onChange={e => setDiscount(parseFloat(e.target.value) || 0)} className="h-8 max-w-[120px] text-left" placeholder="0.00"/>
                             </div>
                             <div className="flex justify-between">
                                 <span>ضريبة القيمة المضافة (14%)</span>

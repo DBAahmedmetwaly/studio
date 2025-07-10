@@ -36,7 +36,8 @@ import {
   Warehouse,
   ArrowRightLeft,
   Banknote,
-  DatabaseBackup
+  DatabaseBackup,
+  Landmark,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -129,6 +130,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <NavSubLink href="/master-data/customers">العملاء</NavSubLink>
                 <NavSubLink href="/master-data/suppliers">الموردون</NavSubLink>
                 <NavSubLink href="/master-data/partners">الشركاء</NavSubLink>
+                <NavSubLink href="/master-data/cash-accounts">الخزائن والبنوك</NavSubLink>
             </NavCollapsible>
 
             <NavCollapsible title="المخزون" icon={<Boxes />}>
