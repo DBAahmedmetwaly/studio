@@ -17,12 +17,14 @@ interface StockItem {
   id: string; // The database ID of the item
   name: string;
   qty: number;
+  unit: string;
   uniqueId: string; // A unique ID for the list key
 }
 
 interface Item {
     id: string;
     name: string;
+    unit: string;
 }
 
 interface Warehouse {
@@ -33,7 +35,7 @@ interface Warehouse {
 export default function StockTransferPage() {
     const { toast } = useToast();
     const [items, setItems] = useState<StockItem[]>([]);
-    const [newItem, setNewItem] = useState({ id: "", name: "", qty: 1 });
+    const [newItem, setNewItem] = useState({ id: "", name: "", qty: 1, unit: "" });
     const [fromSource, setFromSource] = useState<string>("");
     const [toSource, setToSource] = useState<string>("");
 
@@ -56,11 +58,24 @@ export default function StockTransferPage() {
             id: selectedItem.id,
             name: selectedItem.name,
             qty: newItem.qty,
+            unit: selectedItem.unit,
             uniqueId: `${selectedItem.id}-${Date.now()}` // Create a unique ID for the key
         },
         ]);
-        setNewItem({ id: "", name: "", qty: 1 });
+        setNewItem({ id: "", name: "", qty: 1, unit: "" });
     };
+
+    const handleItemSelect = (itemId: string) => {
+        const selectedItem = availableItems.find(i => i.id === itemId);
+        if (selectedItem) {
+            setNewItem({
+                ...newItem,
+                id: itemId,
+                unit: selectedItem.unit,
+            });
+        }
+    }
+
 
     const handleRemoveItem = (uniqueId: string) => {
         setItems(items.filter((item) => item.uniqueId !== uniqueId));
@@ -72,7 +87,7 @@ export default function StockTransferPage() {
 
     const resetForm = () => {
         setItems([]);
-        setNewItem({ id: "", name: "", qty: 1 });
+        setNewItem({ id: "", name: "", qty: 1, unit: "" });
         setFromSource("");
         setToSource("");
     }
@@ -117,6 +132,11 @@ export default function StockTransferPage() {
     };
 
     const loading = loadingItems || loadingWarehouses;
+    const getUnitLabel = (unit: string) => {
+        const units = { piece: "قطعة", weight: "وزن", meter: "متر", kilo: "كيلو", gram: "جرام" };
+        return units[unit as keyof typeof units] || unit;
+    }
+
 
   return (
     <>
@@ -175,7 +195,8 @@ export default function StockTransferPage() {
                     <Table>
                         <TableHeader>
                         <TableRow>
-                            <TableHead className="w-[60%]">الصنف</TableHead>
+                            <TableHead className="w-[50%]">الصنف</TableHead>
+                            <TableHead className="text-center">الوحدة</TableHead>
                             <TableHead className="text-center">الكمية</TableHead>
                             <TableHead className="text-center w-[100px] no-print">الإجراء</TableHead>
                         </TableRow>
@@ -184,6 +205,7 @@ export default function StockTransferPage() {
                         {items.map((item) => (
                             <TableRow key={item.uniqueId}>
                             <TableCell>{item.name}</TableCell>
+                            <TableCell className="text-center">{getUnitLabel(item.unit)}</TableCell>
                             <TableCell className="text-center">{item.qty}</TableCell>
                             <TableCell className="text-center no-print">
                                 <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.uniqueId)}>
@@ -193,8 +215,8 @@ export default function StockTransferPage() {
                             </TableRow>
                         ))}
                         <TableRow className="no-print bg-muted/30">
-                            <TableCell>
-                                <Select value={newItem.id} onValueChange={(value) => setNewItem({ ...newItem, id: value })}>
+                            <TableCell className="p-2">
+                                <Select value={newItem.id} onValueChange={handleItemSelect}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="اختر صنفًا" />
                                     </SelectTrigger>
@@ -203,10 +225,11 @@ export default function StockTransferPage() {
                                     </SelectContent>
                                 </Select>
                             </TableCell>
-                            <TableCell>
+                             <TableCell></TableCell>
+                            <TableCell className="p-2">
                                 <Input type="number" placeholder="الكمية" value={newItem.qty} onChange={e => setNewItem({...newItem, qty: parseInt(e.target.value) || 1})}/>
                             </TableCell>
-                            <TableCell className="text-center">
+                            <TableCell className="text-center p-2">
                                 <Button onClick={handleAddItem} size="sm">
                                     <PlusCircle className="ml-2 h-4 w-4" />
                                     إضافة
