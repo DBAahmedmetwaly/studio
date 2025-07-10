@@ -38,6 +38,7 @@ export default function RootLayout({
           defaultTheme="neutral"
           enableSystem
           disableTransitionOnChange
+          themes={['light', 'dark', 'neutral']}
         >
           <PermissionsProvider>
             <AppLayout>{children}</AppLayout>
