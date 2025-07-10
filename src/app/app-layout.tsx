@@ -33,7 +33,9 @@ import {
   BarChart,
   History,
   Gift,
-  Warehouse
+  Warehouse,
+  ArrowRightLeft,
+  Banknote
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -148,6 +150,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <NavSubLink href="/accounting/journal">قيود اليومية</NavSubLink>
                 <NavSubLink href="/accounting/expenses">إدارة المصروفات</NavSubLink>
                 <NavSubLink href="/accounting/exceptional-income">الدخل الاستثنائي</NavSubLink>
+                <NavSubLink href="/accounting/supplier-payments">مدفوعات الموردين</NavSubLink>
                 <NavSubLink href="/accounting/ai-analysis">تحليل مالي بالذكاء الاصطناعي</NavSubLink>
             </NavCollapsible>
             

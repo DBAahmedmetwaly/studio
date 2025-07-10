@@ -26,6 +26,15 @@ interface Customer {
   openingBalance: number;
 }
 
+// Assuming you will create this collection and hook
+interface CustomerPayment {
+    id: string;
+    date: string;
+    customerId: string;
+    amount: number;
+    notes?: string;
+}
+
 export default function CustomerStatementPage() {
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
   const [fromDate, setFromDate] = useState<string>("");
@@ -34,8 +43,9 @@ export default function CustomerStatementPage() {
 
   const { data: customers, loading: loadingCustomers } = useFirebase<Customer>('customers');
   const { data: sales, loading: loadingSales } = useFirebase<SaleInvoice>('salesInvoices');
+  const { data: payments, loading: loadingPayments } = useFirebase<CustomerPayment>('customerPayments');
   
-  const loading = loadingCustomers || loadingSales;
+  const loading = loadingCustomers || loadingSales || loadingPayments;
 
   const handleGenerateReport = () => {
     if (!selectedCustomerId) {
@@ -46,42 +56,70 @@ export default function CustomerStatementPage() {
     const customer = customers.find(c => c.id === selectedCustomerId);
     if (!customer) return;
 
-    let balance = customer.openingBalance || 0;
-    const transactions = [];
+    const allTransactions: any[] = [];
 
     // Add opening balance as first transaction
-    transactions.push({
-      date: 'رصيد افتتاحي',
+    allTransactions.push({
+      date: new Date(0), // for sorting
+      sortDate: new Date(0),
       description: 'رصيد أول المدة',
-      debit: balance > 0 ? balance : 0,
-      credit: balance < 0 ? -balance : 0,
-      balance: balance
+      debit: customer.openingBalance > 0 ? customer.openingBalance : 0,
+      credit: 0,
     });
     
-    const customerSales = sales
+    // Add Sales Invoices (Debit)
+    sales
       .filter(s => s.customerId === selectedCustomerId)
-      .filter(s => {
-        const saleDate = new Date(s.date);
-        const start = fromDate ? new Date(fromDate) : null;
-        const end = toDate ? new Date(toDate) : null;
-        if (start && saleDate < start) return false;
-        if (end && saleDate > end) return false;
-        return true;
-      })
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-    customerSales.forEach(sale => {
-      balance += sale.total;
-      transactions.push({
-        date: new Date(sale.date).toLocaleDateString('ar-EG'),
-        description: `فاتورة بيع رقم ${sale.invoiceNumber || sale.id.slice(-6).toUpperCase()}`,
-        debit: sale.total,
-        credit: 0,
-        balance: balance
-      });
+      .forEach(sale => {
+        allTransactions.push({
+            date: new Date(sale.date),
+            sortDate: new Date(sale.date),
+            description: `فاتورة بيع رقم ${sale.invoiceNumber || sale.id.slice(-6).toUpperCase()}`,
+            debit: sale.total,
+            credit: 0,
+        });
     });
+    
+    // Add Customer Payments (Credit)
+    payments
+      .filter(p => p.customerId === selectedCustomerId)
+      .forEach(payment => {
+          allTransactions.push({
+              date: new Date(payment.date),
+              sortDate: new Date(payment.date),
+              description: `دفعة مستلمة ${payment.notes ? `(${payment.notes})` : ''}`,
+              debit: 0,
+              credit: payment.amount,
+          });
+      });
 
-    setReportData(transactions);
+    const filteredAndSortedTransactions = allTransactions
+        .filter(t => {
+            const txDate = t.sortDate;
+            const start = fromDate ? new Date(fromDate) : null;
+            const end = toDate ? new Date(toDate) : null;
+            if (txDate.getTime() === new Date(0).getTime()) return true; // always include opening balance
+            if (start && txDate < start) return false;
+            if (end && txDate > end) return false;
+            return true;
+        })
+        .sort((a,b) => a.sortDate.getTime() - b.sortDate.getTime());
+
+    let runningBalance = 0;
+    const finalReport = filteredAndSortedTransactions.map(tx => {
+        if (tx.description === 'رصيد أول المدة') {
+            runningBalance = tx.debit;
+        } else {
+            runningBalance = runningBalance + tx.debit - tx.credit;
+        }
+        return {
+            ...tx,
+            date: tx.sortDate.getTime() === new Date(0).getTime() ? 'رصيد افتتاحي' : tx.date.toLocaleDateString('ar-EG'),
+            balance: runningBalance
+        }
+    })
+
+    setReportData(finalReport);
   };
   
   const handlePrint = () => {
@@ -154,8 +192,8 @@ export default function CustomerStatementPage() {
                         <TableRow>
                             <TableHead>التاريخ</TableHead>
                             <TableHead>البيان</TableHead>
-                            <TableHead className="text-center">مدين</TableHead>
-                            <TableHead className="text-center">دائن</TableHead>
+                            <TableHead className="text-center">مدين (فواتير)</TableHead>
+                            <TableHead className="text-center">دائن (دفعات)</TableHead>
                             <TableHead className="text-center">الرصيد</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -171,9 +209,9 @@ export default function CustomerStatementPage() {
                         ))}
                     </TableBody>
                     <TableFooter>
-                        <TableRow>
-                            <TableCell colSpan={4} className="font-bold text-base">الرصيد النهائي</TableCell>
-                            <TableCell className="text-center font-bold text-base">{reportData.at(-1)?.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
+                        <TableRow className="bg-muted/50 font-bold">
+                            <TableCell colSpan={4} className="text-base">الرصيد النهائي</TableCell>
+                            <TableCell className="text-center text-base">{reportData.at(-1)?.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
                         </TableRow>
                     </TableFooter>
                 </Table>

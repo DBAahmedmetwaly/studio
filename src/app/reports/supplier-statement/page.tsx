@@ -20,6 +20,14 @@ interface PurchaseInvoice {
   total: number;
 }
 
+interface SupplierPayment {
+    id: string;
+    date: string;
+    supplierId: string;
+    amount: number;
+    notes?: string;
+}
+
 interface Supplier {
   id: string;
   name: string;
@@ -34,8 +42,9 @@ export default function SupplierStatementPage() {
 
   const { data: suppliers, loading: loadingSuppliers } = useFirebase<Supplier>('suppliers');
   const { data: purchases, loading: loadingPurchases } = useFirebase<PurchaseInvoice>('purchaseInvoices');
+  const { data: payments, loading: loadingPayments } = useFirebase<SupplierPayment>('supplierPayments');
   
-  const loading = loadingSuppliers || loadingPurchases;
+  const loading = loadingSuppliers || loadingPurchases || loadingPayments;
 
   const handleGenerateReport = () => {
     if (!selectedSupplierId) {
@@ -48,41 +57,73 @@ export default function SupplierStatementPage() {
 
     // A positive opening balance for a supplier is a credit (we owe them)
     let balance = supplier.openingBalance || 0;
-    const transactions = [];
+    const allTransactions: any[] = [];
 
     // Add opening balance as first transaction
-    transactions.push({
-      date: 'رصيد افتتاحي',
+    allTransactions.push({
+      date: new Date(0), // to ensure it's always first when sorting
+      sortDate: new Date(0),
       description: 'رصيد أول المدة',
-      debit: 0, // We don't owe them for opening balance in debit column
-      credit: balance, // We owe them this amount
-      balance: balance
+      debit: 0, 
+      credit: balance,
     });
     
-    const supplierPurchases = purchases
+    // Add Purchases
+    purchases
       .filter(p => p.supplierId === selectedSupplierId)
-      .filter(p => {
-        const purchaseDate = new Date(p.date);
-        const start = fromDate ? new Date(fromDate) : null;
-        const end = toDate ? new Date(toDate) : null;
-        if (start && purchaseDate < start) return false;
-        if (end && purchaseDate > end) return false;
-        return true;
-      })
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-    supplierPurchases.forEach(purchase => {
-      balance += purchase.total; // Our debt to supplier increases
-      transactions.push({
-        date: new Date(purchase.date).toLocaleDateString('ar-EG'),
-        description: `فاتورة شراء رقم ${purchase.invoiceNumber || purchase.id}`,
-        debit: 0,
-        credit: purchase.total,
-        balance: balance
+      .forEach(purchase => {
+        allTransactions.push({
+            date: new Date(purchase.date),
+            sortDate: new Date(purchase.date),
+            description: `فاتورة شراء رقم ${purchase.invoiceNumber || purchase.id.slice(-5)}`,
+            debit: 0,
+            credit: purchase.total
+        });
       });
-    });
+      
+    // Add Payments
+    payments
+      .filter(p => p.supplierId === selectedSupplierId)
+      .forEach(payment => {
+        allTransactions.push({
+            date: new Date(payment.date),
+            sortDate: new Date(payment.date),
+            description: `دفعة مسددة ${payment.notes ? `(${payment.notes})` : ''}`,
+            debit: payment.amount,
+            credit: 0
+        });
+      });
 
-    setReportData(transactions);
+    // Filter by date and sort
+    const filteredAndSortedTransactions = allTransactions
+        .filter(t => {
+            const txDate = t.sortDate;
+            const start = fromDate ? new Date(fromDate) : null;
+            const end = toDate ? new Date(toDate) : null;
+            if (txDate.getTime() === new Date(0).getTime()) return true; // always include opening balance
+            if (start && txDate < start) return false;
+            if (end && txDate > end) return false;
+            return true;
+        })
+        .sort((a,b) => a.sortDate.getTime() - b.sortDate.getTime());
+    
+    
+    // Calculate running balance
+    let runningBalance = 0;
+    const finalReport = filteredAndSortedTransactions.map(tx => {
+        if (tx.description === 'رصيد أول المدة') {
+            runningBalance = tx.credit;
+        } else {
+            runningBalance = runningBalance + tx.credit - tx.debit;
+        }
+        return {
+            ...tx,
+            date: tx.sortDate.getTime() === new Date(0).getTime() ? 'رصيد افتتاحي' : tx.date.toLocaleDateString('ar-EG'),
+            balance: runningBalance
+        }
+    })
+
+    setReportData(finalReport);
   };
   
   const handlePrint = () => {
@@ -131,7 +172,7 @@ export default function SupplierStatementPage() {
 
         {reportData && (
             <Card className="printable-area">
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-row items-center justify-between border-b pb-4 mb-4">
                 <div>
                     <CardTitle>كشف الحساب لـ: {suppliers.find(s => s.id === selectedSupplierId)?.name}</CardTitle>
                     <CardDescription>
@@ -159,16 +200,16 @@ export default function SupplierStatementPage() {
                             <TableRow key={index}>
                                 <TableCell>{tx.date}</TableCell>
                                 <TableCell>{tx.description}</TableCell>
-                                <TableCell className="text-center">{tx.debit > 0 ? tx.debit.toLocaleString() : '-'}</TableCell>
-                                <TableCell className="text-center">{tx.credit > 0 ? tx.credit.toLocaleString() : '-'}</TableCell>
-                                <TableCell className="text-center font-medium">{tx.balance.toLocaleString()}</TableCell>
+                                <TableCell className="text-center">{tx.debit > 0 ? tx.debit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</TableCell>
+                                <TableCell className="text-center">{tx.credit > 0 ? tx.credit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</TableCell>
+                                <TableCell className="text-center font-medium">{tx.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
                     <TableFooter>
-                        <TableRow>
-                            <TableCell colSpan={4} className="font-bold">الرصيد النهائي (مستحق للمورد)</TableCell>
-                            <TableCell className="text-center font-bold">{reportData.at(-1)?.balance.toLocaleString()}</TableCell>
+                        <TableRow className="bg-muted/50 font-bold">
+                            <TableCell colSpan={4} className="text-base">الرصيد النهائي (مستحق للمورد)</TableCell>
+                            <TableCell className="text-center text-base">{reportData.at(-1)?.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
                         </TableRow>
                     </TableFooter>
                 </Table>
