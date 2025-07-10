@@ -1,9 +1,14 @@
+
+"use client";
+
+import React from "react";
 import {
   ArrowUpRight,
   CreditCard,
   DollarSign,
   Package,
   Users,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -32,8 +37,53 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import useFirebase from "@/hooks/use-firebase";
+
+// Interfaces for Firebase data
+interface SaleInvoice {
+  id: string;
+  total: number;
+  customerName: string;
+  date: string;
+}
+interface Customer {
+  id: string;
+}
+interface Item {
+  id: string;
+  name: string;
+  openingStock: number;
+  price: number;
+}
+interface Branch {
+  id: string;
+  name: string;
+}
 
 export default function Dashboard() {
+  const { data: sales, loading: loadingSales } = useFirebase<SaleInvoice>("salesInvoices");
+  const { data: customers, loading: loadingCustomers } = useFirebase<Customer>("customers");
+  const { data: items, loading: loadingItems } = useFirebase<Item>("items");
+  const { data: branches, loading: loadingBranches } = useFirebase<Branch>("branches");
+
+  const loading = loadingSales || loadingCustomers || loadingItems || loadingBranches;
+
+  const totalRevenue = sales.reduce((acc, sale) => acc + sale.total, 0);
+  const totalSalesCount = sales.length;
+  const totalCustomers = customers.length;
+  const inventoryValue = items.reduce((acc, item) => acc + (item.openingStock || 0) * (item.price || 0), 0);
+
+  const lowStockItems = items.filter(item => (item.openingStock || 0) <= 10).slice(0, 5);
+  const recentTransactions = sales.slice(-5).reverse();
+
+  if (loading) {
+    return (
+        <div className="flex flex-1 justify-center items-center">
+            <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+        </div>
+    )
+  }
+
   return (
     <>
       <PageHeader title="لوحة التحكم">
@@ -41,7 +91,7 @@ export default function Dashboard() {
           <label htmlFor="branch-select" className="text-sm font-medium">
             الفرع:
           </label>
-          <Select defaultValue="br001">
+          <Select defaultValue={branches[0]?.id}>
             <SelectTrigger
               id="branch-select"
               className="w-auto md:w-[180px] bg-card"
@@ -49,8 +99,9 @@ export default function Dashboard() {
               <SelectValue placeholder="اختر فرعًا" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="br001">الفرع الرئيسي - القاهرة</SelectItem>
-              <SelectItem value="br002">فرع الإسكندرية</SelectItem>
+                {branches.map(branch => (
+                    <SelectItem key={branch.id} value={branch.id}>{branch.name}</SelectItem>
+                ))}
             </SelectContent>
           </Select>
         </div>
@@ -65,7 +116,7 @@ export default function Dashboard() {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold font-headline">$45,231.89</div>
+              <div className="text-2xl font-bold font-headline">ج.م {totalRevenue.toLocaleString()}</div>
               <p className="text-xs text-muted-foreground">
                 +20.1% عن الشهر الماضي
               </p>
@@ -74,12 +125,12 @@ export default function Dashboard() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                عملاء جدد
+                إجمالي العملاء
               </CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold font-headline">+235</div>
+              <div className="text-2xl font-bold font-headline">+{totalCustomers}</div>
               <p className="text-xs text-muted-foreground">
                 +180.1% عن الشهر الماضي
               </p>
@@ -87,11 +138,11 @@ export default function Dashboard() {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">المبيعات</CardTitle>
+              <CardTitle className="text-sm font-medium">إجمالي المبيعات</CardTitle>
               <CreditCard className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold font-headline">+12,234</div>
+              <div className="text-2xl font-bold font-headline">+{totalSalesCount}</div>
               <p className="text-xs text-muted-foreground">
                 +19% عن الشهر الماضي
               </p>
@@ -105,7 +156,7 @@ export default function Dashboard() {
               <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold font-headline">$1,250,345</div>
+              <div className="text-2xl font-bold font-headline">ج.م {inventoryValue.toLocaleString()}</div>
               <p className="text-xs text-muted-foreground">
                 +2% عن الشهر الماضي
               </p>
@@ -118,11 +169,11 @@ export default function Dashboard() {
               <div className="grid gap-2">
                 <CardTitle>المعاملات الأخيرة</CardTitle>
                 <CardDescription>
-                  المعاملات الأخيرة من متجرك.
+                  آخر فواتير البيع الصادرة.
                 </CardDescription>
               </div>
               <Button asChild size="sm" className="mr-auto gap-1">
-                <Link href="#">
+                <Link href="/sales/invoices">
                   عرض الكل
                   <ArrowUpRight className="h-4 w-4" />
                 </Link>
@@ -134,9 +185,6 @@ export default function Dashboard() {
                   <TableRow>
                     <TableHead>العميل</TableHead>
                     <TableHead className="hidden xl:table-column">
-                      النوع
-                    </TableHead>
-                    <TableHead className="hidden xl:table-column">
                       الحالة
                     </TableHead>
                     <TableHead className="hidden xl:table-column">
@@ -146,22 +194,10 @@ export default function Dashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {[...Array(5)].map((_, i) => (
-                    <TableRow key={i}>
+                  {recentTransactions.length > 0 ? recentTransactions.map((sale) => (
+                    <TableRow key={sale.id}>
                       <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Avatar className="hidden h-9 w-9 sm:flex">
-                            <AvatarImage
-                              src={`https://placehold.co/100x100.png?text=${"AV".charAt(0)}`}
-                              alt="Avatar"
-                            />
-                            <AvatarFallback>OM</AvatarFallback>
-                          </Avatar>
-                          <div className="font-medium">أوليفيا مارتن</div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="hidden xl:table-column">
-                        بيع
+                        <div className="font-medium">{sale.customerName || 'عميل غير محدد'}</div>
                       </TableCell>
                       <TableCell className="hidden xl:table-column">
                         <Badge className="text-xs" variant="outline">
@@ -169,11 +205,15 @@ export default function Dashboard() {
                         </Badge>
                       </TableCell>
                       <TableCell className="hidden md:table-cell lg:hidden xl:table-column">
-                        2023-06-23
+                        {new Date(sale.date).toLocaleDateString()}
                       </TableCell>
-                      <TableCell className="text-left">$250.00</TableCell>
+                      <TableCell className="text-left">ج.م {sale.total.toLocaleString()}</TableCell>
                     </TableRow>
-                  ))}
+                  )) : (
+                    <TableRow>
+                        <TableCell colSpan={4} className="text-center text-muted-foreground">لا توجد معاملات حديثة.</TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
@@ -182,24 +222,26 @@ export default function Dashboard() {
             <CardHeader>
               <CardTitle>عناصر على وشك النفاذ</CardTitle>
               <CardDescription>
-                هذه العناصر مخزونها قليل.
+                هذه العناصر مخزونها قليل (الرصيد الافتتاحي أقل من 10).
               </CardDescription>
             </CardHeader>
             <CardContent>
             <div className="space-y-4">
-              {[...Array(5)].map((_, i) => (
-                <div className="flex items-center" key={i}>
+              {lowStockItems.length > 0 ? lowStockItems.map((item, i) => (
+                <div className="flex items-center" key={item.id}>
                   <Avatar className="h-9 w-9">
                     <AvatarImage src={`https://placehold.co/100x100.png`} alt="Avatar" data-ai-hint="product" />
                     <AvatarFallback>P{i+1}</AvatarFallback>
                   </Avatar>
                   <div className="mx-4 space-y-1">
-                    <p className="text-sm font-medium leading-none">منتج {i+1}</p>
-                    <p className="text-sm text-muted-foreground">SKU: PRD-00{i+1}</p>
+                    <p className="text-sm font-medium leading-none">{item.name}</p>
+                    <p className="text-sm text-muted-foreground">SKU: {item.id.slice(0,6).toUpperCase()}</p>
                   </div>
-                  <div className="mr-auto font-medium text-destructive">{10-i} وحدات</div>
+                  <div className="mr-auto font-medium text-destructive">{item.openingStock} وحدات</div>
                 </div>
-              ))}
+              )) : (
+                <div className="text-center text-muted-foreground py-4">لا توجد أصناف على وشك النفاذ.</div>
+              )}
             </div>
             </CardContent>
           </Card>
