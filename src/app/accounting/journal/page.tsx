@@ -71,6 +71,30 @@ interface Employee {
     id: string;
     name: string;
 }
+interface SalesReturn {
+    id: string;
+    date: string;
+    customerId: string;
+    warehouseId: string;
+    total: number;
+    items: { id: string; name: string; qty: number; price: number; }[];
+}
+interface PurchaseReturn {
+    id: string;
+    date: string;
+    supplierId: string;
+    warehouseId: string;
+    total: number;
+    items: { id: string; name: string; qty: number; price: number; }[];
+}
+interface Customer {
+    id: string;
+    name: string;
+}
+interface Supplier {
+    id: string;
+    name: string;
+}
 
 
 export default function JournalPage() {
@@ -92,9 +116,13 @@ export default function JournalPage() {
     const { data: employeeAdvances, loading: l10 } = useFirebase<EmployeeAdvance>("employeeAdvances");
     const { data: employees, loading: l11 } = useFirebase<Employee>("employees");
     const { data: employeeAdjustments, loading: l12 } = useFirebase<EmployeeAdjustment>("employeeAdjustments");
+    const { data: salesReturns, loading: l13 } = useFirebase<SalesReturn>("salesReturns");
+    const { data: purchaseReturns, loading: l14 } = useFirebase<PurchaseReturn>("purchaseReturns");
+    const { data: customers, loading: l15 } = useFirebase<Customer>("customers");
+    const { data: suppliers, loading: l16 } = useFirebase<Supplier>("suppliers");
 
 
-    const loading = l1 || l2 || l3 || l4 || l5 || l6 || l7 || l8 || l9 || l10 || l11 || l12;
+    const loading = l1 || l2 || l3 || l4 || l5 || l6 || l7 || l8 || l9 || l10 || l11 || l12 || l13 || l14 || l15 || l16;
     
     const itemsMap = useMemo(() => {
         const map = new Map<string, Item>();
@@ -107,6 +135,8 @@ export default function JournalPage() {
         const getWarehouseName = (id?: string) => warehouses.find(w => w.id === id)?.name || 'عام';
         const getCashAccountName = (id?: string) => cashAccounts.find(c => c.id === id)?.name || 'النقدية/البنك';
         const getEmployeeName = (id?: string) => employees.find(e => e.id === id)?.name || 'موظف غير معروف';
+        const getCustomerName = (id?: string) => customers.find(c => c.id === id)?.name || 'عميل غير معروف';
+        const getSupplierName = (id?: string) => suppliers.find(s => s.id === id)?.name || 'مورد غير معروف';
         
         // Sales Invoices
         sales.forEach(sale => {
@@ -137,6 +167,27 @@ export default function JournalPage() {
                  entries.push({ id: `pur-discount-${p.id}`, date: p.date, warehouseId: p.warehouseId, number: `PUR-${p.id.slice(-4)}`, description: `خصم مكتسب على فاتورة شراء`, debit: 0, credit: p.discount, account: 'خصم مكتسب' });
             }
         });
+        
+        // Sales Returns
+        salesReturns.forEach(sr => {
+            const costOfGoodsReturned = sr.items.reduce((acc, item) => {
+                 const itemMaster = itemsMap.get(item.id);
+                 const itemCost = itemMaster?.cost || item.price * 0.8; // Fallback
+                 return acc + (item.qty * itemCost);
+            }, 0);
+            entries.push({ id: `sal-ret-debit-${sr.id}`, date: sr.date, warehouseId: sr.warehouseId, number: `S-RET-${sr.id.slice(-4)}`, description: `مرتجع مبيعات من ${getCustomerName(sr.customerId)}`, debit: sr.total, credit: 0, account: 'مرتجعات ومسموحات المبيعات' });
+            entries.push({ id: `sal-ret-credit-${sr.id}`, date: sr.date, warehouseId: sr.warehouseId, number: `S-RET-${sr.id.slice(-4)}`, description: `تخفيض مديونية العميل ${getCustomerName(sr.customerId)}`, debit: 0, credit: sr.total, account: 'حسابات العملاء' });
+            // Return goods to inventory
+            entries.push({ id: `sal-ret-inv-debit-${sr.id}`, date: sr.date, warehouseId: sr.warehouseId, number: `S-RET-${sr.id.slice(-4)}`, description: `إعادة بضاعة إلى مخزن ${getWarehouseName(sr.warehouseId)}`, debit: costOfGoodsReturned, credit: 0, account: `مخزون - ${getWarehouseName(sr.warehouseId)}` });
+            entries.push({ id: `sal-ret-inv-credit-${sr.id}`, date: sr.date, warehouseId: sr.warehouseId, number: `S-RET-${sr.id.slice(-4)}`, description: `عكس تكلفة البضاعة المباعة`, debit: 0, credit: costOfGoodsReturned, account: 'تكلفة البضاعة المباعة' });
+        });
+
+        // Purchase Returns
+        purchaseReturns.forEach(pr => {
+             entries.push({ id: `pur-ret-debit-${pr.id}`, date: pr.date, warehouseId: pr.warehouseId, number: `P-RET-${pr.id.slice(-4)}`, description: `تخفيض مستحقات المورد ${getSupplierName(pr.supplierId)}`, debit: pr.total, credit: 0, account: 'حسابات الموردين' });
+             entries.push({ id: `pur-ret-credit-${pr.id}`, date: pr.date, warehouseId: pr.warehouseId, number: `P-RET-${pr.id.slice(-4)}`, description: `مرتجع مشتريات إلى ${getSupplierName(pr.supplierId)}`, debit: 0, credit: pr.total, account: `مخزون - ${getWarehouseName(pr.warehouseId)}` });
+        });
+
 
         // Expenses
         expenses.forEach(e => {
@@ -205,7 +256,7 @@ export default function JournalPage() {
 
 
         return entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [sales, purchases, expenses, exceptionalIncomes, transfers, warehouses, itemsMap, cashAccounts, treasuryTxs, employeeAdvances, employees, employeeAdjustments]);
+    }, [sales, purchases, expenses, exceptionalIncomes, transfers, warehouses, itemsMap, cashAccounts, treasuryTxs, employeeAdvances, employees, employeeAdjustments, salesReturns, purchaseReturns, customers, suppliers]);
 
     const filteredEntries = journalEntries.filter(entry => {
         const entryDate = new Date(entry.date);

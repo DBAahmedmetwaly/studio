@@ -19,6 +19,12 @@ interface SaleInvoice {
   customerId: string;
   total: number;
 }
+interface SalesReturn {
+    id: string;
+    date: string;
+    customerId: string;
+    total: number;
+}
 
 interface Customer {
   id: string;
@@ -44,8 +50,9 @@ export default function CustomerStatementPage() {
   const { data: customers, loading: loadingCustomers } = useFirebase<Customer>('customers');
   const { data: sales, loading: loadingSales } = useFirebase<SaleInvoice>('salesInvoices');
   const { data: payments, loading: loadingPayments } = useFirebase<CustomerPayment>('customerPayments');
+  const { data: salesReturns, loading: loadingReturns } = useFirebase<SalesReturn>('salesReturns');
   
-  const loading = loadingCustomers || loadingSales || loadingPayments;
+  const loading = loadingCustomers || loadingSales || loadingPayments || loadingReturns;
 
   const handleGenerateReport = () => {
     if (!selectedCustomerId) {
@@ -80,6 +87,19 @@ export default function CustomerStatementPage() {
         });
     });
     
+    // Add Sales Returns (Credit)
+    salesReturns
+        .filter(sr => sr.customerId === selectedCustomerId)
+        .forEach(sr => {
+            allTransactions.push({
+                date: new Date(sr.date),
+                sortDate: new Date(sr.date),
+                description: `مرتجع مبيعات رقم ${sr.id.slice(-6).toUpperCase()}`,
+                debit: 0,
+                credit: sr.total,
+            });
+        });
+
     // Add Customer Payments (Credit)
     payments
       .filter(p => p.customerId === selectedCustomerId)
@@ -193,7 +213,7 @@ export default function CustomerStatementPage() {
                             <TableHead>التاريخ</TableHead>
                             <TableHead>البيان</TableHead>
                             <TableHead className="text-center">مدين (فواتير)</TableHead>
-                            <TableHead className="text-center">دائن (دفعات)</TableHead>
+                            <TableHead className="text-center">دائن (دفعات ومرتجعات)</TableHead>
                             <TableHead className="text-center">الرصيد</TableHead>
                         </TableRow>
                     </TableHeader>

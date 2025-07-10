@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { PlusCircle, Loader2, MoreHorizontal, FileText } from "lucide-react";
+import { PlusCircle, Loader2, MoreHorizontal, FileText, Undo2 } from "lucide-react";
 import useFirebase from "@/hooks/use-firebase";
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -107,6 +107,10 @@ export default function PurchaseInvoicesListPage() {
                                     </DropdownMenuItem>
                                      <DropdownMenuItem>
                                         طباعة
+                                    </DropdownMenuItem>
+                                     <DropdownMenuItem onClick={() => router.push(`/purchases/returns?invoiceId=${invoice.id}`)}>
+                                        <Undo2 className="ml-2 h-4 w-4" />
+                                        مرتجع
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>

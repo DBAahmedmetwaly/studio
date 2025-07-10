@@ -20,6 +20,13 @@ interface PurchaseInvoice {
   total: number;
 }
 
+interface PurchaseReturn {
+    id: string;
+    date: string;
+    supplierId: string;
+    total: number;
+}
+
 interface SupplierPayment {
     id: string;
     date: string;
@@ -43,8 +50,9 @@ export default function SupplierStatementPage() {
   const { data: suppliers, loading: loadingSuppliers } = useFirebase<Supplier>('suppliers');
   const { data: purchases, loading: loadingPurchases } = useFirebase<PurchaseInvoice>('purchaseInvoices');
   const { data: payments, loading: loadingPayments } = useFirebase<SupplierPayment>('supplierPayments');
+  const { data: purchaseReturns, loading: loadingReturns } = useFirebase<PurchaseReturn>('purchaseReturns');
   
-  const loading = loadingSuppliers || loadingPurchases || loadingPayments;
+  const loading = loadingSuppliers || loadingPurchases || loadingPayments || loadingReturns;
 
   const handleGenerateReport = () => {
     if (!selectedSupplierId) {
@@ -68,7 +76,7 @@ export default function SupplierStatementPage() {
       credit: balance,
     });
     
-    // Add Purchases
+    // Add Purchases (Credit)
     purchases
       .filter(p => p.supplierId === selectedSupplierId)
       .forEach(purchase => {
@@ -80,8 +88,21 @@ export default function SupplierStatementPage() {
             credit: purchase.total
         });
       });
+
+    // Add Purchase Returns (Debit)
+    purchaseReturns
+        .filter(pr => pr.supplierId === selectedSupplierId)
+        .forEach(pr => {
+            allTransactions.push({
+                date: new Date(pr.date),
+                sortDate: new Date(pr.date),
+                description: `مرتجع مشتريات رقم ${pr.id.slice(-6).toUpperCase()}`,
+                debit: pr.total,
+                credit: 0,
+            });
+        });
       
-    // Add Payments
+    // Add Payments (Debit)
     payments
       .filter(p => p.supplierId === selectedSupplierId)
       .forEach(payment => {
@@ -190,7 +211,7 @@ export default function SupplierStatementPage() {
                         <TableRow>
                             <TableHead>التاريخ</TableHead>
                             <TableHead>البيان</TableHead>
-                            <TableHead className="text-center">مدين (مدفوعات)</TableHead>
+                            <TableHead className="text-center">مدين (مدفوعات ومرتجعات)</TableHead>
                             <TableHead className="text-center">دائن (مشتريات)</TableHead>
                             <TableHead className="text-center">الرصيد</TableHead>
                         </TableRow>

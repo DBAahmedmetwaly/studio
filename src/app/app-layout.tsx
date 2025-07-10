@@ -40,6 +40,7 @@ import {
   Wallet,
   UserRound,
   Calculator,
+  Undo2,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -158,10 +159,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
             <NavCollapsible title="المبيعات" icon={<ShoppingCart />} module="sales">
                 <NavSubLink href="/sales/invoices/list">فواتير البيع</NavSubLink>
+                <NavSubLink href="/sales/returns">مرتجعات البيع</NavSubLink>
             </NavCollapsible>
             
             <NavCollapsible title="المشتريات" icon={<ShoppingBag />} module="purchases">
                 <NavSubLink href="/purchases/invoices/list">فواتير الشراء</NavSubLink>
+                <NavSubLink href="/purchases/returns">مرتجعات الشراء</NavSubLink>
             </NavCollapsible>
 
              <NavCollapsible title="المحاسبة" icon={<BookUser />} module="accounting">
