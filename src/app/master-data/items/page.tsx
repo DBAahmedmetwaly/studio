@@ -13,6 +13,7 @@ import {
 import { AddEntityDialog } from "@/components/add-entity-dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function ItemsPage() {
   return (
@@ -39,7 +40,18 @@ export default function ItemsPage() {
               <Label htmlFor="item-unit" className="text-right">
                 الوحدة
               </Label>
-              <Input id="item-unit" className="col-span-3" />
+              <Select>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="اختر وحدة" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="piece">قطعة</SelectItem>
+                  <SelectItem value="weight">وزن</SelectItem>
+                  <SelectItem value="meter">متر</SelectItem>
+                  <SelectItem value="kilo">كيلو</SelectItem>
+                  <SelectItem value="gram">جرام</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
              <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="item-price" className="text-right">
