@@ -10,7 +10,9 @@ import {
   Line,
   XAxis,
   YAxis,
-  ResponsiveContainer
+  ResponsiveContainer,
+  PieChart,
+  Pie
 } from "recharts"
 
 import {
@@ -76,10 +78,10 @@ const chartConfig = {
 export default function AnalyticsPage() {
   return (
     <>
-      <PageHeader title="التقارير الرسومية" />
+      <PageHeader title="التحليلات الرسومية" />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
-            <Card>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
+            <Card className="lg:col-span-1">
                 <CardHeader>
                     <CardTitle>أرباح وخسائر الأصناف</CardTitle>
                     <CardDescription>
@@ -97,6 +99,7 @@ export default function AnalyticsPage() {
                             tickLine={false}
                             axisLine={false}
                             tickMargin={10}
+                            width={80}
                             />
                             <XAxis type="number" hide />
                             <ChartTooltip
@@ -115,7 +118,7 @@ export default function AnalyticsPage() {
                 </CardContent>
             </Card>
 
-            <Card>
+            <Card className="lg:col-span-1">
                 <CardHeader>
                     <CardTitle>نشاط الموردين</CardTitle>
                     <CardDescription>
@@ -133,6 +136,7 @@ export default function AnalyticsPage() {
                                 tickLine={false}
                                 axisLine={false}
                                 tickMargin={10}
+                                width={100}
                                 />
                                 <XAxis type="number" hide />
                                 <ChartTooltip
@@ -148,7 +152,7 @@ export default function AnalyticsPage() {
                 </CardContent>
             </Card>
             
-            <Card>
+            <Card className="lg:col-span-1">
                 <CardHeader>
                     <CardTitle>الذمم والديون</CardTitle>
                     <CardDescription>
@@ -158,47 +162,16 @@ export default function AnalyticsPage() {
                 <CardContent>
                     <ChartContainer config={chartConfig} className="h-[300px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart
-                            accessibilityLayer
-                            data={receivablesPayablesData}
-                            layout="vertical"
-                            margin={{
-                                left: -20,
-                            }}
-                            >
-                            <CartesianGrid horizontal={false} />
-                            <XAxis dataKey="value" type="number" hide />
-                            <YAxis
-                                dataKey="name"
-                                type="category"
-                                tickLine={false}
-                                tickMargin={10}
-                                axisLine={false}
-                                className="capitalize"
-                            />
-                            <Bar dataKey="value" layout="vertical" radius={5}>
-                                {receivablesPayablesData.map((d, i) => (
-                                    <Cell key={`cell-${i}`} fill={d.fill} />
-                                ))}
-                                <LabelList
-                                    dataKey="value"
-                                    position="right"
-                                    offset={8}
-                                    className="fill-foreground"
-                                    fontSize={12}
-                                />
-                            </Bar>
-                             <ChartTooltip
-                                cursor={false}
-                                content={<ChartTooltipContent hideLabel />}
-                                />
-                            </BarChart>
+                           <PieChart>
+                                <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                                <Pie data={receivablesPayablesData} dataKey="value" nameKey="name" />
+                           </PieChart>
                         </ResponsiveContainer>
                     </ChartContainer>
                 </CardContent>
             </Card>
 
-             <Card>
+             <Card className="lg:col-span-1">
                 <CardHeader>
                     <CardTitle>نشاط الفروع</CardTitle>
                     <CardDescription>

@@ -1,5 +1,6 @@
 "use client"
 
+import React, { useState, useEffect } from "react";
 import PageHeader from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,8 +23,89 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import useFirebase from "@/hooks/use-firebase"; // Assuming a hook for single object might be needed
+import { database } from "@/lib/firebase";
+import { ref, onValue, set } from "firebase/database";
+import { Loader2 } from "lucide-react";
+
+
+interface GeneralSettings {
+    companyName: string;
+    companyAddress: string;
+    language: 'ar' | 'en';
+}
+
+interface FinancialSettings {
+    openingCapital: number;
+    fiscalYearStart: string;
+    currency: 'EGP' | 'SAR' | 'USD';
+    allowNegativeStock: boolean;
+}
+
+interface Settings {
+    general: GeneralSettings;
+    financial: FinancialSettings;
+}
 
 export default function SettingsPage() {
+    const { toast } = useToast();
+    const [settings, setSettings] = useState<Settings | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const settingsRef = ref(database, 'settings/main');
+        const unsubscribe = onValue(settingsRef, (snapshot) => {
+            if (snapshot.exists()) {
+                setSettings(snapshot.val());
+            } else {
+                // Initialize with default settings if none exist
+                setSettings({
+                    general: { companyName: '', companyAddress: '', language: 'ar' },
+                    financial: { openingCapital: 0, fiscalYearStart: '', currency: 'EGP', allowNegativeStock: false }
+                });
+            }
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    const handleSave = async () => {
+        if (!settings) return;
+        try {
+            const settingsRef = ref(database, 'settings/main');
+            await set(settingsRef, settings);
+            toast({
+                title: "تم الحفظ بنجاح",
+                description: "تم تحديث الإعدادات.",
+            });
+        } catch (error) {
+            console.error("Failed to save settings: ", error);
+            toast({
+                variant: "destructive",
+                title: "خطأ",
+                description: "فشل حفظ الإعدادات. يرجى المحاولة مرة أخرى.",
+            });
+        }
+    };
+    
+    const handleGeneralChange = (field: keyof GeneralSettings, value: any) => {
+        setSettings(prev => prev ? { ...prev, general: { ...prev.general, [field]: value } } : null);
+    }
+    
+    const handleFinancialChange = (field: keyof FinancialSettings, value: any) => {
+         setSettings(prev => prev ? { ...prev, financial: { ...prev.financial, [field]: value } } : null);
+    }
+
+    if (loading || !settings) {
+        return (
+            <div className="flex flex-1 justify-center items-center">
+                <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+            </div>
+        );
+    }
+
   return (
     <>
       <PageHeader title="الإعدادات" />
@@ -44,15 +126,15 @@ export default function SettingsPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="company-name">اسم الشركة</Label>
-                  <Input id="company-name" placeholder="أدخل اسم الشركة" />
+                  <Input id="company-name" placeholder="أدخل اسم الشركة" value={settings.general.companyName} onChange={e => handleGeneralChange('companyName', e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="company-address">عنوان الشركة</Label>
-                  <Textarea id="company-address" placeholder="أدخل عنوان الشركة" />
+                  <Textarea id="company-address" placeholder="أدخل عنوان الشركة" value={settings.general.companyAddress} onChange={e => handleGeneralChange('companyAddress', e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="language">اللغة</Label>
-                  <Select defaultValue="ar">
+                  <Select value={settings.general.language} onValueChange={(value: GeneralSettings['language']) => handleGeneralChange('language', value)}>
                     <SelectTrigger>
                       <SelectValue placeholder="اختر اللغة" />
                     </SelectTrigger>
@@ -64,7 +146,7 @@ export default function SettingsPage() {
                 </div>
               </CardContent>
               <CardFooter>
-                <Button>حفظ التغييرات</Button>
+                <Button onClick={handleSave}>حفظ التغييرات</Button>
               </CardFooter>
             </Card>
           </TabsContent>
@@ -79,15 +161,15 @@ export default function SettingsPage() {
               <CardContent className="space-y-4">
                  <div className="space-y-2">
                   <Label htmlFor="opening-capital">رأس مال أول الفترة</Label>
-                  <Input id="opening-capital" type="number" placeholder="أدخل رأس مال أول الفترة" />
+                  <Input id="opening-capital" type="number" placeholder="أدخل رأس مال أول الفترة" value={settings.financial.openingCapital} onChange={e => handleFinancialChange('openingCapital', Number(e.target.value))} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="fiscal-year-start">بداية السنة المالية</Label>
-                  <Input id="fiscal-year-start" type="date" />
+                  <Input id="fiscal-year-start" type="date" value={settings.financial.fiscalYearStart} onChange={e => handleFinancialChange('fiscalYearStart', e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="currency">العملة</Label>
-                  <Select defaultValue="EGP">
+                  <Select value={settings.financial.currency} onValueChange={(value: FinancialSettings['currency']) => handleFinancialChange('currency', value)}>
                     <SelectTrigger>
                       <SelectValue placeholder="اختر العملة" />
                     </SelectTrigger>
@@ -105,11 +187,11 @@ export default function SettingsPage() {
                       السماح بإنشاء فواتير بيع حتى لو كان رصيد الصنف صفر أو أقل.
                     </p>
                   </div>
-                  <Switch id="allow-negative-stock" />
+                  <Switch id="allow-negative-stock" checked={settings.financial.allowNegativeStock} onCheckedChange={checked => handleFinancialChange('allowNegativeStock', checked)} />
                 </div>
               </CardContent>
               <CardFooter>
-                <Button>حفظ التغييرات</Button>
+                <Button onClick={handleSave}>حفظ التغييرات</Button>
               </CardFooter>
             </Card>
           </TabsContent>

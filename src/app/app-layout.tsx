@@ -31,6 +31,8 @@ import {
   ShoppingBag,
   Truck,
   LineChart,
+  BarChart,
+  History,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -129,6 +131,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <NavSubLink href="/inventory/stock-out">إخراج مخزون</NavSubLink>
                 <NavSubLink href="/inventory/transfer">تحويل مخزون</NavSubLink>
                 <NavSubLink href="/inventory/adjustment">تسوية المخزون</NavSubLink>
+                <NavSubLink href="/inventory/movements">حركة المخزون</NavSubLink>
             </NavCollapsible>
 
             <NavCollapsible title="المبيعات" icon={<ShoppingCart />}>
@@ -144,9 +147,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <NavSubLink href="/accounting/expenses">إدارة المصروفات</NavSubLink>
                 <NavSubLink href="/accounting/ai-analysis">تحليل مالي بالذكاء الاصطناعي</NavSubLink>
             </NavCollapsible>
+            
+            <NavLink href="/analytics" icon={<BarChart />}>التحليلات</NavLink>
 
             <NavCollapsible title="التقارير" icon={<AreaChart />}>
-                <NavSubLink href="/reports/analytics">التقارير الرسومية</NavSubLink>
                 <NavSubLink href="/reports/financial-statements">القوائم المالية</NavSubLink>
                 <NavSubLink href="/reports/partner-shares">حصص الشركاء</NavSubLink>
                 <NavSubLink href="/reports/customer-statement">كشف حساب العملاء</NavSubLink>
