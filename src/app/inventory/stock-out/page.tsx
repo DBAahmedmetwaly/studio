@@ -9,8 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle, Trash2, Printer, Save } from "lucide-react";
+import { PlusCircle, Trash2, Printer, Save, Loader2 } from "lucide-react";
 import React, { useState } from "react";
+import useFirebase from "@/hooks/use-firebase";
 
 interface StockItem {
   id: string;
@@ -18,12 +19,28 @@ interface StockItem {
   qty: number;
 }
 
+interface Item {
+    id: string;
+    name: string;
+}
+
+interface Warehouse {
+    id: string;
+    name: string;
+}
+
+interface Branch {
+    id: string;
+    name: string;
+}
+
 export default function StockOutPage() {
-    const [items, setItems] = useState<StockItem[]>([
-        { id: "item001", name: "منتج 1", qty: 3 },
-        { id: "item002", name: "منتج 2", qty: 1 },
-    ]);
+    const [items, setItems] = useState<StockItem[]>([]);
     const [newItem, setNewItem] = useState({ id: "", name: "", qty: 1 });
+
+    const { data: availableItems, loading: loadingItems } = useFirebase<Item>('items');
+    const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
+    const { data: branches, loading: loadingBranches } = useFirebase<Branch>('branches');
 
     const handleAddItem = () => {
         if (!newItem.id || newItem.qty <= 0) return;
@@ -47,11 +64,8 @@ export default function StockOutPage() {
     const handlePrint = () => {
         window.print();
     };
-
-    const availableItems = [
-      { id: "item003", name: "منتج 3" },
-      { id: "item004", name: "منتج 4" },
-    ];
+    
+    const loading = loadingItems || loadingWarehouses || loadingBranches;
 
   return (
     <>
@@ -77,91 +91,96 @@ export default function StockOutPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="grid md:grid-cols-2 gap-6">
-                 <div className="space-y-2">
-                    <Label htmlFor="warehouse">من مستودع / فرع</Label>
-                    <Select>
-                        <SelectTrigger id="warehouse">
-                            <SelectValue placeholder="اختر المصدر" />
-                        </SelectTrigger>
-                        <SelectContent>
-                           <SelectItem value="wh001">مستودع القاهرة</SelectItem>
-                           <SelectItem value="wh002">مستودع الإسكندرية</SelectItem>
-                           <SelectItem value="br001">الفرع الرئيسي - القاهرة</SelectItem>
-                           <SelectItem value="br002">فرع الإسكندرية</SelectItem>
-                        </SelectContent>
-                    </Select>
+            {loading ? (
+                <div className="flex justify-center items-center py-10">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="reason">سبب الإخراج</Label>
-                    <Select>
-                        <SelectTrigger id="reason">
-                            <SelectValue placeholder="اختر سبب الإخراج" />
-                        </SelectTrigger>
-                        <SelectContent>
-                           <SelectItem value="damaged">تالف</SelectItem>
-                           <SelectItem value="samples">عينات</SelectItem>
-                           <SelectItem value="return">مرتجع لمورد</SelectItem>
-                           <SelectItem value="other">أخرى</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-            </div>
-            
-            <div>
-              <Label>الأصناف المخرجة</Label>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[60%]">الصنف</TableHead>
-                    <TableHead>الكمية</TableHead>
-                    <TableHead className="text-left no-print">الإجراء</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {items.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell>{item.name}</TableCell>
-                      <TableCell>{item.qty}</TableCell>
-                      <TableCell className="text-left no-print">
-                        <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  <TableRow className="no-print">
-                     <TableCell>
-                        <Select value={newItem.id} onValueChange={(value) => setNewItem({ ...newItem, id: value })}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="اختر صنفًا" />
-                            </SelectTrigger>
-                            <SelectContent>
-                               {availableItems.map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
-                               {items.filter(i => !availableItems.find(a => a.id === i.id)).map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                     </TableCell>
-                     <TableCell>
-                        <Input type="number" placeholder="الكمية" value={newItem.qty} onChange={e => setNewItem({...newItem, qty: parseInt(e.target.value)})} />
-                     </TableCell>
-                     <TableCell>
-                         <Button onClick={handleAddItem}>
-                            <PlusCircle className="ml-2 h-4 w-4" />
-                            إضافة
-                         </Button>
-                     </TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </div>
-             <div className="space-y-2">
-                <Label htmlFor="notes">ملاحظات</Label>
-                <Textarea id="notes" placeholder="أضف أي ملاحظات هنا..." />
-            </div>
+            ) : (
+                <>
+                    <div className="grid md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                            <Label htmlFor="warehouse">من مستودع / فرع</Label>
+                            <Select>
+                                <SelectTrigger id="warehouse">
+                                    <SelectValue placeholder="اختر المصدر" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                   {warehouses.map(w => <SelectItem key={`wh-${w.id}`} value={w.id}>{w.name}</SelectItem>)}
+                                   {branches.map(b => <SelectItem key={`br-${b.id}`} value={b.id}>{b.name}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="reason">سبب الإخراج</Label>
+                            <Select>
+                                <SelectTrigger id="reason">
+                                    <SelectValue placeholder="اختر سبب الإخراج" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                   <SelectItem value="damaged">تالف</SelectItem>
+                                   <SelectItem value="samples">عينات</SelectItem>
+                                   <SelectItem value="return">مرتجع لمورد</SelectItem>
+                                   <SelectItem value="other">أخرى</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    
+                    <div>
+                      <Label>الأصناف المخرجة</Label>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-[60%]">الصنف</TableHead>
+                            <TableHead>الكمية</TableHead>
+                            <TableHead className="text-left no-print">الإجراء</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {items.map((item) => (
+                            <TableRow key={item.id}>
+                              <TableCell>{item.name}</TableCell>
+                              <TableCell>{item.qty}</TableCell>
+                              <TableCell className="text-left no-print">
+                                <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)}>
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                          <TableRow className="no-print">
+                             <TableCell>
+                                <Select value={newItem.id} onValueChange={(value) => setNewItem({ ...newItem, id: value })}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="اختر صنفًا" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                       {availableItems.map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                             </TableCell>
+                             <TableCell>
+                                <Input type="number" placeholder="الكمية" value={newItem.qty} onChange={e => setNewItem({...newItem, qty: parseInt(e.target.value) || 1})} />
+                             </TableCell>
+                             <TableCell>
+                                 <Button onClick={handleAddItem}>
+                                    <PlusCircle className="ml-2 h-4 w-4" />
+                                    إضافة
+                                 </Button>
+                             </TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="notes">ملاحظات</Label>
+                        <Textarea id="notes" placeholder="أضف أي ملاحظات هنا..." />
+                    </div>
+                </>
+            )}
           </CardContent>
           <CardFooter className="flex justify-end no-print">
-            <Button size="lg">تأكيد الإخراج</Button>
+            <Button size="lg" disabled={loading}>تأكيد الإخراج</Button>
           </CardFooter>
         </Card>
       </main>
