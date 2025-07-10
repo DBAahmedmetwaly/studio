@@ -17,6 +17,7 @@ import {
   SidebarMenuSub,
   SidebarMenuSubItem,
   SidebarMenuSubButton,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import {
   LayoutDashboard,
@@ -50,11 +51,12 @@ const Logo = () => (
 
 const NavLink = ({ href, children, icon }: { href: string; children: React.ReactNode; icon: React.ReactNode }) => {
   const pathname = usePathname();
+  const { setOpenMobile } = useSidebar();
   const isActive = pathname === href;
   return (
     <SidebarMenuItem>
       <SidebarMenuButton asChild isActive={isActive}>
-        <Link href={href}>
+        <Link href={href} onClick={() => setOpenMobile(false)}>
           {icon}
           <span>{children}</span>
         </Link>
@@ -94,11 +96,12 @@ const NavCollapsible = ({ title, icon, children, defaultOpen = false }: { title:
 
 const NavSubLink = ({ href, children }: { href: string; children: React.ReactNode }) => {
     const pathname = usePathname();
+    const { setOpenMobile } = useSidebar();
     const isActive = pathname === href || pathname.startsWith(href + '/');
     return (
         <SidebarMenuSubItem>
             <SidebarMenuSubButton asChild isActive={isActive}>
-                <Link href={href}>{children}</Link>
+                <Link href={href} onClick={() => setOpenMobile(false)}>{children}</Link>
             </SidebarMenuSubButton>
         </SidebarMenuSubItem>
     );
