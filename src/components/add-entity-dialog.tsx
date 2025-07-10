@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from "react";
@@ -8,9 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogFooter,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 
 interface AddEntityDialogProps {
   triggerButton: React.ReactNode;
@@ -27,18 +26,29 @@ export function AddEntityDialog({
 }: AddEntityDialogProps) {
   const [isOpen, setIsOpen] = React.useState(false);
 
+  // Wrap children in a function to pass down close function
+  const childrenWithProps = React.Children.map(children, (child) => {
+    if (React.isValidElement(child)) {
+      // @ts-ignore
+      return React.cloneElement(child, { onClose: () => setIsOpen(false), ...child.props });
+    }
+    return child;
+  });
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>{triggerButton}</DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px]" onInteractOutside={(e) => {
+         // This prevents closing the dialog when interacting with select/dropdown menus
+        if ((e.target as HTMLElement).closest('[data-radix-popper-content-wrapper]')) {
+          e.preventDefault();
+        }
+      }}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
-        {children}
-        <DialogFooter>
-          <Button type="submit" onClick={() => setIsOpen(false)}>حفظ</Button>
-        </DialogFooter>
+        {React.cloneElement(children as React.ReactElement, { onClose: () => setIsOpen(false) })}
       </DialogContent>
     </Dialog>
   );
