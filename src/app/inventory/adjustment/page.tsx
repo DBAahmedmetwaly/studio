@@ -9,15 +9,16 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle, Trash2, Printer, Save, Loader2 } from "lucide-react";
-import React, { useState } from "react";
+import { PlusCircle, Trash2, Loader2 } from "lucide-react";
+import React, { useState, useMemo, useCallback } from "react";
 import useFirebase from "@/hooks/use-firebase";
 import { useToast } from "@/hooks/use-toast";
+import { Combobox } from "@/components/ui/combobox";
 
 interface AdjustmentItem {
   itemId: string;
   itemName: string;
-  systemQty: number; // For display, can be calculated
+  systemQty: number; 
   actualQty: number;
   difference: number;
   uniqueId: string;
@@ -28,11 +29,14 @@ interface Item {
     name: string;
     openingStock?: number;
 }
+interface Warehouse { id: string; name: string; }
+interface SaleInvoice { id: string; warehouseId: string; items: { id: string; qty: number; }[]; }
+interface PurchaseInvoice { id: string; warehouseId: string; items: { id: string; qty: number; }[]; }
+interface StockInRecord { id: string; warehouseId: string; items: { id: string; qty: number; }[]; }
+interface StockOutRecord { id: string; sourceId: string; items: { id: string; qty: number; }[]; }
+interface StockTransferRecord { id: string; fromSourceId: string; toSourceId: string; items: { id: string; qty: number; }[]; }
+interface StockAdjustmentRecord { id: string; warehouseId: string; items: { itemId: string; difference: number; }[]; }
 
-interface Warehouse {
-    id: string;
-    name: string;
-}
 
 export default function StockAdjustmentPage() {
     const { toast } = useToast();
@@ -41,25 +45,57 @@ export default function StockAdjustmentPage() {
     const [selectedWarehouse, setSelectedWarehouse] = useState<string>("");
     const [notes, setNotes] = useState<string>("");
     
-    const { data: availableItems, loading: loadingItems } = useFirebase<Item>('items');
-    const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
+    const { data: availableItems, loading: l1 } = useFirebase<Item>('items');
+    const { data: warehouses, loading: l2 } = useFirebase<Warehouse>('warehouses');
+    const { data: sales, loading: l3 } = useFirebase<SaleInvoice>('salesInvoices');
+    const { data: purchases, loading: l4 } = useFirebase<PurchaseInvoice>('purchaseInvoices');
+    const { data: stockIns, loading: l5 } = useFirebase<StockInRecord>('stockInRecords');
+    const { data: stockOuts, loading: l6 } = useFirebase<StockOutRecord>('stockOutRecords');
+    const { data: transfers, loading: l7 } = useFirebase<StockTransferRecord>('stockTransferRecords');
+    const { data: adjustments, loading: l8 } = useFirebase<StockAdjustmentRecord>('stockAdjustmentRecords');
     const { add: addAdjustmentRecord, getNextId } = useFirebase("stockAdjustmentRecords");
+    
+    const loading = l1 || l2 || l3 || l4 || l5 || l6 || l7 || l8;
+
+    const availableItemsForCombobox = useMemo(() => {
+        return availableItems.map(item => ({ value: item.id, label: item.name }));
+    }, [availableItems]);
+
+    const calculateSystemStock = useCallback((itemId: string, warehouseId: string) => {
+        if (!itemId || !warehouseId) return 0;
+        
+        const item = availableItems.find(i => i.id === itemId);
+        let stock = item?.openingStock || 0;
+
+        // Increases
+        purchases.filter(p => p.warehouseId === warehouseId).forEach(p => p.items.filter(i => i.id === itemId).forEach(i => stock += i.qty));
+        stockIns.filter(si => si.warehouseId === warehouseId).forEach(si => si.items.filter(i => i.id === itemId).forEach(i => stock += i.qty));
+        transfers.filter(t => t.toSourceId === warehouseId).forEach(t => t.items.filter(i => i.id === itemId).forEach(i => stock += i.qty));
+
+        // Decreases
+        sales.filter(s => s.warehouseId === warehouseId).forEach(s => s.items.filter(i => i.id === itemId).forEach(i => stock -= i.qty));
+        stockOuts.filter(so => so.sourceId === warehouseId).forEach(so => so.items.filter(i => i.id === itemId).forEach(i => stock -= i.qty));
+        transfers.filter(t => t.fromSourceId === warehouseId).forEach(t => t.items.filter(i => i.id === itemId).forEach(i => stock -= i.qty));
+        
+        // Adjustments
+        adjustments.filter(adj => adj.warehouseId === warehouseId).forEach(adj => adj.items.filter(i => i.itemId === itemId).forEach(i => stock += i.difference));
+
+        return stock;
+    }, [availableItems, purchases, sales, stockIns, stockOuts, transfers, adjustments]);
 
     const handleAddItem = () => {
-        if (!newItem.itemId || newItem.actualQty < 0) {
+        if (!newItem.itemId || !selectedWarehouse) {
             toast({
                 variant: "destructive",
                 title: "خطأ",
-                description: "يرجى اختيار صنف وكمية صالحة.",
+                description: "يرجى اختيار مخزن وصنف وكمية صالحة.",
             });
             return;
         }
         const selectedItemData = availableItems.find(i => i.id === newItem.itemId);
         if (!selectedItemData) return;
         
-        // Note: systemQty should be calculated based on all movements. 
-        // For simplicity here, we'll use openingStock. A real implementation needs a full stock ledger.
-        const systemQty = selectedItemData.openingStock || 0; 
+        const systemQty = calculateSystemStock(newItem.itemId, selectedWarehouse);
         const difference = newItem.actualQty - systemQty;
 
         setItems([
@@ -121,7 +157,6 @@ export default function StockAdjustmentPage() {
         }
     };
 
-    const loading = loadingItems || loadingWarehouses;
 
   return (
     <>
@@ -190,14 +225,13 @@ export default function StockAdjustmentPage() {
                             ))}
                              <TableRow className="no-print bg-muted/30">
                                 <TableCell>
-                                    <Select value={newItem.itemId} onValueChange={(value) => setNewItem({ ...newItem, itemId: value })}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="اختر صنفًا" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                        {availableItems.map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
+                                    <Combobox
+                                        options={availableItemsForCombobox}
+                                        value={newItem.itemId}
+                                        onValueChange={(value) => setNewItem({ ...newItem, itemId: value })}
+                                        placeholder="ابحث عن صنف..."
+                                        emptyMessage="لم يتم العثور على الصنف."
+                                    />
                                 </TableCell>
                                 <TableCell></TableCell>
                                 <TableCell>
@@ -205,7 +239,7 @@ export default function StockAdjustmentPage() {
                                 </TableCell>
                                 <TableCell></TableCell>
                                 <TableCell className="text-center">
-                                    <Button onClick={handleAddItem} size="sm">
+                                    <Button onClick={handleAddItem} size="sm" disabled={!selectedWarehouse || !newItem.itemId}>
                                         <PlusCircle className="ml-2 h-4 w-4" />
                                         إضافة
                                     </Button>

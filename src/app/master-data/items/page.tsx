@@ -45,8 +45,9 @@ interface Item {
 }
 
 const ItemForm = ({ item, onSave, onClose }: { item?: Item, onSave: (item: Omit<Item, 'id' | 'code'> & { id?: string, code?: string }) => void, onClose: () => void }) => {
-  const [formData, setFormData] = useState<Omit<Item, 'id'>>(
-    item || { name: "", unit: "piece", price: 0, cost: 0, openingStock: 0 }
+  const [formData, setFormData] = useState<Omit<Item, 'id' | 'code'>>(
+    item ? { name: item.name, unit: item.unit, price: item.price, cost: item.cost, openingStock: item.openingStock }
+    : { name: "", unit: "piece", price: 0, cost: 0, openingStock: 0 }
   );
 
   const handleSubmit = () => {
@@ -185,7 +186,7 @@ export default function ItemsPage() {
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
             ) : (
-                <div className="w-full overflow-auto border rounded-lg">
+                 <div className="w-full overflow-auto border rounded-lg">
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -240,7 +241,7 @@ export default function ItemsPage() {
                             ))}
                         </TableBody>
                     </Table>
-                </div>
+                 </div>
             )}
           </CardContent>
         </Card>
@@ -248,3 +249,4 @@ export default function ItemsPage() {
     </>
   );
 }
+
