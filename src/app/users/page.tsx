@@ -59,6 +59,53 @@ const users = [
   },
 ];
 
+const UserForm = ({ user }: { user?: typeof users[0] }) => (
+  <div className="grid gap-4 py-4">
+    <div className="grid grid-cols-4 items-center gap-4">
+      <Label htmlFor="user-name" className="text-right">
+        الاسم
+      </Label>
+      <Input id="user-name" defaultValue={user?.name} className="col-span-3" />
+    </div>
+    <div className="grid grid-cols-4 items-center gap-4">
+      <Label htmlFor="user-email" className="text-right">
+        البريد الإلكتروني
+      </Label>
+      <Input id="user-email" type="email" defaultValue={user?.email} className="col-span-3" />
+    </div>
+    <div className="grid grid-cols-4 items-center gap-4">
+      <Label htmlFor="user-role" className="text-right">
+        الدور
+      </Label>
+      <Select defaultValue={user?.role}>
+        <SelectTrigger className="col-span-3">
+          <SelectValue placeholder="اختر دورًا" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="مسؤول">مسؤول</SelectItem>
+          <SelectItem value="محاسب">محاسب</SelectItem>
+          <SelectItem value="أمين مخزن">أمين مخزن</SelectItem>
+          <SelectItem value="أمين صندوق">أمين صندوق</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+      <div className="grid grid-cols-4 items-center gap-4">
+      <Label htmlFor="user-branch" className="text-right">
+        الفرع
+      </Label>
+        <Select defaultValue={user?.branch}>
+        <SelectTrigger className="col-span-3">
+          <SelectValue placeholder="اختر فرعًا" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="الفرع الرئيسي - القاهرة">الفرع الرئيسي - القاهرة</SelectItem>
+          <SelectItem value="فرع الإسكندرية">فرع الإسكندرية</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+  </div>
+);
+
 export default function UsersPage() {
   return (
     <>
@@ -73,50 +120,7 @@ export default function UsersPage() {
             </Button>
           }
         >
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="user-name" className="text-right">
-                الاسم
-              </Label>
-              <Input id="user-name" className="col-span-3" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="user-email" className="text-right">
-                البريد الإلكتروني
-              </Label>
-              <Input id="user-email" type="email" className="col-span-3" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="user-role" className="text-right">
-                الدور
-              </Label>
-              <Select>
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="اختر دورًا" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">مسؤول</SelectItem>
-                  <SelectItem value="accountant">محاسب</SelectItem>
-                  <SelectItem value="storekeeper">أمين مخزن</SelectItem>
-                  <SelectItem value="cashier">أمين صندوق</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="user-branch" className="text-right">
-                الفرع
-              </Label>
-               <Select>
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="اختر فرعًا" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="main">الفرع الرئيسي - القاهرة</SelectItem>
-                  <SelectItem value="alex">فرع الإسكندرية</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+          <UserForm />
         </AddEntityDialog>
       </PageHeader>
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
@@ -167,10 +171,18 @@ export default function UsersPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                          <DropdownMenuItem>
-                            <Edit className="ml-2 h-4 w-4" />
-                            تعديل
-                            </DropdownMenuItem>
+                          <AddEntityDialog
+                            title="تعديل المستخدم"
+                            description="قم بتحديث تفاصيل المستخدم هنا."
+                            triggerButton={
+                              <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                <Edit className="ml-2 h-4 w-4" />
+                                تعديل
+                              </DropdownMenuItem>
+                            }
+                          >
+                           <UserForm user={user} />
+                          </AddEntityDialog>
                           <DropdownMenuItem className="text-destructive">
                              <Trash2 className="ml-2 h-4 w-4" />
                             حذف
