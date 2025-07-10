@@ -1,25 +1,12 @@
 
 "use client"
 
-import { BarChart, LineChart, TrendingUp, Users, GitFork } from "lucide-react"
-import {
-  Bar,
-  CartesianGrid,
-  Cell,
-  LabelList,
-  Line,
-  XAxis,
-  YAxis,
-  ResponsiveContainer,
-  PieChart,
-  Pie
-} from "recharts"
+import { Bar, CartesianGrid, LabelList, XAxis, YAxis, Pie, PieChart as RechartsPieChart, BarChart as RechartsBarChart } from "recharts"
 
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
@@ -90,8 +77,7 @@ export default function AnalyticsPage() {
                 </CardHeader>
                 <CardContent>
                     <ChartContainer config={chartConfig} className="h-[300px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={itemProfitData} layout="vertical" margin={{ right: 20 }}>
+                        <RechartsBarChart data={itemProfitData} layout="vertical" margin={{ right: 20 }}>
                             <CartesianGrid horizontal={false} />
                             <YAxis
                             dataKey="name"
@@ -112,8 +98,7 @@ export default function AnalyticsPage() {
                              <Bar dataKey="loss" name="خسائر" fill="var(--color-loss)" radius={5}>
                                 <LabelList position="right" offset={8} className="fill-foreground" fontSize={12} />
                             </Bar>
-                        </BarChart>
-                        </ResponsiveContainer>
+                        </RechartsBarChart>
                     </ChartContainer>
                 </CardContent>
             </Card>
@@ -127,27 +112,25 @@ export default function AnalyticsPage() {
                 </CardHeader>
                 <CardContent>
                     <ChartContainer config={{}} className="h-[300px] w-full">
-                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={supplierActivityData} layout="vertical" margin={{ right: 20 }}>
-                                <CartesianGrid horizontal={false} />
-                                <YAxis
-                                dataKey="name"
-                                type="category"
-                                tickLine={false}
-                                axisLine={false}
-                                tickMargin={10}
-                                width={100}
-                                />
-                                <XAxis type="number" hide />
-                                <ChartTooltip
-                                cursor={false}
-                                content={<ChartTooltipContent />}
-                                />
-                                <Bar dataKey="value" fill="hsl(var(--primary))" radius={5}>
-                                    <LabelList position="right" offset={8} className="fill-foreground" fontSize={12} />
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
+                        <RechartsBarChart data={supplierActivityData} layout="vertical" margin={{ right: 20 }}>
+                            <CartesianGrid horizontal={false} />
+                            <YAxis
+                            dataKey="name"
+                            type="category"
+                            tickLine={false}
+                            axisLine={false}
+                            tickMargin={10}
+                            width={100}
+                            />
+                            <XAxis type="number" hide />
+                            <ChartTooltip
+                            cursor={false}
+                            content={<ChartTooltipContent />}
+                            />
+                            <Bar dataKey="value" fill="hsl(var(--primary))" radius={5}>
+                                <LabelList position="right" offset={8} className="fill-foreground" fontSize={12} />
+                            </Bar>
+                        </RechartsBarChart>
                     </ChartContainer>
                 </CardContent>
             </Card>
@@ -161,12 +144,10 @@ export default function AnalyticsPage() {
                 </CardHeader>
                 <CardContent>
                     <ChartContainer config={chartConfig} className="h-[300px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                           <PieChart>
-                                <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                                <Pie data={receivablesPayablesData} dataKey="value" nameKey="name" />
-                           </PieChart>
-                        </ResponsiveContainer>
+                       <RechartsPieChart>
+                            <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                            <Pie data={receivablesPayablesData} dataKey="value" nameKey="name" />
+                       </RechartsPieChart>
                     </ChartContainer>
                 </CardContent>
             </Card>
@@ -180,30 +161,28 @@ export default function AnalyticsPage() {
                 </CardHeader>
                 <CardContent>
                     <ChartContainer config={{}} className="h-[300px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={branchActivityData}>
-                                <CartesianGrid vertical={false} />
-                                <XAxis
-                                dataKey="name"
-                                tickLine={false}
-                                tickMargin={10}
-                                axisLine={false}
+                        <RechartsBarChart data={branchActivityData}>
+                            <CartesianGrid vertical={false} />
+                            <XAxis
+                            dataKey="name"
+                            tickLine={false}
+                            tickMargin={10}
+                            axisLine={false}
+                            />
+                            <YAxis />
+                            <ChartTooltip
+                            cursor={false}
+                            content={<ChartTooltipContent />}
+                            />
+                            <Bar dataKey="sales" fill="hsl(var(--primary))" radius={8}>
+                                <LabelList
+                                    position="top"
+                                    offset={12}
+                                    className="fill-foreground"
+                                    fontSize={12}
                                 />
-                                <YAxis />
-                                <ChartTooltip
-                                cursor={false}
-                                content={<ChartTooltipContent />}
-                                />
-                                <Bar dataKey="sales" fill="hsl(var(--primary))" radius={8}>
-                                    <LabelList
-                                        position="top"
-                                        offset={12}
-                                        className="fill-foreground"
-                                        fontSize={12}
-                                    />
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
+                            </Bar>
+                        </RechartsBarChart>
                     </ChartContainer>
                 </CardContent>
             </Card>
