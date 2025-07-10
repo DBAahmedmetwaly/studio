@@ -23,7 +23,7 @@ interface SaleInvoice {
     id: string;
     date: string;
     warehouseId: string;
-    items: { id: string; qty: number; price: number }[];
+    items: { id: string; qty: number; price: number; cost?: number; }[];
 }
 
 interface PurchaseInvoice {
@@ -77,8 +77,8 @@ export default function ItemProfitLossPage() {
                 sale.items.forEach(saleItem => {
                     if (saleItem.id === item.id) {
                         totalRevenue += saleItem.qty * saleItem.price;
-                        // Use average cost from purchases or master data if available
-                        totalCost += saleItem.qty * (item.cost || item.price * 0.8); // fallback to 80% of sale price
+                        // Use cost from sale invoice if available, otherwise fallback
+                        totalCost += saleItem.qty * (saleItem.cost || item.cost || item.price * 0.8);
                     }
                 });
             });

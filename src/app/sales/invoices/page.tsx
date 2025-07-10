@@ -23,6 +23,7 @@ interface InvoiceItem {
   name: string;
   qty: number;
   price: number;
+  cost: number;
   total: number;
   unit: string;
 }
@@ -60,7 +61,7 @@ export default function SalesInvoicePage() {
     const { can } = usePermissions();
 
     const [items, setItems] = useState<InvoiceItem[]>([]);
-    const [newItem, setNewItem] = useState({ id: "", name: "", qty: 1, price: 0, unit: "" });
+    const [newItem, setNewItem] = useState({ id: "", name: "", qty: 1, price: 0, cost: 0, unit: "" });
     const [subtotal, setSubtotal] = useState(0);
     const [discount, setDiscount] = useState(0);
     const [tax, setTax] = useState(0);
@@ -146,11 +147,12 @@ export default function SalesInvoicePage() {
             ...newItem,
             name: selectedItem.name,
             unit: selectedItem.unit,
+            cost: selectedItem.cost || 0,
             total: newItem.qty * newItem.price,
             id: `${selectedItem.id}-${Date.now()}`
         },
         ]);
-        setNewItem({ id: "", name: "", qty: 1, price: 0, unit: "" });
+        setNewItem({ id: "", name: "", qty: 1, price: 0, cost: 0, unit: "" });
     };
 
     const handleRemoveItem = (id: string) => {
@@ -168,6 +170,7 @@ export default function SalesInvoicePage() {
                 ...newItem,
                 id: itemId,
                 price: selectedItem.price || 0,
+                cost: selectedItem.cost || 0,
                 unit: selectedItem.unit,
             });
         }
@@ -202,7 +205,7 @@ export default function SalesInvoicePage() {
                         qty: item.qty,
                         price: item.price,
                         total: item.total,
-                        cost: allItems.find(i => i.id === originalItemId)?.cost || 0
+                        cost: item.cost,
                     }
                 }),
                 subtotal,
