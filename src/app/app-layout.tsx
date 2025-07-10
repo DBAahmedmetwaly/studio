@@ -39,6 +39,7 @@ import {
   Landmark,
   Wallet,
   UserRound,
+  Calculator,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -175,6 +176,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <NavCollapsible title="الموارد البشرية" icon={<UserRound />} module="hr">
                 <NavSubLink href="/hr/employees">الموظفين</NavSubLink>
                 <NavSubLink href="/hr/advances">سلف الموظفين</NavSubLink>
+                <NavSubLink href="/hr/payroll">احتساب الرواتب</NavSubLink>
             </NavCollapsible>
 
             <NavLink href="/analytics" icon={<BarChart />} module="analytics">التحليلات</NavLink>

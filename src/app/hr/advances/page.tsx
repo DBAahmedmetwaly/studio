@@ -28,6 +28,7 @@ interface EmployeeAdvance {
     date: string;
     amount: number;
     employeeId: string;
+    paidFromAccountId: string;
     notes?: string;
 }
 
@@ -36,16 +37,21 @@ interface Employee {
     name: string;
 }
 
-const AdvanceForm = ({ advance, onSave, onClose, employees }: { advance?: EmployeeAdvance, onSave: (data: any) => void, onClose: () => void, employees: Employee[] }) => {
+interface CashAccount {
+    id: string;
+    name: string;
+}
+
+const AdvanceForm = ({ advance, onSave, onClose, employees, cashAccounts }: { advance?: EmployeeAdvance, onSave: (data: any) => void, onClose: () => void, employees: Employee[], cashAccounts: CashAccount[] }) => {
     const [formData, setFormData] = useState(
-        advance || { date: new Date().toISOString().split('T')[0], amount: 0, employeeId: "", notes: "" }
+        advance || { date: new Date().toISOString().split('T')[0], amount: 0, employeeId: "", paidFromAccountId: "", notes: "" }
     );
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         onSave({ ...formData, amount: Number(formData.amount) });
         if (!advance) { 
-            setFormData({ date: new Date().toISOString().split('T')[0], amount: 0, employeeId: "", notes: "" });
+            setFormData({ date: new Date().toISOString().split('T')[0], amount: 0, employeeId: "", paidFromAccountId: "", notes: "" });
         }
         onClose();
     }
@@ -72,6 +78,17 @@ const AdvanceForm = ({ advance, onSave, onClose, employees }: { advance?: Employ
                     <Label htmlFor="advance-amount" className="text-right">المبلغ</Label>
                     <Input id="advance-amount" type="number" value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value as any})} className="col-span-3" placeholder="أدخل مبلغ السلفة" required/>
                 </div>
+                 <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="paid-from" className="text-right">مدفوع من</Label>
+                    <Select value={formData.paidFromAccountId} onValueChange={v => setFormData({...formData, paidFromAccountId: v})} required>
+                        <SelectTrigger className="col-span-3">
+                            <SelectValue placeholder="اختر حساب الدفع" />
+                        </SelectTrigger>
+                        <SelectContent>
+                           {cashAccounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="advance-notes" className="text-right">ملاحظات</Label>
                     <Textarea id="advance-notes" value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} className="col-span-3" placeholder="أدخل أي ملاحظات (اختياري)" />
@@ -90,14 +107,20 @@ const AdvanceForm = ({ advance, onSave, onClose, employees }: { advance?: Employ
 export default function EmployeeAdvancesPage() {
     const { data: advances, loading: loadingAdvances, add, update, remove } = useFirebase<EmployeeAdvance>('employeeAdvances');
     const { data: employees, loading: loadingEmployees } = useFirebase<Employee>('employees');
+    const { data: cashAccounts, loading: loadingCashAccounts } = useFirebase<CashAccount>('cashAccounts');
     const { toast } = useToast();
     const { can } = usePermissions();
     
-    const loading = loadingAdvances || loadingEmployees;
+    const loading = loadingAdvances || loadingEmployees || loadingCashAccounts;
 
      const getEmployeeName = (employeeId: string) => {
         return employees.find(s => s.id === employeeId)?.name || 'غير معروف';
     };
+
+    const getCashAccountName = (accountId: string) => {
+        return cashAccounts.find(acc => acc.id === accountId)?.name || 'غير معروف';
+    }
+
 
     const handleSave = async (data: any) => {
         try {
@@ -142,7 +165,7 @@ export default function EmployeeAdvancesPage() {
                     </Button>
                 }
             >
-                <AdvanceForm onSave={handleSave} onClose={()=>{}} employees={employees} />
+                <AdvanceForm onSave={handleSave} onClose={()=>{}} employees={employees} cashAccounts={cashAccounts} />
             </AddEntityDialog>
         )}
       </PageHeader>
@@ -164,7 +187,7 @@ export default function EmployeeAdvancesPage() {
                                     <TableRow>
                                         <TableHead className="w-[150px]">التاريخ</TableHead>
                                         <TableHead>الموظف</TableHead>
-                                        <TableHead>الملاحظات</TableHead>
+                                        <TableHead>مدفوعة من</TableHead>
                                         <TableHead className="text-center w-[150px]">المبلغ</TableHead>
                                         <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
                                     </TableRow>
@@ -174,7 +197,7 @@ export default function EmployeeAdvancesPage() {
                                         <TableRow key={advance.id}>
                                             <TableCell>{new Date(advance.date).toLocaleDateString('ar-EG')}</TableCell>
                                             <TableCell>{getEmployeeName(advance.employeeId)}</TableCell>
-                                            <TableCell>{advance.notes || '-'}</TableCell>
+                                            <TableCell>{getCashAccountName(advance.paidFromAccountId)}</TableCell>
                                             <TableCell className="text-center">{advance.amount.toLocaleString()}</TableCell>
                                             <TableCell className="text-center">
                                                 <DropdownMenu>
@@ -197,7 +220,7 @@ export default function EmployeeAdvancesPage() {
                                                                     </DropdownMenuItem>
                                                                 }
                                                             >
-                                                                <AdvanceForm advance={advance} onSave={handleSave} onClose={() => {}} employees={employees} />
+                                                                <AdvanceForm advance={advance} onSave={handleSave} onClose={() => {}} employees={employees} cashAccounts={cashAccounts} />
                                                             </AddEntityDialog>
                                                         )}
                                                         {can('delete', 'hr') && (
@@ -228,4 +251,3 @@ export default function EmployeeAdvancesPage() {
     </>
   );
 }
-

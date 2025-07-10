@@ -52,6 +52,17 @@ interface TreasuryTransaction {
     accountId: string;
     description: string;
 }
+interface EmployeeAdvance {
+    id: string;
+    date: string;
+    employeeId: string;
+    amount: number;
+    paidFromAccountId: string;
+}
+interface Employee {
+    id: string;
+    name: string;
+}
 
 
 export default function JournalPage() {
@@ -70,9 +81,11 @@ export default function JournalPage() {
     const { data: itemsData, loading: l7 } = useFirebase<Item>("items");
     const { data: cashAccounts, loading: l8 } = useFirebase<CashAccount>("cashAccounts");
     const { data: treasuryTxs, loading: l9 } = useFirebase<TreasuryTransaction>("treasuryTransactions");
+    const { data: employeeAdvances, loading: l10 } = useFirebase<EmployeeAdvance>("employeeAdvances");
+    const { data: employees, loading: l11 } = useFirebase<Employee>("employees");
 
 
-    const loading = l1 || l2 || l3 || l4 || l5 || l6 || l7 || l8 || l9;
+    const loading = l1 || l2 || l3 || l4 || l5 || l6 || l7 || l8 || l9 || l10 || l11;
     
     const itemsMap = useMemo(() => {
         const map = new Map<string, Item>();
@@ -84,6 +97,7 @@ export default function JournalPage() {
         const entries: any[] = [];
         const getWarehouseName = (id?: string) => warehouses.find(w => w.id === id)?.name || 'عام';
         const getCashAccountName = (id?: string) => cashAccounts.find(c => c.id === id)?.name || 'النقدية/البنك';
+        const getEmployeeName = (id?: string) => employees.find(e => e.id === id)?.name || 'موظف غير معروف';
         
         // Sales Invoices
         sales.forEach(sale => {
@@ -159,9 +173,17 @@ export default function JournalPage() {
             }
         });
 
+        // Employee Advances
+        employeeAdvances.forEach(adv => {
+            const employeeName = getEmployeeName(adv.employeeId);
+            const cashAccountName = getCashAccountName(adv.paidFromAccountId);
+            entries.push({ id: `adv-debit-${adv.id}`, date: adv.date, number: `ADV-${adv.id.slice(-4)}`, description: `سلفة للموظف ${employeeName}`, debit: adv.amount, credit: 0, account: 'سلف الموظفين' });
+            entries.push({ id: `adv-credit-${adv.id}`, date: adv.date, number: `ADV-${adv.id.slice(-4)}`, description: `دفع من ${cashAccountName}`, debit: 0, credit: adv.amount, account: cashAccountName });
+        });
+
 
         return entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [sales, purchases, expenses, exceptionalIncomes, transfers, warehouses, itemsMap, cashAccounts, treasuryTxs]);
+    }, [sales, purchases, expenses, exceptionalIncomes, transfers, warehouses, itemsMap, cashAccounts, treasuryTxs, employeeAdvances, employees]);
 
     const filteredEntries = useMemo(() => {
         return journalEntries.filter(entry => {
