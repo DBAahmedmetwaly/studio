@@ -58,6 +58,9 @@ export default function SalesInvoicePage() {
     const [warehouseId, setWarehouseId] = useState("");
     const [notes, setNotes] = useState("");
     const [isSaving, setIsSaving] = useState(false);
+    
+    const [invoiceDate, setInvoiceDate] = useState<string>('');
+    const [dueDate, setDueDate] = useState<string>('');
 
     const { data: availableItems, loading: loadingItems } = useFirebase<Item>('items');
     const { data: customers, loading: loadingCustomers } = useFirebase<Customer>('customers');
@@ -72,6 +75,12 @@ export default function SalesInvoicePage() {
         setTax(newTax);
         setTotal(newSubtotal - discount + newTax);
     }, [items, discount, applyTax]);
+
+    useEffect(() => {
+        // Set dates only on the client-side to avoid hydration errors
+        setInvoiceDate(new Date().toLocaleDateString('ar-EG'));
+        setDueDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('ar-EG'));
+    }, []);
 
     const handleAddItem = () => {
         if (!newItem.id || newItem.qty <= 0 || newItem.price < 0) return;
@@ -190,8 +199,8 @@ export default function SalesInvoicePage() {
                 </div>
                 <div className="text-left text-sm md:text-base">
                     <div className="font-bold text-lg">فاتورة #(سيتم إنشاؤه)</div>
-                    <div>تاريخ الفاتورة: {new Date().toLocaleDateString('ar-EG')}</div>
-                    <div>تاريخ الاستحقاق: {new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('ar-EG')}</div>
+                    <div>تاريخ الفاتورة: {invoiceDate || '...'}</div>
+                    <div>تاريخ الاستحقاق: {dueDate || '...'}</div>
                 </div>
             </div>
           </CardHeader>
