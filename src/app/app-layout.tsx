@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React from "react";
@@ -39,6 +38,7 @@ import {
   DatabaseBackup,
   Landmark,
   Wallet,
+  UserRound,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -172,6 +172,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <NavSubLink href="/accounting/ai-analysis">تحليل مالي بالذكاء الاصطناعي</NavSubLink>
             </NavCollapsible>
             
+            <NavCollapsible title="الموارد البشرية" icon={<UserRound />} module="hr">
+                <NavSubLink href="/hr/employees">الموظفين</NavSubLink>
+            </NavCollapsible>
+
             <NavLink href="/analytics" icon={<BarChart />} module="analytics">التحليلات</NavLink>
 
             <NavCollapsible title="التقارير" icon={<AreaChart />} module="reports">

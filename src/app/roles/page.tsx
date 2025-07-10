@@ -1,3 +1,4 @@
+
 "use client";
 
 import PageHeader from "@/components/page-header";
@@ -30,12 +31,12 @@ import { useState } from "react";
 const initialRoles = {
   مسؤول: {
     dashboard: { view: true },
-    branches: { view: true, add: true, edit: true, delete: true },
     masterData: { view: true, add: true, edit: true, delete: true },
     inventory: { view: true, add: true, edit: true, delete: true },
     sales: { view: true, add: true, edit: true, delete: true, print: true },
     purchases: { view: true, add: true, edit: true, delete: true, print: true },
     accounting: { view: true, add: true, edit: true, delete: true },
+    hr: { view: true, add: true, edit: true, delete: true },
     reports: { view: true, generate: true },
     analytics: { view: true },
     users: { view: true, add: true, edit: true, delete: true },
@@ -44,12 +45,12 @@ const initialRoles = {
   },
   محاسب: {
     dashboard: { view: true },
-    branches: { view: false, add: false, edit: false, delete: false },
     masterData: { view: true, add: true, edit: true, delete: false },
     inventory: { view: true, add: false, edit: false, delete: false },
     sales: { view: true, add: true, edit: true, delete: false, print: true },
     purchases: { view: true, add: true, edit: true, delete: false, print: true },
     accounting: { view: true, add: true, edit: true, delete: true },
+    hr: { view: false, add: false, edit: false, delete: false },
     reports: { view: true, generate: true },
     analytics: { view: true },
     users: { view: false, add: false, edit: false, delete: false },
@@ -58,12 +59,12 @@ const initialRoles = {
   },
   "أمين مخزن": {
     dashboard: { view: true },
-    branches: { view: false, add: false, edit: false, delete: false },
     masterData: { view: true, add: false, edit: false, delete: false },
     inventory: { view: true, add: true, edit: true, delete: true },
     sales: { view: false, add: false, edit: false, delete: false, print: false },
     purchases: { view: false, add: false, edit: false, delete: false, print: false },
     accounting: { view: false, add: false, edit: false, delete: false },
+    hr: { view: false, add: false, edit: false, delete: false },
     reports: { view: true, generate: false },
     analytics: { view: false },
     users: { view: false, add: false, edit: false, delete: false },
@@ -72,12 +73,12 @@ const initialRoles = {
   },
   "أمين صندوق": {
     dashboard: { view: true },
-    branches: { view: false, add: false, edit: false, delete: false },
     masterData: { view: true, add: false, edit: false, delete: false },
     inventory: { view: false, add: false, edit: false, delete: false },
     sales: { view: true, add: true, edit: false, delete: false, print: true },
     purchases: { view: true, add: true, edit: false, delete: false, print: true },
     accounting: { view: true, add: true, edit: false, delete: false },
+    hr: { view: false, add: false, edit: false, delete: false },
     reports: { view: true, generate: false },
     analytics: { view: true },
     users: { view: false, add: false, edit: false, delete: false },
@@ -88,12 +89,12 @@ const initialRoles = {
 
 const permissionsMap = {
   dashboard: { label: "لوحة التحكم", actions: { view: "عرض" } },
-
   masterData: { label: "البيانات الرئيسية", actions: { view: "عرض", add: "إضافة", edit: "تعديل", delete: "حذف" } },
   inventory: { label: "المخزون", actions: { view: "عرض", add: "إضافة", edit: "تعديل", delete: "حذف" } },
   sales: { label: "المبيعات", actions: { view: "عرض", add: "إضافة", edit: "تعديل", delete: "حذف", print: "طباعة" } },
   purchases: { label: "المشتريات", actions: { view: "عرض", add: "إضافة", edit: "تعديل", delete: "حذف", print: "طباعة" } },
   accounting: { label: "المحاسبة", actions: { view: "عرض", add: "إضافة", edit: "تعديل", delete: "حذف" } },
+  hr: { label: "الموارد البشرية", actions: { view: "عرض", add: "إضافة", edit: "تعديل", delete: "حذف" } },
   reports: { label: "التقارير", actions: { view: "عرض", generate: "إنشاء" } },
   analytics: { label: "التقارير الرسومية", actions: { view: "عرض" } },
   users: { label: "المستخدمون", actions: { view: "عرض", add: "إضافة", edit: "تعديل", delete: "حذف" } },
@@ -165,7 +166,7 @@ export default function RolesPage() {
                       <TableBody>
                         {Object.keys(permissionsMap).map((moduleKey) => {
                           const module = moduleKey as Module;
-                          const moduleInfo = permissionsMap[module];
+                          const moduleInfo = permissionsMap[module as keyof typeof permissionsMap];
                           const moduleActions = moduleInfo.actions;
                           const rolePermissions = roles[role as Role][module];
 
