@@ -1,5 +1,4 @@
 import {
-  Activity,
   ArrowUpRight,
   CreditCard,
   DollarSign,
@@ -45,7 +44,7 @@ export default function Dashboard() {
           <Select defaultValue="br001">
             <SelectTrigger
               id="branch-select"
-              className="w-[180px] bg-card"
+              className="w-auto md:w-[180px] bg-card"
             >
               <SelectValue placeholder="اختر فرعًا" />
             </SelectTrigger>

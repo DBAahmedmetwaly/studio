@@ -38,6 +38,7 @@ import { Button } from "./ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
 import { cn } from "@/lib/utils";
+import { ModeToggle } from "./mode-toggle";
 
 const Logo = () => (
     <div className="flex items-center gap-2" >
@@ -70,7 +71,7 @@ const NavCollapsible = ({ title, icon, children }: { title: string; icon: React.
         }
         return null;
     }) || [];
-    const isOpen = childPaths.some(path => pathname.startsWith(path));
+    const isOpen = childPaths.some(path => path && pathname.startsWith(path));
 
     return (
         <Collapsible defaultOpen={isOpen}>
@@ -160,11 +161,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <header className="flex h-14 items-center gap-4 border-b bg-card px-6">
-            <SidebarTrigger className="md:hidden" />
+        <header className="flex h-14 items-center gap-4 border-b bg-background px-6">
             <div className="flex-1">
                 {/* Header content can go here */}
             </div>
+            <ModeToggle />
+            <SidebarTrigger className="md:hidden" />
         </header>
         {children}
         </SidebarInset>
