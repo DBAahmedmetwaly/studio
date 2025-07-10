@@ -136,10 +136,6 @@ export default function StockInPage() {
     <>
       <PageHeader title="استلام مخزون">
         <div className="flex gap-2 no-print">
-            <Button variant="outline">
-                <Save className="ml-2 h-4 w-4" />
-                حفظ كمسودة
-            </Button>
             <Button onClick={handlePrint}>
                 <Printer className="ml-2 h-4 w-4" />
                 طباعة
@@ -192,49 +188,51 @@ export default function StockInPage() {
                     
                     <div>
                       <Label>الأصناف المستلمة</Label>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="w-[60%]">الصنف</TableHead>
-                            <TableHead>الكمية</TableHead>
-                            <TableHead className="text-left no-print">الإجراء</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {items.map((item) => (
-                            <TableRow key={item.uniqueId}>
-                              <TableCell>{item.name}</TableCell>
-                              <TableCell>{item.qty}</TableCell>
-                              <TableCell className="text-left no-print">
-                                <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.uniqueId)}>
-                                  <Trash2 className="h-4 w-4 text-destructive" />
-                                </Button>
-                              </TableCell>
+                      <div className="w-full overflow-auto border rounded-lg">
+                        <Table>
+                            <TableHeader>
+                            <TableRow>
+                                <TableHead className="w-[60%]">الصنف</TableHead>
+                                <TableHead className="text-center">الكمية</TableHead>
+                                <TableHead className="text-center w-[100px] no-print">الإجراء</TableHead>
                             </TableRow>
-                          ))}
-                          <TableRow className="no-print">
-                             <TableCell>
-                                <Select value={newItem.id} onValueChange={(value) => setNewItem({ ...newItem, id: value })}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="اختر صنفًا" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                       {availableItems.map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                             </TableCell>
-                             <TableCell>
-                                <Input type="number" placeholder="الكمية" value={newItem.qty} onChange={e => setNewItem({...newItem, qty: parseInt(e.target.value) || 1})} />
-                             </TableCell>
-                             <TableCell>
-                                 <Button onClick={handleAddItem}>
-                                    <PlusCircle className="ml-2 h-4 w-4" />
-                                    إضافة
-                                 </Button>
-                             </TableCell>
-                          </TableRow>
-                        </TableBody>
-                      </Table>
+                            </TableHeader>
+                            <TableBody>
+                            {items.map((item) => (
+                                <TableRow key={item.uniqueId}>
+                                <TableCell>{item.name}</TableCell>
+                                <TableCell className="text-center">{item.qty}</TableCell>
+                                <TableCell className="text-center no-print">
+                                    <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.uniqueId)}>
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                </TableCell>
+                                </TableRow>
+                            ))}
+                            <TableRow className="no-print bg-muted/30">
+                                <TableCell>
+                                    <Select value={newItem.id} onValueChange={(value) => setNewItem({ ...newItem, id: value })}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="اختر صنفًا" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                        {availableItems.map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </TableCell>
+                                <TableCell>
+                                    <Input type="number" placeholder="الكمية" value={newItem.qty} onChange={e => setNewItem({...newItem, qty: parseInt(e.target.value) || 1})} />
+                                </TableCell>
+                                <TableCell className="text-center">
+                                    <Button onClick={handleAddItem} size="sm">
+                                        <PlusCircle className="ml-2 h-4 w-4" />
+                                        إضافة
+                                    </Button>
+                                </TableCell>
+                            </TableRow>
+                            </TableBody>
+                        </Table>
+                       </div>
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="notes">ملاحظات</Label>

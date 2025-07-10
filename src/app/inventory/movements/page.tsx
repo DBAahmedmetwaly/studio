@@ -87,7 +87,7 @@ export default function InventoryMovementsPage() {
       
       return true;
     });
-  }, [stockIns, stockOuts, stockTransfers, filters]);
+  }, [stockIns, stockOuts, stockTransfers, filters, warehouses]);
 
 
   const handleFilterChange = (key: keyof typeof filters, value: string) => {
@@ -163,55 +163,57 @@ export default function InventoryMovementsPage() {
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
             ) : (
-                <Table>
-                <TableHeader>
-                    <TableRow>
-                    <TableHead className="text-center w-[150px]">نوع الحركة</TableHead>
-                    <TableHead className="w-[150px]">رقم الإيصال</TableHead>
-                    <TableHead className="w-[150px]">التاريخ</TableHead>
-                    <TableHead>التفاصيل</TableHead>
-                    <TableHead>الأصناف</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {filteredMovements.length > 0 ? filteredMovements.map((move) => (
-                    <TableRow key={`${move.type}-${move.id}`}>
-                        <TableCell className="text-center">
-                        <Badge variant={
-                            move.type === 'in' ? 'default' :
-                            move.type === 'out' ? 'destructive' :
-                            'secondary'
-                        }>
-                            {move.type === 'in' && <ArrowDown className="h-3 w-3 -ml-1" />}
-                            {move.type === 'out' && <ArrowUp className="h-3 w-3 -ml-1" />}
-                            {move.type === 'transfer' && <ArrowLeftRight className="h-3 w-3 -ml-1" />}
-                            <span className="mr-1">{move.typeLabel}</span>
-                        </Badge>
-                        </TableCell>
-                        <TableCell className="font-mono">{move.receiptNumber}</TableCell>
-                        <TableCell>{new Date(move.date).toLocaleDateString('ar-EG')}</TableCell>
-                        <TableCell>
-                        {move.type === 'in' && `إلى: ${getSourceName(move.warehouseId)}`}
-                        {move.type === 'out' && `من: ${getSourceName(move.sourceId)}`}
-                        {move.type === 'transfer' && `من: ${getSourceName(move.fromSourceId)} إلى: ${getSourceName(move.toSourceId)}`}
-                        </TableCell>
-                        <TableCell>
-                        {move.items.map((item: any, index: number) => (
-                            <div key={index} className="text-xs">
-                            {item.name} (الكمية: {item.qty})
-                            </div>
-                        ))}
-                        </TableCell>
-                    </TableRow>
-                    )) : (
-                    <TableRow>
-                            <TableCell colSpan={5} className="text-center text-muted-foreground py-10">
-                                لا توجد حركات مخزون مسجلة تطابق الفلاتر.
-                            </TableCell>
-                        </TableRow>
-                    )}
-                </TableBody>
-                </Table>
+                <div className="w-full overflow-auto border rounded-lg">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                            <TableHead className="text-center w-[150px]">نوع الحركة</TableHead>
+                            <TableHead className="w-[150px]">رقم الإيصال</TableHead>
+                            <TableHead className="w-[150px]">التاريخ</TableHead>
+                            <TableHead>التفاصيل</TableHead>
+                            <TableHead>الأصناف</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {filteredMovements.length > 0 ? filteredMovements.map((move) => (
+                            <TableRow key={`${move.type}-${move.id}`}>
+                                <TableCell className="text-center">
+                                <Badge variant={
+                                    move.type === 'in' ? 'default' :
+                                    move.type === 'out' ? 'destructive' :
+                                    'secondary'
+                                }>
+                                    {move.type === 'in' && <ArrowDown className="h-3 w-3 -ml-1" />}
+                                    {move.type === 'out' && <ArrowUp className="h-3 w-3 -ml-1" />}
+                                    {move.type === 'transfer' && <ArrowLeftRight className="h-3 w-3 -ml-1" />}
+                                    <span className="mr-1">{move.typeLabel}</span>
+                                </Badge>
+                                </TableCell>
+                                <TableCell className="font-mono">{move.receiptNumber}</TableCell>
+                                <TableCell>{new Date(move.date).toLocaleDateString('ar-EG')}</TableCell>
+                                <TableCell>
+                                {move.type === 'in' && `إلى: ${getSourceName(move.warehouseId)}`}
+                                {move.type === 'out' && `من: ${getSourceName(move.sourceId)}`}
+                                {move.type === 'transfer' && `من: ${getSourceName(move.fromSourceId)} إلى: ${getSourceName(move.toSourceId)}`}
+                                </TableCell>
+                                <TableCell>
+                                {move.items.map((item: any, index: number) => (
+                                    <div key={index} className="text-xs">
+                                    {item.name} (الكمية: {item.qty})
+                                    </div>
+                                ))}
+                                </TableCell>
+                            </TableRow>
+                            )) : (
+                            <TableRow>
+                                    <TableCell colSpan={5} className="text-center text-muted-foreground py-10">
+                                        لا توجد حركات مخزون مسجلة تطابق الفلاتر.
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
             )}
           </CardContent>
         </Card>
