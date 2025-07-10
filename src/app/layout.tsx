@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Noto_Kufi_Arabic } from "next/font/google";
 import "./globals.css";
-import { AppLayout } from "@/components/app-layout";
+import { AppLayout } from "@/app/app-layout";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
 

@@ -110,14 +110,14 @@ export default function SalesInvoicePage() {
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6 printable-area">
         <Card>
           <CardHeader>
-            <div className="flex justify-between items-start">
+            <div className="flex flex-col md:flex-row justify-between items-start gap-4">
                 <div>
                     <CardTitle>فاتورة بيع</CardTitle>
                     <CardDescription>
                         شركة المحاسب الذكي
                     </CardDescription>
                 </div>
-                <div className="text-left">
+                <div className="text-left text-sm md:text-base">
                     <div className="font-bold text-lg">فاتورة #INV-00123</div>
                     <div>تاريخ الفاتورة: {new Date().toLocaleDateString('ar-EG')}</div>
                     <div>تاريخ الاستحقاق: {new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('ar-EG')}</div>
