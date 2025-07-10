@@ -4,7 +4,7 @@
 import React, { createContext, useContext, useMemo } from 'react';
 
 // This is a simplified version. In a real app, you'd fetch this from your auth provider/backend.
-const MOCK_CURRENT_USER_ROLE: Role = 'محاسب'; 
+const MOCK_CURRENT_USER_ROLE: Role = 'مسؤول'; 
 
 const allRoles = {
   مسؤول: {
