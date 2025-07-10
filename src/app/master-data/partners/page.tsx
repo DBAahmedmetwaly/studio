@@ -162,22 +162,20 @@ export default function PartnersPage() {
                     <TableHeader>
                         <TableRow>
                             <TableHead>اسم الشريك</TableHead>
-                            <TableHead>رأس المال</TableHead>
-                            <TableHead>حصة الأرباح (%)</TableHead>
+                            <TableHead className="text-center">رأس المال</TableHead>
+                            <TableHead className="text-center">حصة الأرباح (%)</TableHead>
                             <TableHead>المخزن</TableHead>
-                            <TableHead>
-                                <span className="sr-only">الإجراءات</span>
-                            </TableHead>
+                            <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {partners.map((partner) => (
                             <TableRow key={partner.id}>
                                 <TableCell className="font-medium">{partner.name}</TableCell>
-                                <TableCell>{partner.capital}</TableCell>
-                                <TableCell>{partner.profitShare}%</TableCell>
+                                <TableCell className="text-center">{partner.capital}</TableCell>
+                                <TableCell className="text-center">{partner.profitShare}%</TableCell>
                                 <TableCell>{getWarehouseName(partner.warehouseId)}</TableCell>
-                                <TableCell>
+                                <TableCell className="text-center">
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
                                         <Button aria-haspopup="true" size="icon" variant="ghost">

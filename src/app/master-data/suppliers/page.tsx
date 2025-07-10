@@ -112,7 +112,7 @@ export default function SuppliersPage() {
             </Button>
           }
         >
-          <SupplierForm onSave={handleSave} />
+          <SupplierForm onSave={handleSave} onClose={()=>{}} />
         </AddEntityDialog>
       </PageHeader>
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
@@ -134,10 +134,8 @@ export default function SuppliersPage() {
                         <TableRow>
                             <TableHead>اسم المورد</TableHead>
                             <TableHead>جهة الاتصال</TableHead>
-                            <TableHead>رصيد أول المدة</TableHead>
-                            <TableHead>
-                                <span className="sr-only">الإجراءات</span>
-                            </TableHead>
+                            <TableHead className="text-center">رصيد أول المدة</TableHead>
+                            <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -145,8 +143,8 @@ export default function SuppliersPage() {
                             <TableRow key={supplier.id}>
                                 <TableCell className="font-medium">{supplier.name}</TableCell>
                                 <TableCell>{supplier.contact}</TableCell>
-                                <TableCell>{supplier.openingBalance}</TableCell>
-                                <TableCell>
+                                <TableCell className="text-center">{supplier.openingBalance}</TableCell>
+                                <TableCell className="text-center">
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
                                         <Button aria-haspopup="true" size="icon" variant="ghost">
@@ -166,7 +164,7 @@ export default function SuppliersPage() {
                                                 </DropdownMenuItem>
                                             }
                                         >
-                                           <SupplierForm supplier={supplier} onSave={handleSave} />
+                                           <SupplierForm supplier={supplier} onSave={handleSave} onClose={()=>{}}/>
                                         </AddEntityDialog>
                                         <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(supplier.id!)}>
                                             <Trash2 className="ml-2 h-4 w-4" />

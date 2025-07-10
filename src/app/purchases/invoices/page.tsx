@@ -207,20 +207,20 @@ export default function PurchaseInvoicePage() {
                     <TableHeader>
                     <TableRow>
                         <TableHead className="w-[40%]">الصنف</TableHead>
-                        <TableHead>الكمية</TableHead>
-                        <TableHead>سعر الوحدة</TableHead>
-                        <TableHead className="text-left">الإجمالي</TableHead>
-                        <TableHead className="text-left no-print">الإجراء</TableHead>
+                        <TableHead className="text-center">الكمية</TableHead>
+                        <TableHead className="text-center">سعر الوحدة</TableHead>
+                        <TableHead className="text-center">الإجمالي</TableHead>
+                        <TableHead className="text-center w-[100px] no-print">الإجراء</TableHead>
                     </TableRow>
                     </TableHeader>
                     <TableBody>
                     {items.map((item, index) => (
                         <TableRow key={item.id}>
                         <TableCell>{item.name}</TableCell>
-                        <TableCell>{item.qty}</TableCell>
-                        <TableCell>ج.م {item.price.toFixed(2)}</TableCell>
-                        <TableCell className="text-left">ج.م {item.total.toFixed(2)}</TableCell>
-                        <TableCell className="text-left no-print">
+                        <TableCell className="text-center">{item.qty}</TableCell>
+                        <TableCell className="text-center">ج.م {item.price.toFixed(2)}</TableCell>
+                        <TableCell className="text-center">ج.م {item.total.toFixed(2)}</TableCell>
+                        <TableCell className="text-center no-print">
                             <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)}>
                             <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>

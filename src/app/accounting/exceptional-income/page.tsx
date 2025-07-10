@@ -123,10 +123,10 @@ export default function ExceptionalIncomePage() {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>التاريخ</TableHead>
+                                <TableHead className="w-[150px]">التاريخ</TableHead>
                                 <TableHead>الوصف</TableHead>
-                                <TableHead>المبلغ</TableHead>
-                                <TableHead><span className="sr-only">الإجراءات</span></TableHead>
+                                <TableHead className="text-center w-[150px]">المبلغ</TableHead>
+                                <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -134,8 +134,8 @@ export default function ExceptionalIncomePage() {
                                 <TableRow key={income.id}>
                                     <TableCell>{new Date(income.date).toLocaleDateString('ar-EG')}</TableCell>
                                     <TableCell>{income.description}</TableCell>
-                                    <TableCell>{income.amount.toLocaleString()}</TableCell>
-                                    <TableCell>
+                                    <TableCell className="text-center">{income.amount.toLocaleString()}</TableCell>
+                                    <TableCell className="text-center">
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
                                                 <Button aria-haspopup="true" size="icon" variant="ghost">

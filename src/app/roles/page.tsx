@@ -88,7 +88,7 @@ const initialRoles = {
 
 const permissionsMap = {
   dashboard: { label: "لوحة التحكم", actions: { view: "عرض" } },
-  branches: { label: "الفروع", actions: { view: "عرض", add: "إضافة", edit: "تعديل", delete: "حذف" } },
+
   masterData: { label: "البيانات الرئيسية", actions: { view: "عرض", add: "إضافة", edit: "تعديل", delete: "حذف" } },
   inventory: { label: "المخزون", actions: { view: "عرض", add: "إضافة", edit: "تعديل", delete: "حذف" } },
   sales: { label: "المبيعات", actions: { view: "عرض", add: "إضافة", edit: "تعديل", delete: "حذف", print: "طباعة" } },

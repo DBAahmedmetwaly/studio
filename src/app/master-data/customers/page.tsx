@@ -148,20 +148,18 @@ export default function CustomersPage() {
                     <TableHeader>
                         <TableRow>
                             <TableHead>اسم العميل</TableHead>
-                            <TableHead>رصيد أول المدة</TableHead>
-                            <TableHead>حد الائتمان</TableHead>
-                            <TableHead>
-                                <span className="sr-only">الإجراءات</span>
-                            </TableHead>
+                            <TableHead className="text-center">رصيد أول المدة</TableHead>
+                            <TableHead className="text-center">حد الائتمان</TableHead>
+                            <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {customers.map((customer) => (
                             <TableRow key={customer.id}>
                                 <TableCell className="font-medium">{customer.name}</TableCell>
-                                <TableCell>{customer.openingBalance}</TableCell>
-                                <TableCell>{customer.creditLimit}</TableCell>
-                                <TableCell>
+                                <TableCell className="text-center">{customer.openingBalance}</TableCell>
+                                <TableCell className="text-center">{customer.creditLimit}</TableCell>
+                                <TableCell className="text-center">
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
                                         <Button aria-haspopup="true" size="icon" variant="ghost">

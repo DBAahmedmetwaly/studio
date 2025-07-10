@@ -137,11 +137,9 @@ export default function UsersPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>المستخدم</TableHead>
-                  <TableHead>الدور</TableHead>
+                  <TableHead className="text-center">الدور</TableHead>
                   <TableHead>المخزن</TableHead>
-                  <TableHead>
-                    <span className="sr-only">الإجراءات</span>
-                  </TableHead>
+                  <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -158,11 +156,11 @@ export default function UsersPage() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-center">
                       <Badge variant="outline">{user.role}</Badge>
                     </TableCell>
                     <TableCell>{user.warehouse}</TableCell>
-                    <TableCell>
+                    <TableCell className="text-center">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button aria-haspopup="true" size="icon" variant="ghost">

@@ -157,22 +157,20 @@ export default function ItemsPage() {
                     <TableHeader>
                         <TableRow>
                             <TableHead>اسم الصنف</TableHead>
-                            <TableHead>الوحدة</TableHead>
-                            <TableHead>السعر</TableHead>
-                            <TableHead>رصيد أول المدة</TableHead>
-                            <TableHead>
-                                <span className="sr-only">الإجراءات</span>
-                            </TableHead>
+                            <TableHead className="text-center">الوحدة</TableHead>
+                            <TableHead className="text-center">السعر</TableHead>
+                            <TableHead className="text-center">رصيد أول المدة</TableHead>
+                            <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {items.map((item) => (
                             <TableRow key={item.id}>
                                 <TableCell className="font-medium">{item.name}</TableCell>
-                                <TableCell>{getUnitLabel(item.unit)}</TableCell>
-                                <TableCell>{item.price}</TableCell>
-                                <TableCell>{item.openingStock}</TableCell>
-                                <TableCell>
+                                <TableCell className="text-center">{getUnitLabel(item.unit)}</TableCell>
+                                <TableCell className="text-center">{item.price}</TableCell>
+                                <TableCell className="text-center">{item.openingStock}</TableCell>
+                                <TableCell className="text-center">
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
                                             <Button aria-haspopup="true" size="icon" variant="ghost">

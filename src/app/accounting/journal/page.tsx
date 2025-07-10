@@ -39,12 +39,12 @@ export default function JournalPage() {
              <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead>التاريخ</TableHead>
-                        <TableHead>رقم القيد</TableHead>
+                        <TableHead className="w-[120px]">التاريخ</TableHead>
+                        <TableHead className="w-[120px]">رقم القيد</TableHead>
                         <TableHead>البيان</TableHead>
                         <TableHead>الحساب</TableHead>
-                        <TableHead className="text-center">مدين</TableHead>
-                        <TableHead className="text-center">دائن</TableHead>
+                        <TableHead className="text-center w-[150px]">مدين</TableHead>
+                        <TableHead className="text-center w-[150px]">دائن</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>

@@ -166,9 +166,9 @@ export default function InventoryMovementsPage() {
                 <Table>
                 <TableHeader>
                     <TableRow>
-                    <TableHead>نوع الحركة</TableHead>
-                    <TableHead>رقم الإيصال</TableHead>
-                    <TableHead>التاريخ</TableHead>
+                    <TableHead className="text-center w-[150px]">نوع الحركة</TableHead>
+                    <TableHead className="w-[150px]">رقم الإيصال</TableHead>
+                    <TableHead className="w-[150px]">التاريخ</TableHead>
                     <TableHead>التفاصيل</TableHead>
                     <TableHead>الأصناف</TableHead>
                     </TableRow>
@@ -176,7 +176,7 @@ export default function InventoryMovementsPage() {
                 <TableBody>
                     {filteredMovements.length > 0 ? filteredMovements.map((move) => (
                     <TableRow key={`${move.type}-${move.id}`}>
-                        <TableCell>
+                        <TableCell className="text-center">
                         <Badge variant={
                             move.type === 'in' ? 'default' :
                             move.type === 'out' ? 'destructive' :

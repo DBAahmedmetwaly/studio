@@ -110,7 +110,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <SidebarContent>
           <SidebarMenu>
             <NavLink href="/" icon={<LayoutDashboard />}>لوحة التحكم</NavLink>
-            <NavLink href="/branches" icon={<GitFork />}>الفروع</NavLink>
+         
             
             <NavCollapsible title="البيانات الرئيسية" icon={<Package />}>
                 <NavSubLink href="/master-data/items">الأصناف</NavSubLink>
