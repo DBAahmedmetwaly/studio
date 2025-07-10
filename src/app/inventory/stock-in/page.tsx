@@ -10,17 +10,17 @@ import {
 export default function StockInPage() {
   return (
     <>
-      <PageHeader title="Stock In" />
+      <PageHeader title="إدخال مخزون" />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
         <Card>
           <CardHeader>
-            <CardTitle>Stock In</CardTitle>
+            <CardTitle>إدخال مخزون</CardTitle>
             <CardDescription>
-              Record incoming stock, e.g., purchases, opening stock.
+              تسجيل المخزون الوارد، مثل المشتريات والمخزون الافتتاحي.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p>Stock In form will be displayed here.</p>
+            <p>سيتم عرض نموذج إدخال المخزون هنا.</p>
           </CardContent>
         </Card>
       </main>

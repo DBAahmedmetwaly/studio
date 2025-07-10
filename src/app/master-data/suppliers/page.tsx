@@ -12,22 +12,22 @@ import {
 export default function SuppliersPage() {
   return (
     <>
-      <PageHeader title="Supplier Management">
+      <PageHeader title="إدارة الموردين">
         <Button size="sm" className="gap-1">
           <PlusCircle className="h-4 w-4" />
-          Add Supplier
+          إضافة مورد
         </Button>
       </PageHeader>
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
         <Card>
           <CardHeader>
-            <CardTitle>Suppliers</CardTitle>
+            <CardTitle>الموردون</CardTitle>
             <CardDescription>
-              Manage suppliers with contact info and balances.
+              إدارة الموردين مع معلومات الاتصال والأرصدة.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p>Supplier management table will be displayed here.</p>
+            <p>سيتم عرض جدول إدارة الموردين هنا.</p>
           </CardContent>
         </Card>
       </main>

@@ -12,22 +12,22 @@ import {
 export default function PartnersPage() {
   return (
     <>
-      <PageHeader title="Partner Management">
+      <PageHeader title="إدارة الشركاء">
         <Button size="sm" className="gap-1">
           <PlusCircle className="h-4 w-4" />
-          Add Partner
+          إضافة شريك
         </Button>
       </PageHeader>
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
         <Card>
           <CardHeader>
-            <CardTitle>Partners</CardTitle>
+            <CardTitle>الشركاء</CardTitle>
             <CardDescription>
-              Manage partners with capital and profit share.
+              إدارة الشركاء مع رأس المال وحصة الأرباح.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p>Partner management table will be displayed here.</p>
+            <p>سيتم عرض جدول إدارة الشركاء هنا.</p>
           </CardContent>
         </Card>
       </main>

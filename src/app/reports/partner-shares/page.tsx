@@ -10,17 +10,17 @@ import {
 export default function PartnerSharesPage() {
   return (
     <>
-      <PageHeader title="Partner Share Reports" />
+      <PageHeader title="تقارير حصص الشركاء" />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
         <Card>
           <CardHeader>
-            <CardTitle>Partner Shares</CardTitle>
+            <CardTitle>حصص الشركاء</CardTitle>
             <CardDescription>
-              Reports on partner capital and profit distribution.
+              تقارير عن رأس مال الشركاء وتوزيع الأرباح.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p>Partner share reports will be displayed here.</p>
+            <p>سيتم عرض تقارير حصص الشركاء هنا.</p>
           </CardContent>
         </Card>
       </main>

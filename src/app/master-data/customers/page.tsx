@@ -12,22 +12,22 @@ import {
 export default function CustomersPage() {
   return (
     <>
-      <PageHeader title="Customer Management">
+      <PageHeader title="إدارة العملاء">
         <Button size="sm" className="gap-1">
           <PlusCircle className="h-4 w-4" />
-          Add Customer
+          إضافة عميل
         </Button>
       </PageHeader>
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
         <Card>
           <CardHeader>
-            <CardTitle>Customers</CardTitle>
+            <CardTitle>العملاء</CardTitle>
             <CardDescription>
-              Manage customers with credit limits and opening balances.
+              إدارة العملاء مع حدود الائتمان والأرصدة الافتتاحية.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p>Customer management table will be displayed here.</p>
+            <p>سيتم عرض جدول إدارة العملاء هنا.</p>
           </CardContent>
         </Card>
       </main>

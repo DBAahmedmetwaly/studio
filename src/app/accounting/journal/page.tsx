@@ -10,17 +10,17 @@ import {
 export default function JournalPage() {
   return (
     <>
-      <PageHeader title="Journal Entries" />
+      <PageHeader title="قيود اليومية" />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
         <Card>
           <CardHeader>
-            <CardTitle>Journal Entries</CardTitle>
+            <CardTitle>قيود اليومية</CardTitle>
             <CardDescription>
-              Create and manage manual journal entries.
+              إنشاء وإدارة قيود اليومية اليدوية.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p>Journal Entries table will be displayed here.</p>
+            <p>سيتم عرض جدول قيود اليومية هنا.</p>
           </CardContent>
         </Card>
       </main>

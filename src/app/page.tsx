@@ -37,21 +37,21 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 export default function Dashboard() {
   return (
     <>
-      <PageHeader title="Dashboard">
+      <PageHeader title="لوحة التحكم">
         <div className="flex items-center space-x-2">
           <label htmlFor="branch-select" className="text-sm font-medium">
-            Branch:
+            الفرع:
           </label>
           <Select defaultValue="br001">
             <SelectTrigger
               id="branch-select"
               className="w-[180px] bg-card"
             >
-              <SelectValue placeholder="Select a branch" />
+              <SelectValue placeholder="اختر فرعًا" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="br001">Main Branch – Cairo</SelectItem>
-              <SelectItem value="br002">Alexandria Branch</SelectItem>
+              <SelectItem value="br001">الفرع الرئيسي - القاهرة</SelectItem>
+              <SelectItem value="br002">فرع الإسكندرية</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -61,54 +61,54 @@ export default function Dashboard() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                Total Revenue
+                إجمالي الإيرادات
               </CardTitle>
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold font-headline">$45,231.89</div>
               <p className="text-xs text-muted-foreground">
-                +20.1% from last month
+                +20.1% عن الشهر الماضي
               </p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                New Customers
+                عملاء جدد
               </CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold font-headline">+235</div>
               <p className="text-xs text-muted-foreground">
-                +180.1% from last month
+                +180.1% عن الشهر الماضي
               </p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Sales</CardTitle>
+              <CardTitle className="text-sm font-medium">المبيعات</CardTitle>
               <CreditCard className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold font-headline">+12,234</div>
               <p className="text-xs text-muted-foreground">
-                +19% from last month
+                +19% عن الشهر الماضي
               </p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                Stock Value
+                قيمة المخزون
               </CardTitle>
               <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold font-headline">$1,250,345</div>
               <p className="text-xs text-muted-foreground">
-                +2% from last month
+                +2% عن الشهر الماضي
               </p>
             </CardContent>
           </Card>
@@ -117,14 +117,14 @@ export default function Dashboard() {
           <Card className="col-span-4">
             <CardHeader className="flex flex-row items-center">
               <div className="grid gap-2">
-                <CardTitle>Recent Transactions</CardTitle>
+                <CardTitle>المعاملات الأخيرة</CardTitle>
                 <CardDescription>
-                  Recent transactions from your store.
+                  المعاملات الأخيرة من متجرك.
                 </CardDescription>
               </div>
-              <Button asChild size="sm" className="ml-auto gap-1">
+              <Button asChild size="sm" className="mr-auto gap-1">
                 <Link href="#">
-                  View All
+                  عرض الكل
                   <ArrowUpRight className="h-4 w-4" />
                 </Link>
               </Button>
@@ -133,17 +133,17 @@ export default function Dashboard() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Customer</TableHead>
+                    <TableHead>العميل</TableHead>
                     <TableHead className="hidden xl:table-column">
-                      Type
+                      النوع
                     </TableHead>
                     <TableHead className="hidden xl:table-column">
-                      Status
+                      الحالة
                     </TableHead>
                     <TableHead className="hidden xl:table-column">
-                      Date
+                      التاريخ
                     </TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead className="text-left">المبلغ</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -158,21 +158,21 @@ export default function Dashboard() {
                             />
                             <AvatarFallback>OM</AvatarFallback>
                           </Avatar>
-                          <div className="font-medium">Olivia Martin</div>
+                          <div className="font-medium">أوليفيا مارتن</div>
                         </div>
                       </TableCell>
                       <TableCell className="hidden xl:table-column">
-                        Sale
+                        بيع
                       </TableCell>
                       <TableCell className="hidden xl:table-column">
                         <Badge className="text-xs" variant="outline">
-                          Approved
+                          موافق عليه
                         </Badge>
                       </TableCell>
                       <TableCell className="hidden md:table-cell lg:hidden xl:table-column">
                         2023-06-23
                       </TableCell>
-                      <TableCell className="text-right">$250.00</TableCell>
+                      <TableCell className="text-left">$250.00</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -181,9 +181,9 @@ export default function Dashboard() {
           </Card>
           <Card className="col-span-4 lg:col-span-3">
             <CardHeader>
-              <CardTitle>Low Stock Items</CardTitle>
+              <CardTitle>عناصر على وشك النفاذ</CardTitle>
               <CardDescription>
-                These items are running low in stock.
+                هذه العناصر مخزونها قليل.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -194,11 +194,11 @@ export default function Dashboard() {
                     <AvatarImage src={`https://placehold.co/100x100.png`} alt="Avatar" data-ai-hint="product" />
                     <AvatarFallback>P{i+1}</AvatarFallback>
                   </Avatar>
-                  <div className="ml-4 space-y-1">
-                    <p className="text-sm font-medium leading-none">Product {i+1}</p>
+                  <div className="mx-4 space-y-1">
+                    <p className="text-sm font-medium leading-none">منتج {i+1}</p>
                     <p className="text-sm text-muted-foreground">SKU: PRD-00{i+1}</p>
                   </div>
-                  <div className="ml-auto font-medium text-destructive">{10-i} units</div>
+                  <div className="mr-auto font-medium text-destructive">{10-i} وحدات</div>
                 </div>
               ))}
             </div>

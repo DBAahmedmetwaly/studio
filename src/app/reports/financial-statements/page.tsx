@@ -16,50 +16,50 @@ import {
 export default function FinancialStatementsPage() {
   return (
     <>
-      <PageHeader title="Financial Statements" />
+      <PageHeader title="القوائم المالية" />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
         <Tabs defaultValue="income-statement">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="income-statement">Income Statement</TabsTrigger>
-            <TabsTrigger value="balance-sheet">Balance Sheet</TabsTrigger>
-            <TabsTrigger value="trial-balance">Trial Balance</TabsTrigger>
+            <TabsTrigger value="income-statement">قائمة الدخل</TabsTrigger>
+            <TabsTrigger value="balance-sheet">الميزانية العمومية</TabsTrigger>
+            <TabsTrigger value="trial-balance">ميزان المراجعة</TabsTrigger>
           </TabsList>
           <TabsContent value="income-statement">
             <Card>
               <CardHeader>
-                <CardTitle>Income Statement</CardTitle>
+                <CardTitle>قائمة الدخل</CardTitle>
                 <CardDescription>
-                  Summary of revenues, expenses, and profits.
+                  ملخص الإيرادات والمصروفات والأرباح.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <p>Income Statement report will be displayed here.</p>
+                <p>سيتم عرض تقرير قائمة الدخل هنا.</p>
               </CardContent>
             </Card>
           </TabsContent>
           <TabsContent value="balance-sheet">
             <Card>
               <CardHeader>
-                <CardTitle>Balance Sheet</CardTitle>
+                <CardTitle>الميزانية العمومية</CardTitle>
                 <CardDescription>
-                  Snapshot of the company's financial health.
+                  لقطة عن الوضع المالي للشركة.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <p>Balance Sheet report will be displayed here.</p>
+                <p>سيتم عرض تقرير الميزانية العمومية هنا.</p>
               </CardContent>
             </Card>
           </TabsContent>
           <TabsContent value="trial-balance">
             <Card>
               <CardHeader>
-                <CardTitle>Trial Balance</CardTitle>
+                <CardTitle>ميزان المراجعة</CardTitle>
                 <CardDescription>
-                  Worksheet of all ledger balances.
+                  ورقة عمل لجميع أرصدة دفتر الأستاذ.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <p>Trial Balance report will be displayed here.</p>
+                <p>سيتم عرض تقرير ميزان المراجعة هنا.</p>
               </CardContent>
             </Card>
           </TabsContent>

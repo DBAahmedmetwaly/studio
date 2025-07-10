@@ -12,22 +12,22 @@ import {
 export default function ItemsPage() {
   return (
     <>
-      <PageHeader title="Items Management">
+      <PageHeader title="إدارة الأصناف">
         <Button size="sm" className="gap-1">
           <PlusCircle className="h-4 w-4" />
-          Add Item
+          إضافة صنف
         </Button>
       </PageHeader>
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
         <Card>
           <CardHeader>
-            <CardTitle>Items</CardTitle>
+            <CardTitle>الأصناف</CardTitle>
             <CardDescription>
-              Define items with categories, units, and prices.
+              تحديد الأصناف مع الفئات والوحدات والأسعار.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p>Item management table will be displayed here.</p>
+            <p>سيتم عرض جدول إدارة الأصناف هنا.</p>
           </CardContent>
         </Card>
       </main>

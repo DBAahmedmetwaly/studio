@@ -42,7 +42,7 @@ import { cn } from "@/lib/utils";
 const Logo = () => (
     <div className="flex items-center gap-2" >
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-7 w-7 text-primary"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
-        <h1 className="text-lg font-bold font-headline text-primary-foreground">MultiBranch</h1>
+        <h1 className="text-lg font-bold font-headline text-primary-foreground">متعدد الفروع</h1>
     </div>
 );
 
@@ -79,7 +79,7 @@ const NavCollapsible = ({ title, icon, children }: { title: string; icon: React.
                     <SidebarMenuButton>
                         {icon}
                         <span>{title}</span>
-                        <ChevronDown className="ml-auto h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                        <ChevronDown className="mr-auto h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" />
                     </SidebarMenuButton>
                 </CollapsibleTrigger>
             </SidebarMenuItem>
@@ -105,7 +105,7 @@ const NavSubLink = ({ href, children }: { href: string; children: React.ReactNod
 export function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider>
-      <Sidebar>
+      <Sidebar side="right">
         <SidebarHeader className="bg-sidebar-primary">
             <div className="flex w-full items-center justify-between p-2">
                 <Logo />
@@ -113,36 +113,36 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>
-            <NavLink href="/" icon={<LayoutDashboard />}>Dashboard</NavLink>
-            <NavLink href="/branches" icon={<GitFork />}>Branches</NavLink>
+            <NavLink href="/" icon={<LayoutDashboard />}>لوحة التحكم</NavLink>
+            <NavLink href="/branches" icon={<GitFork />}>الفروع</NavLink>
             
-            <NavCollapsible title="Master Data" icon={<Package />}>
-                <NavSubLink href="/master-data/items">Items</NavSubLink>
-                <NavSubLink href="/master-data/warehouses">Warehouses</NavSubLink>
-                <NavSubLink href="/master-data/customers">Customers</NavSubLink>
-                <NavSubLink href="/master-data/suppliers">Suppliers</NavSubLink>
-                <NavSubLink href="/master-data/partners">Partners</NavSubLink>
+            <NavCollapsible title="البيانات الرئيسية" icon={<Package />}>
+                <NavSubLink href="/master-data/items">الأصناف</NavSubLink>
+                <NavSubLink href="/master-data/warehouses">المستودعات</NavSubLink>
+                <NavSubLink href="/master-data/customers">العملاء</NavSubLink>
+                <NavSubLink href="/master-data/suppliers">الموردون</NavSubLink>
+                <NavSubLink href="/master-data/partners">الشركاء</NavSubLink>
             </NavCollapsible>
 
-            <NavCollapsible title="Inventory" icon={<Boxes />}>
-                <NavSubLink href="/inventory/stock-in">Stock In</NavSubLink>
-                <NavSubLink href="/inventory/stock-out">Stock Out</NavSubLink>
-                <NavSubLink href="/inventory/transfer">Stock Transfer</NavSubLink>
-                <NavSubLink href="/inventory/adjustment">Stock Adjustment</NavSubLink>
+            <NavCollapsible title="المخزون" icon={<Boxes />}>
+                <NavSubLink href="/inventory/stock-in">إدخال مخزون</NavSubLink>
+                <NavSubLink href="/inventory/stock-out">إخراج مخزون</NavSubLink>
+                <NavSubLink href="/inventory/transfer">تحويل مخزون</NavSubLink>
+                <NavSubLink href="/inventory/adjustment">تسوية المخزون</NavSubLink>
             </NavCollapsible>
 
-             <NavCollapsible title="Accounting" icon={<BookUser />}>
-                <NavSubLink href="/accounting/journal">Journal Entries</NavSubLink>
-                <NavSubLink href="/accounting/ai-analysis">AI Financial Analysis</NavSubLink>
+             <NavCollapsible title="المحاسبة" icon={<BookUser />}>
+                <NavSubLink href="/accounting/journal">قيود اليومية</NavSubLink>
+                <NavSubLink href="/accounting/ai-analysis">تحليل مالي بالذكاء الاصطناعي</NavSubLink>
             </NavCollapsible>
 
-            <NavCollapsible title="Reports" icon={<AreaChart />}>
-                <NavSubLink href="/reports/financial-statements">Financial Statements</NavSubLink>
-                <NavSubLink href="/reports/partner-shares">Partner Shares</NavSubLink>
+            <NavCollapsible title="التقارير" icon={<AreaChart />}>
+                <NavSubLink href="/reports/financial-statements">القوائم المالية</NavSubLink>
+                <NavSubLink href="/reports/partner-shares">حصص الشركاء</NavSubLink>
             </NavCollapsible>
 
-            <NavLink href="/users" icon={<UserCog />}>Users & Permissions</NavLink>
-            <NavLink href="/settings" icon={<Settings />}>Settings</NavLink>
+            <NavLink href="/users" icon={<UserCog />}>المستخدمون والصلاحيات</NavLink>
+            <NavLink href="/settings" icon={<Settings />}>الإعدادات</NavLink>
 
           </SidebarMenu>
         </SidebarContent>
@@ -153,7 +153,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     <AvatarFallback>AD</AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col">
-                    <span className="font-semibold text-sm">Admin User</span>
+                    <span className="font-semibold text-sm">مستخدم مسؤول</span>
                     <span className="text-xs text-muted-foreground">admin@example.com</span>
                 </div>
             </div>

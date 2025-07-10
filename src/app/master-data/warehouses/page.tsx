@@ -12,22 +12,22 @@ import {
 export default function WarehousesPage() {
   return (
     <>
-      <PageHeader title="Warehouse Management">
+      <PageHeader title="إدارة المستودعات">
         <Button size="sm" className="gap-1">
           <PlusCircle className="h-4 w-4" />
-          Add Warehouse
+          إضافة مستودع
         </Button>
       </PageHeader>
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
         <Card>
           <CardHeader>
-            <CardTitle>Warehouses</CardTitle>
+            <CardTitle>المستودعات</CardTitle>
             <CardDescription>
-              Manage warehouses linked to branches.
+              إدارة المستودعات المرتبطة بالفروع.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p>Warehouse management table will be displayed here.</p>
+            <p>سيتم عرض جدول إدارة المستودعات هنا.</p>
           </CardContent>
         </Card>
       </main>

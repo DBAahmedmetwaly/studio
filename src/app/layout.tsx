@@ -15,8 +15,8 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "MultiBranch Accounting",
-  description: "Warehouse & Accounting System",
+  title: "محاسبة متعددة الفروع",
+  description: "نظام المخازن والمحاسبة",
 };
 
 export default function RootLayout({
@@ -25,7 +25,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" dir="ltr" suppressHydrationWarning>
+    <html lang="ar" dir="rtl" suppressHydrationWarning>
       <body
         className={`${inter.variable} ${spaceGrotesk.variable} font-body antialiased`}
       >

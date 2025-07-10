@@ -24,13 +24,13 @@ function SubmitButton() {
     <Button type="submit" disabled={pending}>
       {pending ? (
         <>
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          Analyzing...
+          <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+          جارٍ التحليل...
         </>
       ) : (
         <>
-          <Wand2 className="mr-2 h-4 w-4" />
-          Analyze Entries
+          <Wand2 className="ml-2 h-4 w-4" />
+          تحليل القيود
         </>
       )}
     </Button>
@@ -46,7 +46,7 @@ export default function AiAnalysisClient() {
     if (state.message && state.message !== "Analysis successful." && !state.issues?.length) {
       toast({
         variant: "destructive",
-        title: "Analysis Error",
+        title: "خطأ في التحليل",
         description: state.message,
       });
     }
@@ -57,19 +57,18 @@ export default function AiAnalysisClient() {
       <Card>
         <form action={dispatch}>
           <CardHeader>
-            <CardTitle>Analyze Journal Entries</CardTitle>
+            <CardTitle>تحليل قيود اليومية</CardTitle>
             <CardDescription>
-              Paste your journal entries below. Our AI will provide actionable
-              suggestions for financial improvements.
+              الصق قيود اليومية الخاصة بك أدناه. سيقدم الذكاء الاصطناعي اقتراحات قابلة للتنفيذ لتحسين الوضع المالي.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid w-full gap-2">
-              <Label htmlFor="journalEntries">Journal Entries</Label>
+              <Label htmlFor="journalEntries">قيود اليومية</Label>
               <Textarea
                 id="journalEntries"
                 name="journalEntries"
-                placeholder="Example: 2023-10-01, Debit Cash 1000, Credit Sales Revenue 1000; 2023-10-02, Debit COGS 500, Credit Inventory 500..."
+                placeholder="مثال: 2023-10-01، مدين نقدية 1000، دائن إيرادات مبيعات 1000؛ 2023-10-02، مدين تكلفة البضاعة المباعة 500، دائن مخزون 500..."
                 className="min-h-48"
                 required
               />
@@ -87,9 +86,9 @@ export default function AiAnalysisClient() {
       </Card>
       <Card className="flex flex-col">
         <CardHeader>
-          <CardTitle>AI-Powered Suggestions</CardTitle>
+          <CardTitle>اقتراحات مدعومة بالذكاء الاصطناعي</CardTitle>
           <CardDescription>
-            Actionable insights based on your financial data will appear here.
+            ستظهر هنا رؤى قابلة للتنفيذ بناءً على بياناتك المالية.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex-grow">
@@ -97,13 +96,13 @@ export default function AiAnalysisClient() {
             <div className="flex h-full items-center justify-center">
               <div className="text-center text-muted-foreground">
                 <Loader2 className="mx-auto mb-2 h-8 w-8 animate-spin" />
-                <p>AI is analyzing your data...</p>
+                <p>الذكاء الاصطناعي يحلل بياناتك...</p>
               </div>
             </div>
           ) : state.suggestions ? (
             <Alert>
               <Sparkles className="h-4 w-4" />
-              <AlertTitle>Financial Analysis Complete!</AlertTitle>
+              <AlertTitle>اكتمل التحليل المالي!</AlertTitle>
               <AlertDescription>
                 <div
                   className="prose prose-sm dark:prose-invert"
@@ -117,7 +116,7 @@ export default function AiAnalysisClient() {
             <div className="flex h-full items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/50">
               <div className="text-center text-muted-foreground">
                 <Wand2 className="mx-auto mb-2 h-8 w-8" />
-                <p>Your analysis will be shown here.</p>
+                <p>سيتم عرض تحليلك هنا.</p>
               </div>
             </div>
           )}

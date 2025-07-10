@@ -28,47 +28,47 @@ import { Badge } from "@/components/ui/badge";
 const branches = [
   {
     code: "BR001",
-    name: "Main Branch – Cairo",
-    status: "Active",
+    name: "الفرع الرئيسي - القاهرة",
+    status: "نشط",
   },
   {
     code: "BR002",
-    name: "Alexandria Branch",
-    status: "Active",
+    name: "فرع الإسكندرية",
+    status: "نشط",
   },
   {
     code: "BR003",
-    name: "Giza Branch",
-    status: "Inactive",
+    name: "فرع الجيزة",
+    status: "غير نشط",
   },
 ];
 
 export default function BranchesPage() {
   return (
     <>
-      <PageHeader title="Branches">
+      <PageHeader title="الفروع">
         <Button size="sm" className="gap-1">
           <PlusCircle className="h-4 w-4" />
-          Add Branch
+          إضافة فرع
         </Button>
       </PageHeader>
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
         <Card>
           <CardHeader>
-            <CardTitle>Branch List</CardTitle>
+            <CardTitle>قائمة الفروع</CardTitle>
             <CardDescription>
-              Manage your company branches here.
+              إدارة فروع شركتك من هنا.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Branch Code</TableHead>
-                  <TableHead>Branch Name</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>رمز الفرع</TableHead>
+                  <TableHead>اسم الفرع</TableHead>
+                  <TableHead>الحالة</TableHead>
                   <TableHead>
-                    <span className="sr-only">Actions</span>
+                    <span className="sr-only">الإجراءات</span>
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -78,7 +78,7 @@ export default function BranchesPage() {
                     <TableCell className="font-medium">{branch.code}</TableCell>
                     <TableCell>{branch.name}</TableCell>
                     <TableCell>
-                      <Badge variant={branch.status === "Active" ? "default" : "secondary"}>
+                      <Badge variant={branch.status === "نشط" ? "default" : "secondary"}>
                         {branch.status}
                       </Badge>
                     </TableCell>
@@ -87,13 +87,13 @@ export default function BranchesPage() {
                         <DropdownMenuTrigger asChild>
                           <Button aria-haspopup="true" size="icon" variant="ghost">
                             <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Toggle menu</span>
+                            <span className="sr-only">تبديل القائمة</span>
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem>Edit</DropdownMenuItem>
-                          <DropdownMenuItem>Delete</DropdownMenuItem>
+                          <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+                          <DropdownMenuItem>تعديل</DropdownMenuItem>
+                          <DropdownMenuItem>حذف</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>

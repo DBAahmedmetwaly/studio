@@ -10,17 +10,17 @@ import {
 export default function StockTransferPage() {
   return (
     <>
-      <PageHeader title="Stock Transfer" />
+      <PageHeader title="تحويل مخزون" />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
         <Card>
           <CardHeader>
-            <CardTitle>Stock Transfer</CardTitle>
+            <CardTitle>تحويل مخزون</CardTitle>
             <CardDescription>
-              Transfer stock between warehouses.
+              تحويل المخزون بين المستودعات.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p>Stock Transfer form will be displayed here.</p>
+            <p>سيتم عرض نموذج تحويل المخزون هنا.</p>
           </CardContent>
         </Card>
       </main>
