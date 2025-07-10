@@ -10,18 +10,13 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
+import { InvoiceItemSchema } from '@/ai/schemas';
 
 const ExtractInvoiceItemsInputSchema = z.object({
   text: z.string().describe('The text description of the invoice.'),
 });
 export type ExtractInvoiceItemsInput = z.infer<typeof ExtractInvoiceItemsInputSchema>;
 
-export const InvoiceItemSchema = z.object({
-  itemName: z.string().describe("The name of the item."),
-  quantity: z.number().describe("The quantity of the item."),
-  price: z.number().describe("The unit price of the item."),
-});
-export type InvoiceItem = z.infer<typeof InvoiceItemSchema>;
 
 const ExtractInvoiceItemsOutputSchema = z.object({
   items: z.array(InvoiceItemSchema).describe('An array of structured items extracted from the invoice text.'),
