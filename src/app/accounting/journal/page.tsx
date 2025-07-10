@@ -31,8 +31,18 @@ interface SaleInvoice {
 }
 interface PurchaseInvoice { id: string; date: string; supplierName: string; total: number; warehouseId: string; }
 interface Expense { id: string; date: string; description: string; amount: number; warehouseId?: string; }
-interface ExceptionalIncome { id: string; date: string; description: string; amount: number; }
+interface ExceptionalIncome { id: string; date: string; description: string; amount: number; warehouseId?: string; }
 interface Warehouse { id: string; name: string; }
+interface StockTransferRecord {
+    id: string; date: string; fromSourceId: string; toSourceId: string;
+    items: { id: string, name: string; qty: number, cost?:number }[];
+}
+interface Item {
+    id: string;
+    cost?: number;
+    price: number;
+}
+
 
 export default function JournalPage() {
     const [filters, setFilters] = useState({
@@ -46,11 +56,20 @@ export default function JournalPage() {
     const { data: expenses, loading: l3 } = useFirebase<Expense>("expenses");
     const { data: exceptionalIncomes, loading: l4 } = useFirebase<ExceptionalIncome>("exceptionalIncomes");
     const { data: warehouses, loading: l5 } = useFirebase<Warehouse>("warehouses");
+    const { data: transfers, loading: l6 } = useFirebase<StockTransferRecord>("stockTransferRecords");
+    const { data: itemsData, loading: l7 } = useFirebase<Item>("items");
+
+    const loading = l1 || l2 || l3 || l4 || l5 || l6 || l7;
     
-    const loading = l1 || l2 || l3 || l4 || l5;
+    const itemsMap = useMemo(() => {
+        const map = new Map<string, Item>();
+        itemsData.forEach(item => map.set(item.id, item));
+        return map;
+    }, [itemsData]);
 
     const journalEntries = useMemo(() => {
         const entries: any[] = [];
+        const getWarehouseName = (id?: string) => warehouses.find(w => w.id === id)?.name || 'عام';
         
         // Sales Invoices
         sales.forEach(sale => {
@@ -58,29 +77,46 @@ export default function JournalPage() {
             entries.push({ id: `sale-ar-${sale.id}`, date: sale.date, warehouseId: sale.warehouseId, number: `INV-${sale.id.slice(-4)}`, description: `فاتورة بيع للعميل ${sale.customerName}`, debit: sale.total, credit: 0, account: 'حسابات العملاء' });
             entries.push({ id: `sale-rev-${sale.id}`, date: sale.date, warehouseId: sale.warehouseId, number: `INV-${sale.id.slice(-4)}`, description: `إيرادات من فاتورة بيع`, debit: 0, credit: sale.total, account: 'إيرادات المبيعات' });
             entries.push({ id: `sale-cogs-${sale.id}`, date: sale.date, warehouseId: sale.warehouseId, number: `INV-${sale.id.slice(-4)}`, description: `تكلفة بضاعة مباعة`, debit: costOfGoodsSold, credit: 0, account: 'تكلفة البضاعة المباعة' });
-            entries.push({ id: `sale-inv-${sale.id}`, date: sale.date, warehouseId: sale.warehouseId, number: `INV-${sale.id.slice(-4)}`, description: `تخفيض المخزون`, debit: 0, credit: costOfGoodsSold, account: 'المخزون' });
+            entries.push({ id: `sale-inv-${sale.id}`, date: sale.date, warehouseId: sale.warehouseId, number: `INV-${sale.id.slice(-4)}`, description: `تخفيض المخزون من ${getWarehouseName(sale.warehouseId)}`, debit: 0, credit: costOfGoodsSold, account: `مخزون - ${getWarehouseName(sale.warehouseId)}` });
         });
 
         // Purchase Invoices
         purchases.forEach(p => {
-            entries.push({ id: `pur-inv-${p.id}`, date: p.date, warehouseId: p.warehouseId, number: `PUR-${p.id.slice(-4)}`, description: `فاتورة شراء من ${p.supplierName}`, debit: p.total, credit: 0, account: 'المخزون' });
+            entries.push({ id: `pur-inv-${p.id}`, date: p.date, warehouseId: p.warehouseId, number: `PUR-${p.id.slice(-4)}`, description: `فاتورة شراء من ${p.supplierName}`, debit: p.total, credit: 0, account: `مخزون - ${getWarehouseName(p.warehouseId)}` });
             entries.push({ id: `pur-ap-${p.id}`, date: p.date, warehouseId: p.warehouseId, number: `PUR-${p.id.slice(-4)}`, description: `مستحقات للمورد ${p.supplierName}`, debit: 0, credit: p.total, account: 'حسابات الموردين' });
         });
 
         // Expenses
         expenses.forEach(e => {
-            entries.push({ id: `exp-debit-${e.id}`, date: e.date, warehouseId: e.warehouseId, number: `EXP-${e.id.slice(-4)}`, description: e.description, debit: e.amount, credit: 0, account: 'مصروفات عمومية' });
+            entries.push({ id: `exp-debit-${e.id}`, date: e.date, warehouseId: e.warehouseId, number: `EXP-${e.id.slice(-4)}`, description: e.description, debit: e.amount, credit: 0, account: e.warehouseId ? `مصروفات - ${getWarehouseName(e.warehouseId)}` : 'مصروفات عمومية' });
             entries.push({ id: `exp-credit-${e.id}`, date: e.date, warehouseId: e.warehouseId, number: `EXP-${e.id.slice(-4)}`, description: `دفع مصروفات: ${e.description}`, debit: 0, credit: e.amount, account: 'النقدية/البنك' });
         });
         
         // Exceptional Incomes
         exceptionalIncomes.forEach(i => {
-            entries.push({ id: `ex-inc-debit-${i.id}`, date: i.date, warehouseId: 'N/A', number: `INC-${i.id.slice(-4)}`, description: i.description, debit: i.amount, credit: 0, account: 'النقدية/البنك' });
-            entries.push({ id: `ex-inc-credit-${i.id}`, date: i.date, warehouseId: 'N/A', number: `INC-${i.id.slice(-4)}`, description: i.description, debit: 0, credit: i.amount, account: 'دخل استثنائي' });
+            entries.push({ id: `ex-inc-debit-${i.id}`, date: i.date, warehouseId: i.warehouseId, number: `INC-${i.id.slice(-4)}`, description: i.description, debit: i.amount, credit: 0, account: 'النقدية/البنك' });
+            entries.push({ id: `ex-inc-credit-${i.id}`, date: i.date, warehouseId: i.warehouseId, number: `INC-${i.id.slice(-4)}`, description: i.description, debit: 0, credit: i.amount, account: i.warehouseId ? `دخل استثنائي - ${getWarehouseName(i.warehouseId)}` : 'دخل استثنائي' });
+        });
+
+        // Stock Transfers
+        transfers.forEach(t => {
+            const transferCost = t.items.reduce((acc, transferItem) => {
+                const itemMaster = itemsMap.get(transferItem.id);
+                // Use a fallback cost if not available
+                const itemCost = transferItem.cost || itemMaster?.cost || itemMaster?.price || 0;
+                return acc + (transferItem.qty * itemCost);
+            }, 0);
+            const fromWarehouseName = getWarehouseName(t.fromSourceId);
+            const toWarehouseName = getWarehouseName(t.toSourceId);
+
+            // Debit the receiving warehouse (asset increase)
+            entries.push({ id: `trn-debit-${t.id}`, date: t.date, warehouseId: t.toSourceId, number: `TRN-${t.id.slice(-4)}`, description: `تحويل من ${fromWarehouseName}`, debit: transferCost, credit: 0, account: `مخزون - ${toWarehouseName}` });
+            // Credit the sending warehouse (asset decrease)
+            entries.push({ id: `trn-credit-${t.id}`, date: t.date, warehouseId: t.fromSourceId, number: `TRN-${t.id.slice(-4)}`, description: `تحويل إلى ${toWarehouseName}`, debit: 0, credit: transferCost, account: `مخزون - ${fromWarehouseName}` });
         });
 
         return entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [sales, purchases, expenses, exceptionalIncomes]);
+    }, [sales, purchases, expenses, exceptionalIncomes, transfers, warehouses, itemsMap]);
 
     const filteredEntries = useMemo(() => {
         return journalEntries.filter(entry => {
@@ -90,7 +126,7 @@ export default function JournalPage() {
 
             if (from && entryDate < from) return false;
             if (to && entryDate > to) return false;
-            if (filters.warehouseId !== 'all' && entry.warehouseId !== filters.warehouseId && entry.warehouseId !== 'N/A') return false;
+            if (filters.warehouseId !== 'all' && entry.warehouseId !== filters.warehouseId && entry.warehouseId !== undefined) return false;
 
             return true;
         });
@@ -146,37 +182,39 @@ export default function JournalPage() {
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
             ) : (
-             <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead className="w-[120px]">التاريخ</TableHead>
-                        <TableHead className="w-[120px]">رقم القيد</TableHead>
-                        <TableHead>البيان</TableHead>
-                        <TableHead>الحساب</TableHead>
-                        <TableHead className="text-center w-[150px]">مدين</TableHead>
-                        <TableHead className="text-center w-[150px]">دائن</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {filteredEntries.map((entry) => (
-                         <TableRow key={entry.id}>
-                            <TableCell>{new Date(entry.date).toLocaleDateString('ar-EG')}</TableCell>
-                            <TableCell>{entry.number}</TableCell>
-                            <TableCell>{entry.description}</TableCell>
-                            <TableCell>{entry.account}</TableCell>
-                            <TableCell className="text-center font-mono">{entry.debit > 0 ? entry.debit.toLocaleString() : '-'}</TableCell>
-                            <TableCell className="text-center font-mono">{entry.credit > 0 ? entry.credit.toLocaleString() : '-'}</TableCell>
-                        </TableRow>
-                    ))}
-                    {filteredEntries.length === 0 && (
-                        <TableRow>
-                            <TableCell colSpan={6} className="text-center text-muted-foreground py-10">
-                                لا توجد قيود يومية تطابق الفلاتر المحددة.
-                            </TableCell>
-                        </TableRow>
-                    )}
-                </TableBody>
-             </Table>
+                <div className="w-full overflow-auto border rounded-lg">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="w-[120px]">التاريخ</TableHead>
+                                <TableHead className="w-[120px]">رقم القيد</TableHead>
+                                <TableHead>البيان</TableHead>
+                                <TableHead>الحساب</TableHead>
+                                <TableHead className="text-center w-[150px]">مدين</TableHead>
+                                <TableHead className="text-center w-[150px]">دائن</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {filteredEntries.map((entry) => (
+                                 <TableRow key={entry.id}>
+                                    <TableCell>{new Date(entry.date).toLocaleDateString('ar-EG')}</TableCell>
+                                    <TableCell>{entry.number}</TableCell>
+                                    <TableCell>{entry.description}</TableCell>
+                                    <TableCell>{entry.account}</TableCell>
+                                    <TableCell className="text-center font-mono">{entry.debit > 0 ? entry.debit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</TableCell>
+                                    <TableCell className="text-center font-mono">{entry.credit > 0 ? entry.credit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</TableCell>
+                                </TableRow>
+                            ))}
+                            {filteredEntries.length === 0 && (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="text-center text-muted-foreground py-10">
+                                        لا توجد قيود يومية تطابق الفلاتر المحددة.
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
             )}
           </CardContent>
         </Card>

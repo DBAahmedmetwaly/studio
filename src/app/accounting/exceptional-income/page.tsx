@@ -21,15 +21,22 @@ import { useToast } from '@/hooks/use-toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { AddEntityDialog } from '@/components/add-entity-dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface ExceptionalIncome {
     id?: string;
     date: string;
     amount: number;
     description: string;
+    warehouseId?: string;
 }
 
-const IncomeForm = ({ income, onSave, onClose }: { income?: ExceptionalIncome, onSave: (data: ExceptionalIncome) => void, onClose: () => void }) => {
+interface Warehouse {
+    id: string;
+    name: string;
+}
+
+const IncomeForm = ({ income, onSave, onClose, warehouses }: { income?: ExceptionalIncome, onSave: (data: ExceptionalIncome) => void, onClose: () => void, warehouses: Warehouse[] }) => {
     const [formData, setFormData] = useState<ExceptionalIncome>(
         income || { date: new Date().toISOString().split('T')[0], amount: 0, description: "" }
     );
@@ -54,6 +61,18 @@ const IncomeForm = ({ income, onSave, onClose }: { income?: ExceptionalIncome, o
                     <Label htmlFor="income-description" className="text-right">الوصف</Label>
                     <Textarea id="income-description" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="col-span-3" placeholder="أدخل وصفًا للدخل" />
                 </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="income-warehouse" className="text-right">تحميل على</Label>
+                    <Select value={formData.warehouseId} onValueChange={v => setFormData({...formData, warehouseId: v})}>
+                        <SelectTrigger className="col-span-3">
+                            <SelectValue placeholder="اختياري: اختر مخزنًا" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="none">بدون (عام)</SelectItem>
+                            {warehouses.map(w => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
             </div>
             <div className="flex justify-end">
                 <Button onClick={handleSubmit}>حفظ</Button>
@@ -64,8 +83,16 @@ const IncomeForm = ({ income, onSave, onClose }: { income?: ExceptionalIncome, o
 
 
 export default function ExceptionalIncomePage() {
-    const { data: incomes, loading, add, update, remove } = useFirebase<ExceptionalIncome>('exceptionalIncomes');
+    const { data: incomes, loading: loadingIncomes, add, update, remove } = useFirebase<ExceptionalIncome>('exceptionalIncomes');
+    const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
     const { toast } = useToast();
+    
+    const loading = loadingIncomes || loadingWarehouses;
+
+    const getWarehouseName = (warehouseId?: string) => {
+        if (!warehouseId || warehouseId === 'none') return 'عام';
+        return warehouses.find(w => w.id === warehouseId)?.name || 'غير معروف';
+    };
 
     const handleSave = async (data: ExceptionalIncome) => {
         try {
@@ -105,7 +132,7 @@ export default function ExceptionalIncomePage() {
                 </Button>
             }
         >
-            <IncomeForm onSave={handleSave} onClose={()=>{}} />
+            <IncomeForm onSave={handleSave} onClose={()=>{}} warehouses={warehouses} />
         </AddEntityDialog>
       </PageHeader>
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
@@ -120,54 +147,58 @@ export default function ExceptionalIncomePage() {
                         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                     </div>
                 ) : (
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="w-[150px]">التاريخ</TableHead>
-                                <TableHead>الوصف</TableHead>
-                                <TableHead className="text-center w-[150px]">المبلغ</TableHead>
-                                <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {incomes.map(income => (
-                                <TableRow key={income.id}>
-                                    <TableCell>{new Date(income.date).toLocaleDateString('ar-EG')}</TableCell>
-                                    <TableCell>{income.description}</TableCell>
-                                    <TableCell className="text-center">{income.amount.toLocaleString()}</TableCell>
-                                    <TableCell className="text-center">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button aria-haspopup="true" size="icon" variant="ghost">
-                                                    <MoreHorizontal className="h-4 w-4" />
-                                                    <span className="sr-only">قائمة</span>
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                                                <AddEntityDialog
-                                                    title="تعديل الدخل"
-                                                    description="تحديث تفاصيل سجل الدخل."
-                                                    triggerButton={
-                                                        <DropdownMenuItem onSelect={e => e.preventDefault()}>
-                                                            <Edit className="ml-2 h-4 w-4" />
-                                                            تعديل
-                                                        </DropdownMenuItem>
-                                                    }
-                                                >
-                                                    <IncomeForm income={income} onSave={handleSave} onClose={() => {}} />
-                                                </AddEntityDialog>
-                                                 <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(income.id!)}>
-                                                    <Trash2 className="ml-2 h-4 w-4" />
-                                                    حذف
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </TableCell>
+                    <div className="w-full overflow-auto border rounded-lg">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead className="w-[150px]">التاريخ</TableHead>
+                                    <TableHead>الوصف</TableHead>
+                                    <TableHead>المخزن/الجهة</TableHead>
+                                    <TableHead className="text-center w-[150px]">المبلغ</TableHead>
+                                    <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                                {incomes.map(income => (
+                                    <TableRow key={income.id}>
+                                        <TableCell>{new Date(income.date).toLocaleDateString('ar-EG')}</TableCell>
+                                        <TableCell>{income.description}</TableCell>
+                                        <TableCell>{getWarehouseName(income.warehouseId)}</TableCell>
+                                        <TableCell className="text-center">{income.amount.toLocaleString()}</TableCell>
+                                        <TableCell className="text-center">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button aria-haspopup="true" size="icon" variant="ghost">
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                        <span className="sr-only">قائمة</span>
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+                                                    <AddEntityDialog
+                                                        title="تعديل الدخل"
+                                                        description="تحديث تفاصيل سجل الدخل."
+                                                        triggerButton={
+                                                            <DropdownMenuItem onSelect={e => e.preventDefault()}>
+                                                                <Edit className="ml-2 h-4 w-4" />
+                                                                تعديل
+                                                            </DropdownMenuItem>
+                                                        }
+                                                    >
+                                                        <IncomeForm income={income} onSave={handleSave} onClose={() => {}} warehouses={warehouses} />
+                                                    </AddEntityDialog>
+                                                     <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(income.id!)}>
+                                                        <Trash2 className="ml-2 h-4 w-4" />
+                                                        حذف
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
                 )}
             </CardContent>
         </Card>
