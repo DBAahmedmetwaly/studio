@@ -73,7 +73,7 @@ export default function CustomerStatementPage() {
       balance += sale.total;
       transactions.push({
         date: new Date(sale.date).toLocaleDateString('ar-EG'),
-        description: `فاتورة بيع رقم ${sale.invoiceNumber}`,
+        description: `فاتورة بيع رقم ${sale.invoiceNumber || sale.id}`,
         debit: sale.total,
         credit: 0,
         balance: balance
