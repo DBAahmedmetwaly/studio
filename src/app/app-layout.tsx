@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React from "react";
@@ -93,7 +94,7 @@ const NavCollapsible = ({ title, icon, children, defaultOpen = false }: { title:
 
 const NavSubLink = ({ href, children }: { href: string; children: React.ReactNode }) => {
     const pathname = usePathname();
-    const isActive = pathname === href;
+    const isActive = pathname === href || pathname.startsWith(href + '/');
     return (
         <SidebarMenuSubItem>
             <SidebarMenuSubButton asChild isActive={isActive}>
@@ -133,7 +134,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </NavCollapsible>
 
             <NavCollapsible title="المبيعات" icon={<ShoppingCart />}>
-                <NavSubLink href="/sales/invoices">فاتورة بيع</NavSubLink>
+                <NavSubLink href="/sales/invoices/list">فواتير البيع</NavSubLink>
             </NavCollapsible>
             
             <NavCollapsible title="المشتريات" icon={<ShoppingBag />}>
