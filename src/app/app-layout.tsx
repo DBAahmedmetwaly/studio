@@ -161,7 +161,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </NavCollapsible>
             
             <NavCollapsible title="المشتريات" icon={<ShoppingBag />} module="purchases">
-                <NavSubLink href="/purchases/invoices">فاتورة شراء</NavSubLink>
+                <NavSubLink href="/purchases/invoices/list">فواتير الشراء</NavSubLink>
             </NavCollapsible>
 
              <NavCollapsible title="المحاسبة" icon={<BookUser />} module="accounting">

@@ -14,6 +14,7 @@ import React, { useState, useEffect, useTransition } from "react";
 import { extractInvoiceItems } from "@/ai/flows/extract-invoice-items";
 import useFirebase from "@/hooks/use-firebase";
 import { useToast } from "@/hooks/use-toast";
+import { useRouter } from 'next/navigation';
 import { Switch } from "@/components/ui/switch";
 
 interface InvoiceItem {
@@ -22,6 +23,7 @@ interface InvoiceItem {
   qty: number;
   price: number;
   total: number;
+  unit: string;
 }
 
 interface Item {
@@ -42,8 +44,9 @@ interface Warehouse {
     name: string;
 }
 
-
 export default function PurchaseInvoicePage() {
+  const router = useRouter();
+  const { toast } = useToast();
   const [items, setItems] = useState<InvoiceItem[]>([]);
   const [newItem, setNewItem] = useState({ id: "", name: "", qty: 1, price: 0, unit: "" });
   const [subtotal, setSubtotal] = useState(0);
@@ -52,11 +55,20 @@ export default function PurchaseInvoicePage() {
   const [total, setTotal] = useState(0);
   const [applyTax, setApplyTax] = useState(true);
   const [invoiceText, setInvoiceText] = useState("");
-  const [isPending, startTransition] = useTransition();
+  const [isAiPending, startAiTransition] = useTransition();
+  const [isSaving, setIsSaving] = useState(false);
 
+  const [supplierId, setSupplierId] = useState("");
+  const [warehouseId, setWarehouseId] = useState("");
+  const [notes, setNotes] = useState("");
+  
+  const [invoiceDate, setInvoiceDate] = useState<string>('');
+  const [dueDate, setDueDate] = useState<string>('');
+  
   const { data: availableItems, loading: loadingItems } = useFirebase<Item>('items');
   const { data: suppliers, loading: loadingSuppliers } = useFirebase<Supplier>('suppliers');
   const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
+  const { add: addPurchaseInvoice, getNextId } = useFirebase('purchaseInvoices');
 
   useEffect(() => {
     const newSubtotal = items.reduce((acc, item) => acc + item.total, 0);
@@ -65,6 +77,14 @@ export default function PurchaseInvoicePage() {
     setTax(newTax);
     setTotal(newSubtotal - discount + newTax);
   }, [items, discount, applyTax]);
+
+  useEffect(() => {
+    const today = new Date();
+    const futureDate = new Date();
+    futureDate.setDate(today.getDate() + 30);
+    setInvoiceDate(today.toLocaleDateString('ar-EG'));
+    setDueDate(futureDate.toLocaleDateString('ar-EG'));
+  }, []);
 
   const handleAddItem = () => {
     if (!newItem.id || newItem.qty <= 0 || newItem.price <= 0) return;
@@ -75,8 +95,10 @@ export default function PurchaseInvoicePage() {
       ...items,
       { 
         ...newItem,
+        id: `${selectedItem.id}-${Date.now()}`,
         name: selectedItem.name,
-        total: newItem.qty * newItem.price 
+        total: newItem.qty * newItem.price,
+        unit: selectedItem.unit,
       },
     ]);
     setNewItem({ id: "", name: "", qty: 1, price: 0, unit: "" });
@@ -104,38 +126,98 @@ export default function PurchaseInvoicePage() {
 
   const handleAiExtract = () => {
     if(!invoiceText) return;
-    startTransition(async () => {
+    startAiTransition(async () => {
         try {
             const result = await extractInvoiceItems({text: invoiceText});
             if (result && result.items) {
-                 const newItems: InvoiceItem[] = result.items.map((item, index) => ({
-                    id: `ai-item-${Date.now()}-${index}`,
-                    name: item.itemName,
-                    qty: item.quantity,
-                    price: item.price,
-                    total: item.quantity * item.price,
-                }));
-                setItems(prevItems => [...prevItems, ...newItems]);
+                 const newAiItems: InvoiceItem[] = result.items.map((item, index) => {
+                     const matchedItem = availableItems.find(i => i.name.includes(item.itemName))
+                     return {
+                        id: matchedItem ? `${matchedItem.id}-${Date.now()}` : `ai-item-${Date.now()}-${index}`,
+                        name: item.itemName,
+                        qty: item.quantity,
+                        price: item.price,
+                        total: item.quantity * item.price,
+                        unit: matchedItem?.unit || 'قطعة'
+                    }
+                });
+                setItems(prevItems => [...prevItems, ...newAiItems]);
                 setInvoiceText("");
             }
         } catch (error) {
             console.error("Failed to extract invoice items:", error);
+            toast({ variant: 'destructive', title: 'خطأ', description: 'فشل تحليل الفاتورة بالذكاء الاصطناعي.'});
         }
     });
   }
 
+  const handleSaveInvoice = async () => {
+      if (!supplierId || !warehouseId || items.length === 0) {
+            toast({
+                variant: 'destructive',
+                title: 'بيانات غير مكتملة',
+                description: 'يرجى اختيار المورد والمخزن وإضافة صنف واحد على الأقل.'
+            });
+            return;
+        }
+        setIsSaving(true);
+        try {
+            const invoiceNumber = `PUR-${await getNextId('purchaseInvoice')}`;
+            const supplierName = suppliers.find(s => s.id === supplierId)?.name || '';
+
+            const invoiceData = {
+                invoiceNumber,
+                date: new Date().toISOString(),
+                supplierId,
+                supplierName,
+                warehouseId,
+                items: items.map(item => {
+                    const originalItemId = item.id.split('-')[0];
+                    return {
+                        id: originalItemId,
+                        name: item.name,
+                        qty: item.qty,
+                        price: item.price,
+                        total: item.total,
+                    }
+                }),
+                subtotal,
+                discount,
+                tax,
+                total,
+                notes,
+            };
+
+            await addPurchaseInvoice(invoiceData);
+            toast({
+                title: 'تم الحفظ بنجاح',
+                description: `تم حفظ فاتورة الشراء رقم ${invoiceNumber}`
+            });
+            router.push('/purchases/invoices/list');
+        } catch (error) {
+            console.error("Failed to save purchase invoice:", error);
+            toast({
+                variant: 'destructive',
+                title: 'خطأ',
+                description: 'فشل حفظ الفاتورة. الرجاء المحاولة مرة أخرى.'
+            });
+        } finally {
+            setIsSaving(false);
+        }
+  }
+
   const loading = loadingItems || loadingSuppliers || loadingWarehouses;
-  const getUnitForItem = (itemId: string) => availableItems.find(i => i.id === itemId)?.unit || 'قطعة';
+  const getUnitForItem = (itemId: string) => {
+    if (!itemId) return '';
+    const originalId = itemId.split('-')[0];
+    return availableItems.find(i => i.id === originalId)?.unit || 'قطعة';
+  }
 
   return (
     <>
-      <PageHeader title="فاتورة شراء">
+      <PageHeader title="فاتورة شراء جديدة">
         <div className="flex gap-2 no-print">
-            <Button variant="outline">
-                <Save className="ml-2 h-4 w-4" />
-                حفظ كمسودة
-            </Button>
-            <Button onClick={handlePrint}>
+            <Button onClick={handlePrint} variant="outline">
                 <Printer className="ml-2 h-4 w-4" />
                 طباعة
             </Button>
@@ -152,9 +234,9 @@ export default function PurchaseInvoicePage() {
                     </CardDescription>
                 </div>
                 <div className="text-left text-sm md:text-base">
-                    <div className="font-bold text-lg">فاتورة #PUR-00123</div>
-                    <div>تاريخ الفاتورة: {new Date().toLocaleDateString('ar-EG')}</div>
-                    <div>تاريخ الاستحقاق: {new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('ar-EG')}</div>
+                    <div className="font-bold text-lg">فاتورة #(سيتم إنشاؤه)</div>
+                    <div>تاريخ الفاتورة: {invoiceDate}</div>
+                    <div>تاريخ الاستحقاق: {dueDate}</div>
                 </div>
             </div>
           </CardHeader>
@@ -168,7 +250,7 @@ export default function PurchaseInvoicePage() {
                 <div className="grid md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                         <Label htmlFor="supplier">المورد</Label>
-                        <Select>
+                        <Select value={supplierId} onValueChange={setSupplierId}>
                             <SelectTrigger id="supplier">
                                 <SelectValue placeholder="اختر موردًا" />
                             </SelectTrigger>
@@ -179,7 +261,7 @@ export default function PurchaseInvoicePage() {
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="warehouse">المخزن المستلم</Label>
-                        <Select>
+                        <Select value={warehouseId} onValueChange={setWarehouseId}>
                             <SelectTrigger id="warehouse">
                                 <SelectValue placeholder="اختر مخزنًا" />
                             </SelectTrigger>
@@ -199,8 +281,8 @@ export default function PurchaseInvoicePage() {
                     value={invoiceText}
                     onChange={(e) => setInvoiceText(e.target.value)}
                     />
-                    <Button onClick={handleAiExtract} disabled={isPending || !invoiceText}>
-                    {isPending ? <Loader2 className="animate-spin" /> : <Wand2 />}
+                    <Button onClick={handleAiExtract} disabled={isAiPending || !invoiceText}>
+                    {isAiPending ? <Loader2 className="animate-spin" /> : <Wand2 />}
                     <span className="sr-only">تحليل</span>
                     </Button>
                 </div>
@@ -227,7 +309,7 @@ export default function PurchaseInvoicePage() {
                         {items.map((item, index) => (
                             <TableRow key={item.id}>
                             <TableCell>{item.name}</TableCell>
-                            <TableCell className="text-center">{getUnitForItem(item.id)}</TableCell>
+                            <TableCell className="text-center">{item.unit}</TableCell>
                             <TableCell className="text-center">{item.qty}</TableCell>
                             <TableCell className="text-center">ج.م {item.price.toFixed(2)}</TableCell>
                             <TableCell className="text-center">ج.م {item.total.toFixed(2)}</TableCell>
@@ -238,8 +320,8 @@ export default function PurchaseInvoicePage() {
                             </TableCell>
                             </TableRow>
                         ))}
-                        <TableRow className="no-print">
-                            <TableCell>
+                        <TableRow className="no-print bg-muted/20">
+                            <TableCell className="p-2">
                                 <Select value={newItem.id} onValueChange={handleItemSelect}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="اختر صنفًا" />
@@ -249,15 +331,15 @@ export default function PurchaseInvoicePage() {
                                     </SelectContent>
                                 </Select>
                             </TableCell>
-                            <TableCell className="text-center text-muted-foreground">{newItem.unit}</TableCell>
-                            <TableCell>
-                                <Input type="number" placeholder="الكمية" value={newItem.qty} onChange={e => setNewItem({...newItem, qty: parseInt(e.target.value) || 1})} />
+                            <TableCell className="text-center text-muted-foreground p-2">{newItem.unit}</TableCell>
+                            <TableCell className="p-2">
+                                <Input type="number" placeholder="الكمية" value={newItem.qty} onChange={e => setNewItem({...newItem, qty: parseInt(e.target.value) || 1})} className="text-center" />
                             </TableCell>
-                            <TableCell>
-                                <Input type="number" placeholder="السعر" value={newItem.price} onChange={e => setNewItem({...newItem, price: parseFloat(e.target.value) || 0})} />
+                            <TableCell className="p-2">
+                                <Input type="number" placeholder="السعر" value={newItem.price} onChange={e => setNewItem({...newItem, price: parseFloat(e.target.value) || 0})} className="text-center" />
                             </TableCell>
                             <TableCell></TableCell>
-                            <TableCell>
+                            <TableCell className="text-center p-2">
                                 <Button onClick={handleAddItem}>
                                     <PlusCircle className="ml-2 h-4 w-4" />
                                     إضافة
@@ -296,13 +378,16 @@ export default function PurchaseInvoicePage() {
 
                 <div className="space-y-2">
                     <Label htmlFor="notes">ملاحظات</Label>
-                    <Textarea id="notes" placeholder="أضف أي ملاحظات هنا..." />
+                    <Textarea id="notes" placeholder="أضف أي ملاحظات هنا..." value={notes} onChange={e => setNotes(e.target.value)} />
                 </div>
             </>
             )}
           </CardContent>
           <CardFooter className="flex justify-end no-print">
-            <Button size="lg" disabled={loading}>تسجيل الفاتورة</Button>
+            <Button size="lg" disabled={loading || isSaving} onClick={handleSaveInvoice}>
+                 {isSaving ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <Save className="ml-2 h-4 w-4" />}
+                {isSaving ? 'جارٍ الحفظ...' : 'تسجيل الفاتورة'}
+            </Button>
           </CardFooter>
         </Card>
       </main>
