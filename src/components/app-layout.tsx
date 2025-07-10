@@ -32,6 +32,9 @@ import {
   Settings,
   ChevronDown,
   ShieldCheck,
+  Receipt,
+  FileText,
+  TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -135,12 +138,16 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
              <NavCollapsible title="المحاسبة" icon={<BookUser />}>
                 <NavSubLink href="/accounting/journal">قيود اليومية</NavSubLink>
+                <NavSubLink href="/accounting/expenses">إدارة المصروفات</NavSubLink>
                 <NavSubLink href="/accounting/ai-analysis">تحليل مالي بالذكاء الاصطناعي</NavSubLink>
             </NavCollapsible>
 
             <NavCollapsible title="التقارير" icon={<AreaChart />}>
                 <NavSubLink href="/reports/financial-statements">القوائم المالية</NavSubLink>
                 <NavSubLink href="/reports/partner-shares">حصص الشركاء</NavSubLink>
+                <NavSubLink href="/reports/customer-statement">كشف حساب العملاء</NavSubLink>
+                <NavSubLink href="/reports/supplier-statement">كشف حساب الموردين</NavSubLink>
+                <NavSubLink href="/reports/item-profit-loss">أرباح وخسائر الأصناف</NavSubLink>
             </NavCollapsible>
             
             <NavCollapsible title="المستخدمون والإعدادات" icon={<UserCog />}>
