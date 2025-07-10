@@ -272,24 +272,6 @@ export default function PurchaseInvoicePage() {
                     </div>
                 </div>
 
-                <div className="space-y-2 no-print">
-                <Label htmlFor="ai-invoice-text">استيراد بالذكاء الاصطناعي</Label>
-                <div className="flex gap-2">
-                    <Textarea 
-                    id="ai-invoice-text" 
-                    placeholder="مثال: فاتورة من مورد أجهزة بها 5 لابتوب بسعر 10000 للواحد و 10 ماوس بسعر 200..."
-                    value={invoiceText}
-                    onChange={(e) => setInvoiceText(e.target.value)}
-                    />
-                    <Button onClick={handleAiExtract} disabled={isAiPending || !invoiceText}>
-                    {isAiPending ? <Loader2 className="animate-spin" /> : <Wand2 />}
-                    <span className="sr-only">تحليل</span>
-                    </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                    صف الفاتورة وسيقوم الذكاء الاصطناعي باستخلاص البنود لك.
-                </p>
-                </div>
                 
                 <div>
                 <Label>بنود الفاتورة</Label>
