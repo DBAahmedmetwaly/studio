@@ -185,19 +185,17 @@ export default function JournalPage() {
         return entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }, [sales, purchases, expenses, exceptionalIncomes, transfers, warehouses, itemsMap, cashAccounts, treasuryTxs, employeeAdvances, employees]);
 
-    const filteredEntries = useMemo(() => {
-        return journalEntries.filter(entry => {
-            const entryDate = new Date(entry.date);
-            const from = filters.fromDate ? new Date(filters.fromDate) : null;
-            const to = filters.toDate ? new Date(filters.toDate) : null;
+    const filteredEntries = journalEntries.filter(entry => {
+        const entryDate = new Date(entry.date);
+        const from = filters.fromDate ? new Date(filters.fromDate) : null;
+        const to = filters.toDate ? new Date(filters.toDate) : null;
 
-            if (from && entryDate < from) return false;
-            if (to && entryDate > to) return false;
-            if (filters.warehouseId !== 'all' && entry.warehouseId !== filters.warehouseId && entry.warehouseId !== undefined) return false;
+        if (from && entryDate < from) return false;
+        if (to && entryDate > to) return false;
+        if (filters.warehouseId !== 'all' && entry.warehouseId !== filters.warehouseId && entry.warehouseId !== undefined) return false;
 
-            return true;
-        });
-    }, [journalEntries, filters]);
+        return true;
+    });
     
      const handleFilterChange = (key: keyof typeof filters, value: string) => {
         setFilters(prev => ({...prev, [key]: value}));
