@@ -1,8 +1,10 @@
+
 "use client";
 
+import React, { useState } from "react";
 import PageHeader from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Edit, Trash2, Loader2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -13,9 +15,114 @@ import {
 import { AddEntityDialog } from "@/components/add-entity-dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import useFirebase from "@/hooks/use-firebase";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+interface Item {
+  id?: string;
+  name: string;
+  unit: 'piece' | 'weight' | 'meter' | 'kilo' | 'gram';
+  price: number;
+  openingStock: number;
+}
+
+const ItemForm = ({ item, onSave, onClose }: { item?: Item, onSave: (item: Item) => void, onClose: () => void }) => {
+  const [formData, setFormData] = useState<Item>(
+    item || { name: "", unit: "piece", price: 0, openingStock: 0 }
+  );
+
+  const handleSubmit = () => {
+    onSave({
+        ...formData,
+        price: Number(formData.price),
+        openingStock: Number(formData.openingStock)
+    });
+    onClose();
+  };
+
+  return (
+    <>
+        <div className="grid gap-4 py-4">
+        <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="item-name" className="text-right">
+            اسم الصنف
+            </Label>
+            <Input id="item-name" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="col-span-3" />
+        </div>
+        <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="item-unit" className="text-right">
+            الوحدة
+            </Label>
+            <Select value={formData.unit} onValueChange={(value: Item["unit"]) => setFormData({...formData, unit: value})}>
+            <SelectTrigger className="col-span-3">
+                <SelectValue placeholder="اختر وحدة" />
+            </SelectTrigger>
+            <SelectContent>
+                <SelectItem value="piece">قطعة</SelectItem>
+                <SelectItem value="weight">وزن</SelectItem>
+                <SelectItem value="meter">متر</SelectItem>
+                <SelectItem value="kilo">كيلو</SelectItem>
+                <SelectItem value="gram">جرام</SelectItem>
+            </SelectContent>
+            </Select>
+        </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="item-price" className="text-right">
+            السعر
+            </Label>
+            <Input id="item-price" type="number" value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value as any})} className="col-span-3" />
+        </div>
+        <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="opening-stock" className="text-right">
+            رصيد أول المدة
+            </Label>
+            <Input id="opening-stock" type="number" value={formData.openingStock} onChange={(e) => setFormData({...formData, openingStock: e.target.value as any})} className="col-span-3" />
+        </div>
+        </div>
+         <div className="flex justify-end">
+            <Button onClick={handleSubmit}>حفظ</Button>
+        </div>
+    </>
+  );
+};
+
 export default function ItemsPage() {
+    const { data: items, loading, add, update, remove } = useFirebase<Item>("items");
+
+    const handleSave = (item: Item) => {
+        if (item.id) {
+            update(item.id, item);
+        } else {
+            add(item);
+        }
+    };
+
+    const handleDelete = (id: string) => {
+        if (confirm("هل أنت متأكد من حذف هذا الصنف؟")) {
+            remove(id);
+        }
+    };
+    
+    const getUnitLabel = (unit: string) => {
+        const units = { piece: "قطعة", weight: "وزن", meter: "متر", kilo: "كيلو", gram: "جرام" };
+        return units[unit as keyof typeof units] || unit;
+    }
+
   return (
     <>
       <PageHeader title="إدارة الأصناف">
@@ -29,43 +136,7 @@ export default function ItemsPage() {
             </Button>
           }
         >
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="item-name" className="text-right">
-                اسم الصنف
-              </Label>
-              <Input id="item-name" className="col-span-3" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="item-unit" className="text-right">
-                الوحدة
-              </Label>
-              <Select>
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="اختر وحدة" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="piece">قطعة</SelectItem>
-                  <SelectItem value="weight">وزن</SelectItem>
-                  <SelectItem value="meter">متر</SelectItem>
-                  <SelectItem value="kilo">كيلو</SelectItem>
-                  <SelectItem value="gram">جرام</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="item-price" className="text-right">
-                السعر
-              </Label>
-              <Input id="item-price" type="number" className="col-span-3" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="opening-stock" className="text-right">
-                رصيد أول المدة
-              </Label>
-              <Input id="opening-stock" type="number" className="col-span-3" />
-            </div>
-          </div>
+          <ItemForm onSave={handleSave} />
         </AddEntityDialog>
       </PageHeader>
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
@@ -77,7 +148,64 @@ export default function ItemsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p>سيتم عرض جدول إدارة الأصناف هنا.</p>
+            {loading ? (
+                 <div className="flex justify-center items-center py-10">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+            ) : (
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>اسم الصنف</TableHead>
+                            <TableHead>الوحدة</TableHead>
+                            <TableHead>السعر</TableHead>
+                            <TableHead>رصيد أول المدة</TableHead>
+                            <TableHead>
+                                <span className="sr-only">الإجراءات</span>
+                            </TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {items.map((item) => (
+                            <TableRow key={item.id}>
+                                <TableCell className="font-medium">{item.name}</TableCell>
+                                <TableCell>{getUnitLabel(item.unit)}</TableCell>
+                                <TableCell>{item.price}</TableCell>
+                                <TableCell>{item.openingStock}</TableCell>
+                                <TableCell>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button aria-haspopup="true" size="icon" variant="ghost">
+                                                <MoreHorizontal className="h-4 w-4" />
+                                                <span className="sr-only">تبديل القائمة</span>
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                        <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+                                        <AddEntityDialog
+                                            title="تعديل الصنف"
+                                            description="قم بتحديث تفاصيل الصنف هنا."
+                                            triggerButton={
+                                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                <Edit className="ml-2 h-4 w-4" />
+                                                تعديل
+                                                </DropdownMenuItem>
+                                            }
+                                        >
+                                           <ItemForm item={item} onSave={handleSave} />
+                                        </AddEntityDialog>
+                                        <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(item.id!)}>
+                                            <Trash2 className="ml-2 h-4 w-4" />
+                                            حذف
+                                        </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            )}
           </CardContent>
         </Card>
       </main>
