@@ -9,11 +9,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle, Trash2, Save, Loader2 } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import { Trash2, Save, Loader2 } from "lucide-react";
+import React, { useState, useEffect, useMemo } from "react";
 import useFirebase from "@/hooks/use-firebase";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Combobox } from "@/components/ui/combobox";
 
 interface ReturnItem {
   id: string; // original item id
@@ -37,8 +38,7 @@ export default function NewSalesReturnPage() {
   
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(searchParams.get('invoiceId'));
   const [items, setItems] = useState<ReturnItem[]>([]);
-  const [newItem, setNewItem] = useState({ id: "", name: "", qty: 1, price: 0, unit: "" });
-  const [subtotal, setSubtotal] = useState(0);
+  
   const [total, setTotal] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -46,6 +46,12 @@ export default function NewSalesReturnPage() {
   const [warehouseId, setWarehouseId] = useState("");
   const [notes, setNotes] = useState("");
   const [returnDate, setReturnDate] = useState('');
+
+  const [filters, setFilters] = useState({
+    customerId: '',
+    warehouseId: '',
+    date: ''
+  });
   
   const { data: availableItems, loading: loadingItems } = useFirebase<Item>('items');
   const { data: customers, loading: loadingCustomers } = useFirebase<Customer>('customers');
@@ -57,6 +63,25 @@ export default function NewSalesReturnPage() {
     const today = new Date().toISOString().split('T')[0];
     setReturnDate(today);
   }, []);
+  
+  const filteredInvoices = useMemo(() => {
+    return invoices.filter(inv => {
+        const invDate = new Date(inv.date).toISOString().split('T')[0];
+        const filterDate = filters.date ? new Date(filters.date).toISOString().split('T')[0] : '';
+        
+        return (filters.customerId ? inv.customerId === filters.customerId : true) &&
+               (filters.warehouseId ? inv.warehouseId === filters.warehouseId : true) &&
+               (filters.date ? invDate === filterDate : true);
+    });
+  }, [invoices, filters]);
+
+  const invoiceOptions = useMemo(() => {
+      return filteredInvoices.map(inv => ({
+          value: inv.id,
+          label: `${inv.invoiceNumber} - ${inv.customerName} - (${new Date(inv.date).toLocaleDateString('ar-EG')})`
+      }));
+  }, [filteredInvoices]);
+
 
   useEffect(() => {
     if (selectedInvoiceId && invoices.length > 0 && availableItems.length > 0) {
@@ -83,47 +108,14 @@ export default function NewSalesReturnPage() {
   }, [selectedInvoiceId, invoices, availableItems]);
 
   useEffect(() => {
-    const newSubtotal = items.reduce((acc, item) => acc + item.total, 0);
-    setSubtotal(newSubtotal);
-    setTotal(newSubtotal);
+    const newTotal = items.reduce((acc, item) => acc + item.total, 0);
+    setTotal(newTotal);
   }, [items]);
-
-  const handleAddItem = () => {
-    if (!newItem.id || newItem.qty <= 0 || newItem.price <= 0) return;
-    const selectedItem = availableItems.find(i => i.id === newItem.id);
-    if (!selectedItem) return;
-
-    setItems([
-      ...items,
-      { 
-        id: selectedItem.id,
-        name: selectedItem.name,
-        qty: newItem.qty,
-        price: newItem.price,
-        total: newItem.qty * newItem.price,
-        unit: selectedItem.unit,
-        uniqueId: `${selectedItem.id}-${Date.now()}`
-      },
-    ]);
-    setNewItem({ id: "", name: "", qty: 1, price: 0, unit: "" });
-  };
   
   const handleRemoveItem = (uniqueId: string) => {
     setItems(items.filter((item) => item.uniqueId !== uniqueId));
   };
   
-  const handleItemSelect = (itemId: string) => {
-    const selectedItem = availableItems.find(i => i.id === itemId);
-    if (selectedItem) {
-        setNewItem({
-            ...newItem,
-            id: itemId,
-            price: selectedItem.price || 0,
-            unit: selectedItem.unit,
-        });
-    }
-  }
-
   const handleSaveReturn = async () => {
     if (!customerId || !warehouseId || items.length === 0) {
         toast({ variant: 'destructive', title: 'بيانات غير مكتملة', description: 'يرجى اختيار العميل والمخزن وإضافة صنف واحد على الأقل.' });
@@ -136,7 +128,7 @@ export default function NewSalesReturnPage() {
             customerId,
             warehouseId,
             items: items.map(item => ({
-                id: item.id,
+                id: item.id.split('-')[0],
                 name: item.name,
                 qty: item.qty,
                 price: item.price,
@@ -158,6 +150,10 @@ export default function NewSalesReturnPage() {
 
   const loading = loadingItems || loadingCustomers || loadingWarehouses || loadingInvoices;
   
+  const handleFilterChange = (key: keyof typeof filters, value: string) => {
+    setFilters(prev => ({...prev, [key]: value}));
+  };
+
   const ReturnForm = () => (
     <>
         <div className="grid md:grid-cols-3 gap-6">
@@ -246,27 +242,55 @@ export default function NewSalesReturnPage() {
             {loading ? (
                  <div className="flex justify-center items-center py-10"><Loader2 className="h-8 w-8 animate-spin" /></div>
             ) : !selectedInvoiceId ? (
-                 <div className="space-y-4">
-                    <Label htmlFor="invoice-select">اختر فاتورة البيع الأصلية</Label>
-                     <Select onValueChange={setSelectedInvoiceId}>
-                        <SelectTrigger id="invoice-select">
-                            <SelectValue placeholder="اختر فاتورة..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {invoices.map(inv => (
-                                <SelectItem key={inv.id} value={inv.id}>
-                                    {`${inv.invoiceNumber} - ${inv.customerName} - (${new Date(inv.date).toLocaleDateString('ar-EG')})`}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                 <div className="space-y-6">
+                     <Card>
+                        <CardHeader>
+                            <CardTitle>البحث عن فاتورة البيع الأصلية</CardTitle>
+                            <CardDescription>استخدم الفلاتر للبحث عن الفاتورة التي تريد عمل مرتجع لها.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div className="space-y-2">
+                                    <Label>العميل</Label>
+                                    <Select value={filters.customerId} onValueChange={(v) => handleFilterChange('customerId', v)}>
+                                        <SelectTrigger><SelectValue placeholder="كل العملاء" /></SelectTrigger>
+                                        <SelectContent>{customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>المخزن</Label>
+                                    <Select value={filters.warehouseId} onValueChange={(v) => handleFilterChange('warehouseId', v)}>
+                                        <SelectTrigger><SelectValue placeholder="كل المخازن" /></SelectTrigger>
+                                        <SelectContent>{warehouses.map(w => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}</SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>التاريخ</Label>
+                                    <Input type="date" value={filters.date} onChange={(e) => handleFilterChange('date', e.target.value)} />
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                    <div className="space-y-2">
+                        <Label htmlFor="invoice-select">اختر فاتورة البيع</Label>
+                        <Combobox
+                            options={invoiceOptions}
+                            value={selectedInvoiceId || ''}
+                            onValueChange={setSelectedInvoiceId}
+                            placeholder="اختر فاتورة..."
+                            emptyMessage="لا توجد فواتير تطابق البحث."
+                        />
+                    </div>
                 </div>
             ) : (
                 <ReturnForm />
             )}
           </CardContent>
           {selectedInvoiceId && (
-            <CardFooter className="flex justify-end">
+            <CardFooter className="flex justify-between items-center">
+                 <Button variant="outline" onClick={() => setSelectedInvoiceId(null)}>
+                    اختيار فاتورة أخرى
+                </Button>
                 <Button size="lg" disabled={loading || isSaving} onClick={handleSaveReturn}>
                     {isSaving ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <Save className="ml-2 h-4 w-4" />}
                     {isSaving ? 'جارٍ الحفظ...' : 'حفظ المرتجع'}
