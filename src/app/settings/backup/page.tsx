@@ -10,13 +10,13 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { database } from "@/lib/firebase";
-import { ref, get, set } from "firebase/database";
-import { Download, Upload, Loader2, AlertTriangle } from "lucide-react";
+import useFirebase from "@/hooks/use-firebase";
+import { Download, Upload, Loader2, AlertTriangle, History } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,15 +32,42 @@ import {
 
 export default function BackupPage() {
     const { toast } = useToast();
+    const { data: allData, loading: loadingData } = useFirebase<any>('/'); // Listen to root
     const [isLoadingBackup, setIsLoadingBackup] = useState(false);
     const [isLoadingRestore, setIsLoadingRestore] = useState(false);
     const [restoreFile, setRestoreFile] = useState<File | null>(null);
 
+    // This is just a simple way to detect a change. We'll use the JSON string length.
+    const [lastDataState, setLastDataState] = useState("");
+    const [lastModified, setLastModified] = useState<Date | null>(null);
+
+    React.useEffect(() => {
+        const currentDataState = JSON.stringify(allData);
+        if (allData.length > 0 && currentDataState !== lastDataState) {
+            setLastDataState(currentDataState);
+            setLastModified(new Date());
+        }
+    }, [allData, lastDataState]);
+
+
     const handleBackup = async () => {
         setIsLoadingBackup(true);
         try {
+            if (Object.keys(allData).length === 0) {
+                 toast({ variant: "destructive", title: "خطأ", description: "لا توجد بيانات لإنشاء نسخة احتياطية." });
+                 return;
+            }
+            
+            // The useFirebase hook already gives us the data, but it's an array.
+            // For a true backup, we need the raw object structure from Firebase.
+            // We will re-fetch it here to ensure we get the correct structure.
+            const { get } = await import("firebase/database");
+            const { database } = await import("@/lib/firebase");
+            const { ref } = await import("firebase/database");
+            
             const dbRef = ref(database);
             const snapshot = await get(dbRef);
+
             if (snapshot.exists()) {
                 const data = snapshot.val();
                 const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
@@ -79,6 +106,10 @@ export default function BackupPage() {
         const reader = new FileReader();
         reader.onload = async (e) => {
             try {
+                const { set } = await import("firebase/database");
+                const { database } = await import("@/lib/firebase");
+                const { ref } = await import("firebase/database");
+
                 const text = e.target?.result;
                 if (typeof text !== 'string') {
                     throw new Error("فشل قراءة الملف");
@@ -86,9 +117,8 @@ export default function BackupPage() {
                 const data = JSON.parse(text);
                 const dbRef = ref(database);
                 await set(dbRef, data);
-                toast({ title: "تم بنجاح", description: "تم استعادة البيانات بنجاح." });
+                toast({ title: "تم بنجاح", description: "تم استعادة البيانات بنجاح. قد تحتاج إلى تحديث الصفحة." });
                 setRestoreFile(null);
-                 // Optionally, you can reset the input field
                 const fileInput = document.getElementById('restore-file') as HTMLInputElement;
                 if (fileInput) fileInput.value = '';
 
@@ -115,15 +145,23 @@ export default function BackupPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Button onClick={handleBackup} disabled={isLoadingBackup}>
-                        {isLoadingBackup ? (
+                    <Button onClick={handleBackup} disabled={isLoadingBackup || loadingData}>
+                        {isLoadingBackup || loadingData ? (
                             <Loader2 className="ml-2 h-4 w-4 animate-spin" />
                         ) : (
                             <Download className="ml-2 h-4 w-4" />
                         )}
-                        {isLoadingBackup ? 'جارٍ الإنشاء...' : 'إنشاء وتنزيل نسخة احتياطية'}
+                        {isLoadingBackup ? 'جارٍ الإنشاء...' : (loadingData ? 'جاري فحص البيانات...' : 'إنشاء وتنزيل نسخة احتياطية')}
                     </Button>
                 </CardContent>
+                 <CardFooter>
+                    {loadingData ? <Loader2 className="h-4 w-4 animate-spin" /> : (lastModified &&
+                        <div className="text-xs text-muted-foreground flex items-center gap-2">
+                            <History className="h-4 w-4" />
+                            <span>آخر تعديل على البيانات: {lastModified.toLocaleString('ar-EG')}</span>
+                        </div>
+                    )}
+                </CardFooter>
             </Card>
 
             <Card className="border-destructive">
@@ -161,7 +199,7 @@ export default function BackupPage() {
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                             <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleRestore}>نعم، أفهم المخاطر، قم بالاستعادة</AlertDialogAction>
+                            <AlertDialogAction onClick={handleRestore} className="bg-destructive hover:bg-destructive/90">نعم، أفهم المخاطر، قم بالاستعادة</AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
                     </AlertDialog>
@@ -172,4 +210,3 @@ export default function BackupPage() {
     </>
   );
 }
-
