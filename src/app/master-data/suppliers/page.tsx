@@ -41,6 +41,12 @@ export default function SuppliersPage() {
               </Label>
               <Input id="supplier-contact" className="col-span-3" />
             </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="opening-balance" className="text-right">
+                رصيد أول المدة
+              </Label>
+              <Input id="opening-balance" type="number" className="col-span-3" />
+            </div>
           </div>
         </AddEntityDialog>
       </PageHeader>

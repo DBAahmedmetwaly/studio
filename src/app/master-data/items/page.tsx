@@ -47,6 +47,12 @@ export default function ItemsPage() {
               </Label>
               <Input id="item-price" type="number" className="col-span-3" />
             </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="opening-stock" className="text-right">
+                رصيد أول المدة
+              </Label>
+              <Input id="opening-stock" type="number" className="col-span-3" />
+            </div>
           </div>
         </AddEntityDialog>
       </PageHeader>
@@ -55,7 +61,7 @@ export default function ItemsPage() {
           <CardHeader>
             <CardTitle>الأصناف</CardTitle>
             <CardDescription>
-              تحديد الأصناف مع الفئات والوحدات والأسعار.
+              تحديد الأصناف مع الفئات والوحدات والأسعار والأرصدة الافتتاحية.
             </CardDescription>
           </CardHeader>
           <CardContent>

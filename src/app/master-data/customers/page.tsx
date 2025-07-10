@@ -36,6 +36,12 @@ export default function CustomersPage() {
               <Input id="customer-name" className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="opening-balance" className="text-right">
+                رصيد أول المدة
+              </Label>
+              <Input id="opening-balance" type="number" className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="credit-limit" className="text-right">
                 حد الائتمان
               </Label>
