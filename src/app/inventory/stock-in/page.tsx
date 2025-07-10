@@ -89,7 +89,7 @@ export default function StockInPage() {
             toast({
                 variant: "destructive",
                 title: "بيانات غير مكتملة",
-                description: "يرجى اختيار مستودع وإضافة صنف واحد على الأقل.",
+                description: "يرجى اختيار مخزن وإضافة صنف واحد على الأقل.",
             });
             return;
         }
@@ -160,10 +160,10 @@ export default function StockInPage() {
                 <>
                     <div className="grid md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                            <Label htmlFor="warehouse">إلى مستودع</Label>
+                            <Label htmlFor="warehouse">إلى مخزن</Label>
                             <Select value={selectedWarehouse} onValueChange={setSelectedWarehouse}>
                                 <SelectTrigger id="warehouse">
-                                    <SelectValue placeholder="اختر المستودع" />
+                                    <SelectValue placeholder="اختر المخزن" />
                                 </SelectTrigger>
                                 <SelectContent>
                                    {warehouses.map(w => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}

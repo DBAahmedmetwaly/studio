@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from "react";
@@ -114,7 +115,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             
             <NavCollapsible title="البيانات الرئيسية" icon={<Package />}>
                 <NavSubLink href="/master-data/items">الأصناف</NavSubLink>
-                <NavSubLink href="/master-data/warehouses">المستودعات</NavSubLink>
+                <NavSubLink href="/master-data/warehouses">المخازن</NavSubLink>
                 <NavSubLink href="/master-data/customers">العملاء</NavSubLink>
                 <NavSubLink href="/master-data/suppliers">الموردون</NavSubLink>
                 <NavSubLink href="/master-data/partners">الشركاء</NavSubLink>

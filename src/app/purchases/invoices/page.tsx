@@ -170,10 +170,10 @@ export default function PurchaseInvoicePage() {
                         </Select>
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="warehouse">المستودع المستلم</Label>
+                        <Label htmlFor="warehouse">المخزن المستلم</Label>
                         <Select>
                             <SelectTrigger id="warehouse">
-                                <SelectValue placeholder="اختر مستودعًا" />
+                                <SelectValue placeholder="اختر مخزنًا" />
                             </SelectTrigger>
                             <SelectContent>
                                {warehouses.map(w => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}

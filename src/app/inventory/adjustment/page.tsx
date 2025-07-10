@@ -128,7 +128,7 @@ export default function StockAdjustmentPage() {
             toast({
                 variant: "destructive",
                 title: "بيانات غير مكتملة",
-                description: "يرجى اختيار مستودع وإضافة صنف واحد على الأقل للتسوية.",
+                description: "يرجى اختيار مخزن وإضافة صنف واحد على الأقل للتسوية.",
             });
             return;
         }
@@ -182,10 +182,10 @@ export default function StockAdjustmentPage() {
                 <>
                     <div className="grid md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                            <Label htmlFor="warehouse">المستودع</Label>
+                            <Label htmlFor="warehouse">المخزن</Label>
                             <Select value={selectedWarehouse} onValueChange={setSelectedWarehouse}>
                                 <SelectTrigger id="warehouse">
-                                    <SelectValue placeholder="اختر المستودع" />
+                                    <SelectValue placeholder="اختر المخزن" />
                                 </SelectTrigger>
                                 <SelectContent>
                                    {warehouses.map(w => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
