@@ -41,7 +41,7 @@ export default function StockOutPage() {
 
     const { data: availableItems, loading: loadingItems } = useFirebase<Item>('items');
     const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
-    const { add: addStockOutRecord } = useFirebase("stockOutRecords");
+    const { add: addStockOutRecord, getNextId } = useFirebase("stockOutRecords");
 
 
     const handleAddItem = () => {
@@ -85,18 +85,28 @@ export default function StockOutPage() {
             return;
         }
         
+        const nextId = await getNextId('stockOut');
+         if(!nextId) {
+            toast({
+                variant: "destructive",
+                title: "حدث خطأ",
+                description: "فشل في إنشاء رقم الإيصال. يرجى المحاولة مرة أخرى.",
+            });
+            return;
+        }
+
         const record = {
             sourceId: source,
             date: new Date().toISOString(),
             items,
             reason,
             notes,
-            receiptNumber: `OUT-${Date.now()}`
+            receiptNumber: `OUT-${nextId}`
         }
 
         try {
             await addStockOutRecord(record);
-            toast({ title: "تم بنجاح", description: "تم تأكيد إخراج المخزون بنجاح."});
+            toast({ title: "تم بنجاح", description: `تم تأكيد إخراج المخزون بنجاح برقم إيصال: ${record.receiptNumber}`});
             resetForm();
         } catch(error) {
             toast({ variant: "destructive", title: "حدث خطأ", description: "فشل في حفظ إيصال الإخراج. يرجى المحاولة مرة أخرى."});
@@ -125,7 +135,7 @@ export default function StockOutPage() {
           <CardHeader>
             <CardTitle>إيصال إخراج مخزني</CardTitle>
             <div className="grid md:grid-cols-3 gap-4 text-sm text-muted-foreground">
-                <div>رقم الإيصال: OUT-00123</div>
+                <div>رقم الإيصال: (سيتم إنشاؤه عند الحفظ)</div>
                 <div>تاريخ الإخراج: {new Date().toLocaleDateString('ar-EG')}</div>
             </div>
           </CardHeader>

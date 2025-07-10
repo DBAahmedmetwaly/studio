@@ -38,7 +38,7 @@ export default function StockTransferPage() {
 
     const { data: availableItems, loading: loadingItems } = useFirebase<Item>('items');
     const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
-    const { add: addStockTransferRecord } = useFirebase("stockTransferRecords");
+    const { add: addStockTransferRecord, getNextId } = useFirebase("stockTransferRecords");
 
 
     const handleAddItem = () => {
@@ -85,18 +85,28 @@ export default function StockTransferPage() {
             toast({ variant: "destructive", title: "خطأ", description: "لا يمكن التحويل من وإلى نفس المخزن."});
             return;
         }
+        
+        const nextId = await getNextId('stockTransfer');
+        if(!nextId) {
+            toast({
+                variant: "destructive",
+                title: "حدث خطأ",
+                description: "فشل في إنشاء رقم الإيصال. يرجى المحاولة مرة أخرى.",
+            });
+            return;
+        }
 
         const record = {
             fromSourceId: fromSource,
             toSourceId: toSource,
             date: new Date().toISOString(),
             items,
-            receiptNumber: `TRN-${Date.now()}`
+            receiptNumber: `TRN-${nextId}`
         }
 
         try {
             await addStockTransferRecord(record);
-            toast({ title: "تم بنجاح", description: "تم تأكيد تحويل المخزون بنجاح."});
+            toast({ title: "تم بنجاح", description: `تم تأكيد تحويل المخزون بنجاح برقم إيصال: ${record.receiptNumber}`});
             resetForm();
         } catch(error) {
             toast({ variant: "destructive", title: "حدث خطأ", description: "فشل في حفظ إيصال التحويل. يرجى المحاولة مرة أخرى."});
@@ -125,7 +135,7 @@ export default function StockTransferPage() {
           <CardHeader>
             <CardTitle>إيصال تحويل مخزني</CardTitle>
             <div className="grid md:grid-cols-3 gap-4 text-sm text-muted-foreground">
-                <div>رقم الإيصال: TRN-00123</div>
+                <div>رقم الإيصال: (سيتم إنشاؤه عند الحفظ)</div>
                 <div>تاريخ التحويل: {new Date().toLocaleDateString('ar-EG')}</div>
             </div>
           </CardHeader>

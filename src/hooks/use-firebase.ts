@@ -1,9 +1,9 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { database } from '@/lib/firebase';
-import { ref, onValue, set, push, remove as fbRemove, update as fbUpdate } from 'firebase/database';
+import { ref, onValue, set, push, remove as fbRemove, update as fbUpdate, runTransaction } from 'firebase/database';
 
 interface FirebaseData {
   id: string;
@@ -48,18 +48,20 @@ const useFirebase = <T extends object>(path: string) => {
     return () => unsubscribe();
   }, [path]);
 
-  const add = async (newData: T) => {
+  const add = useCallback(async (newData: T) => {
     try {
       const dbRef = ref(database, path);
       const newRef = push(dbRef);
       await set(newRef, newData);
+      return newRef.key;
     } catch (e: any) {
       setError(e);
       console.error('Firebase add failed:', e);
+      throw e;
     }
-  };
+  }, [path]);
 
-  const update = async (id: string, updatedData: Partial<T>) => {
+  const update = useCallback(async (id: string, updatedData: Partial<T>) => {
     try {
       const itemRef = ref(database, `${path}/${id}`);
       // remove id from object before updating
@@ -69,20 +71,40 @@ const useFirebase = <T extends object>(path: string) => {
     } catch (e: any) {
       setError(e);
       console.error('Firebase update failed:', e);
+      throw e;
     }
-  };
+  }, [path]);
 
-  const remove = async (id: string) => {
+  const remove = useCallback(async (id: string) => {
+    if(!id) return;
     try {
       const itemRef = ref(database, `${path}/${id}`);
       await fbRemove(itemRef);
     } catch (e: any) {
       setError(e);
       console.error('Firebase remove failed:', e);
+      throw e;
     }
-  };
+  }, [path]);
 
-  return { data, loading, error, add, update, remove };
+  const getNextId = useCallback(async (counterName: string): Promise<number | null> => {
+    const counterRef = ref(database, `counters/${counterName}`);
+    try {
+        const { committed, snapshot } = await runTransaction(counterRef, (currentValue) => {
+            return (currentValue || 0) + 1;
+        });
+        if (committed) {
+            return snapshot.val();
+        }
+        return null;
+    } catch (e: any) {
+        setError(e);
+        console.error('Failed to get next ID:', e);
+        return null;
+    }
+  }, []);
+
+  return { data, loading, error, add, update, remove, getNextId };
 };
 
 export default useFirebase;

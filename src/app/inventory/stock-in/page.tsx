@@ -40,7 +40,7 @@ export default function StockInPage() {
     
     const { data: availableItems, loading: loadingItems } = useFirebase<Item>('items');
     const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
-    const { add: addStockInRecord } = useFirebase("stockInRecords");
+    const { add: addStockInRecord, getNextId } = useFirebase("stockInRecords");
 
 
     const handleAddItem = () => {
@@ -91,6 +91,16 @@ export default function StockInPage() {
             });
             return;
         }
+        
+        const nextId = await getNextId('stockIn');
+        if(!nextId) {
+            toast({
+                variant: "destructive",
+                title: "حدث خطأ",
+                description: "فشل في إنشاء رقم الإيصال. يرجى المحاولة مرة أخرى.",
+            });
+            return;
+        }
 
         const record = {
             warehouseId: selectedWarehouse,
@@ -98,14 +108,14 @@ export default function StockInPage() {
             items,
             reason,
             notes,
-            receiptNumber: `IN-${Date.now()}`
+            receiptNumber: `IN-${nextId}`
         };
 
         try {
             await addStockInRecord(record);
             toast({
                 title: "تم بنجاح",
-                description: "تم تأكيد إدخال المخزون بنجاح.",
+                description: `تم تأكيد إدخال المخزون بنجاح برقم إيصال: ${record.receiptNumber}`,
             });
             resetForm();
         } catch(error) {
@@ -139,7 +149,7 @@ export default function StockInPage() {
           <CardHeader>
             <CardTitle>إيصال إدخال مخزني</CardTitle>
             <div className="grid md:grid-cols-3 gap-4 text-sm text-muted-foreground">
-                <div>رقم الإيصال: IN-00456</div>
+                <div>رقم الإيصال: (سيتم إنشاؤه عند الحفظ)</div>
                 <div>تاريخ الإدخال: {new Date().toLocaleDateString('ar-EG')}</div>
             </div>
           </CardHeader>
