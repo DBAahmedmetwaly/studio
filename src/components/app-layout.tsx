@@ -31,6 +31,7 @@ import {
   UserCog,
   Settings,
   ChevronDown,
+  ShieldCheck,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -141,9 +142,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <NavSubLink href="/reports/financial-statements">القوائم المالية</NavSubLink>
                 <NavSubLink href="/reports/partner-shares">حصص الشركاء</NavSubLink>
             </NavCollapsible>
-
-            <NavLink href="/users" icon={<UserCog />}>المستخدمون والصلاحيات</NavLink>
-            <NavLink href="/settings" icon={<Settings />}>الإعدادات</NavLink>
+            
+            <NavCollapsible title="المستخدمون والإعدادات" icon={<UserCog />}>
+              <NavSubLink href="/users">المستخدمون</NavSubLink>
+              <NavSubLink href="/roles">الأدوار والصلاحيات</NavSubLink>
+              <NavSubLink href="/settings">الإعدادات</NavSubLink>
+            </NavCollapsible>
 
           </SidebarMenu>
         </SidebarContent>

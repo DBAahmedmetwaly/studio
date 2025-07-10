@@ -109,7 +109,7 @@ const UserForm = ({ user }: { user?: typeof users[0] }) => (
 export default function UsersPage() {
   return (
     <>
-      <PageHeader title="المستخدمون والصلاحيات">
+      <PageHeader title="إدارة المستخدمين">
         <AddEntityDialog
           title="إضافة مستخدم جديد"
           description="أدخل تفاصيل المستخدم الجديد وصلاحياته."
@@ -128,7 +128,7 @@ export default function UsersPage() {
           <CardHeader>
             <CardTitle>المستخدمون</CardTitle>
             <CardDescription>
-              إدارة المستخدمين وأدوارهم (مسؤول، أمين مخزن، محاسب، أمين صندوق).
+              إدارة المستخدمين وأدوارهم في النظام.
             </CardDescription>
           </CardHeader>
           <CardContent>
