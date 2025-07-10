@@ -37,6 +37,7 @@ const initialRoles = {
     purchases: { view: true, add: true, edit: true, delete: true, print: true },
     accounting: { view: true, add: true, edit: true, delete: true },
     reports: { view: true, generate: true },
+    analytics: { view: true },
     users: { view: true, add: true, edit: true, delete: true },
     roles: { view: true, edit: true },
     settings: { view: true, edit: true },
@@ -50,6 +51,7 @@ const initialRoles = {
     purchases: { view: true, add: true, edit: true, delete: false, print: true },
     accounting: { view: true, add: true, edit: true, delete: true },
     reports: { view: true, generate: true },
+    analytics: { view: true },
     users: { view: false, add: false, edit: false, delete: false },
     roles: { view: false, edit: false },
     settings: { view: false, edit: false },
@@ -63,6 +65,7 @@ const initialRoles = {
     purchases: { view: false, add: false, edit: false, delete: false, print: false },
     accounting: { view: false, add: false, edit: false, delete: false },
     reports: { view: true, generate: false },
+    analytics: { view: false },
     users: { view: false, add: false, edit: false, delete: false },
     roles: { view: false, edit: false },
     settings: { view: false, edit: false },
@@ -76,6 +79,7 @@ const initialRoles = {
     purchases: { view: true, add: true, edit: false, delete: false, print: true },
     accounting: { view: true, add: true, edit: false, delete: false },
     reports: { view: true, generate: false },
+    analytics: { view: true },
     users: { view: false, add: false, edit: false, delete: false },
     roles: { view: false, edit: false },
     settings: { view: false, edit: false },
@@ -91,6 +95,7 @@ const permissionsMap = {
   purchases: { label: "المشتريات", actions: { view: "عرض", add: "إضافة", edit: "تعديل", delete: "حذف", print: "طباعة" } },
   accounting: { label: "المحاسبة", actions: { view: "عرض", add: "إضافة", edit: "تعديل", delete: "حذف" } },
   reports: { label: "التقارير", actions: { view: "عرض", generate: "إنشاء" } },
+  analytics: { label: "التقارير الرسومية", actions: { view: "عرض" } },
   users: { label: "المستخدمون", actions: { view: "عرض", add: "إضافة", edit: "تعديل", delete: "حذف" } },
   roles: { label: "الأدوار والصلاحيات", actions: { view: "عرض", edit: "تعديل" } },
   settings: { label: "الإعدادات", actions: { view: "عرض", edit: "تعديل" } },
@@ -171,7 +176,7 @@ export default function RolesPage() {
                                 const action = actionKey as Action;
                                 return(
                                   <TableCell key={action} className="text-center">
-                                    {action in moduleActions ? (
+                                    {rolePermissions && action in moduleActions ? (
                                       <Checkbox
                                         checked={rolePermissions[action]}
                                         onCheckedChange={(checked) => handlePermissionChange(role as Role, module, action, !!checked)}
