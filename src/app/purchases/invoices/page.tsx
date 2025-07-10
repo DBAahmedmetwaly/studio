@@ -9,8 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle, Trash2, Printer, Save } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import { PlusCircle, Trash2, Printer, Save, Wand2, Loader2 } from "lucide-react";
+import React, { useState, useEffect, useTransition } from "react";
+import { extractInvoiceItems, InvoiceItem as AiInvoiceItem } from "@/ai/flows/extract-invoice-items";
 
 interface InvoiceItem {
   id: string;
@@ -29,6 +30,8 @@ export default function PurchaseInvoicePage() {
   const [subtotal, setSubtotal] = useState(0);
   const [tax, setTax] = useState(0);
   const [total, setTotal] = useState(0);
+  const [invoiceText, setInvoiceText] = useState("");
+  const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
     const newSubtotal = items.reduce((acc, item) => acc + item.total, 0);
@@ -61,6 +64,28 @@ export default function PurchaseInvoicePage() {
   const handlePrint = () => {
     window.print();
   };
+
+  const handleAiExtract = () => {
+    if(!invoiceText) return;
+    startTransition(async () => {
+        try {
+            const result = await extractInvoiceItems({text: invoiceText});
+            if (result && result.items) {
+                 const newItems: InvoiceItem[] = result.items.map((item, index) => ({
+                    id: `ai-item-${Date.now()}-${index}`,
+                    name: item.itemName,
+                    qty: item.quantity,
+                    price: item.price,
+                    total: item.quantity * item.price,
+                }));
+                setItems(prevItems => [...prevItems, ...newItems]);
+                setInvoiceText("");
+            }
+        } catch (error) {
+            console.error("Failed to extract invoice items:", error);
+        }
+    });
+  }
 
   const availableItems = [
       { id: "item001", name: "وحدة معالجة مركزية i7" },
@@ -127,6 +152,25 @@ export default function PurchaseInvoicePage() {
                     </Select>
                 </div>
             </div>
+
+            <div className="space-y-2 no-print">
+              <Label htmlFor="ai-invoice-text">استيراد بالذكاء الاصطناعي</Label>
+              <div className="flex gap-2">
+                <Textarea 
+                  id="ai-invoice-text" 
+                  placeholder="مثال: فاتورة من مورد أجهزة بها 5 لابتوب بسعر 10000 للواحد و 10 ماوس بسعر 200..."
+                  value={invoiceText}
+                  onChange={(e) => setInvoiceText(e.target.value)}
+                />
+                <Button onClick={handleAiExtract} disabled={isPending || !invoiceText}>
+                  {isPending ? <Loader2 className="animate-spin" /> : <Wand2 />}
+                  <span className="sr-only">تحليل</span>
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                صف الفاتورة وسيقوم الذكاء الاصطناعي باستخلاص البنود لك.
+              </p>
+            </div>
             
             <div>
               <Label>بنود الفاتورة</Label>
@@ -141,7 +185,7 @@ export default function PurchaseInvoicePage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {items.map((item) => (
+                  {items.map((item, index) => (
                     <TableRow key={item.id}>
                       <TableCell>{item.name}</TableCell>
                       <TableCell>{item.qty}</TableCell>

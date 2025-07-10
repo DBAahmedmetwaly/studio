@@ -2,3 +2,4 @@ import { config } from 'dotenv';
 config();
 
 import '@/ai/flows/financial-analysis.ts';
+import '@/ai/flows/extract-invoice-items.ts';
