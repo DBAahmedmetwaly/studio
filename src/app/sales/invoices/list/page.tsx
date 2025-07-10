@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React from 'react';
@@ -109,7 +110,7 @@ export default function SalesInvoicesListPage() {
                                      <DropdownMenuItem>
                                         طباعة
                                     </DropdownMenuItem>
-                                     <DropdownMenuItem onClick={() => router.push(`/sales/returns?invoiceId=${invoice.id}`)}>
+                                     <DropdownMenuItem onClick={() => router.push(`/sales/returns/new?invoiceId=${invoice.id}`)}>
                                         <Undo2 className="ml-2 h-4 w-4" />
                                         مرتجع
                                     </DropdownMenuItem>

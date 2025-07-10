@@ -109,7 +109,7 @@ export default function PurchaseInvoicesListPage() {
                                      <DropdownMenuItem>
                                         طباعة
                                     </DropdownMenuItem>
-                                     <DropdownMenuItem onClick={() => router.push(`/purchases/returns?invoiceId=${invoice.id}`)}>
+                                     <DropdownMenuItem onClick={() => router.push(`/purchases/returns/new?invoiceId=${invoice.id}`)}>
                                         <Undo2 className="ml-2 h-4 w-4" />
                                         مرتجع
                                     </DropdownMenuItem>
