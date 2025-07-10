@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { PlusCircle, Trash2, Printer, Save, Loader2 } from "lucide-react";
 import React, { useState } from "react";
 import useFirebase from "@/hooks/use-firebase";
+import { useToast } from "@/hooks/use-toast";
 
 interface StockItem {
   id: string;
@@ -35,23 +36,32 @@ interface Branch {
 
 
 export default function StockTransferPage() {
+    const { toast } = useToast();
     const [items, setItems] = useState<StockItem[]>([]);
     const [newItem, setNewItem] = useState({ id: "", name: "", qty: 1 });
+    const [fromSource, setFromSource] = useState<string>("");
+    const [toSource, setToSource] = useState<string>("");
 
     const { data: availableItems, loading: loadingItems } = useFirebase<Item>('items');
     const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
     const { data: branches, loading: loadingBranches } = useFirebase<Branch>('branches');
+    const { add: addStockTransferRecord } = useFirebase("stockTransferRecords");
+
 
     const handleAddItem = () => {
-        if (!newItem.id || newItem.qty <= 0) return;
+        if (!newItem.id || newItem.qty <= 0) {
+            toast({ variant: "destructive", title: "خطأ", description: "يرجى اختيار صنف وكمية صالحة."});
+            return;
+        }
         const selectedItem = availableItems.find(i => i.id === newItem.id);
         if (!selectedItem) return;
 
         setItems([
         ...items,
         { 
-            ...newItem,
+            id: selectedItem.id,
             name: selectedItem.name,
+            qty: newItem.qty,
         },
         ]);
         setNewItem({ id: "", name: "", qty: 1 });
@@ -65,7 +75,44 @@ export default function StockTransferPage() {
         window.print();
     };
 
+    const resetForm = () => {
+        setItems([]);
+        setNewItem({ id: "", name: "", qty: 1 });
+        setFromSource("");
+        setToSource("");
+    }
+
+    const handleConfirm = async () => {
+        if (!fromSource || !toSource || items.length === 0) {
+            toast({ variant: "destructive", title: "بيانات غير مكتملة", description: "يرجى اختيار جهة التحويل وإضافة صنف واحد على الأقل."});
+            return;
+        }
+
+        if(fromSource === toSource) {
+            toast({ variant: "destructive", title: "خطأ", description: "لا يمكن التحويل من وإلى نفس الجهة."});
+            return;
+        }
+
+        const record = {
+            fromSourceId: fromSource,
+            toSourceId: toSource,
+            date: new Date().toISOString(),
+            items,
+            receiptNumber: `TRN-${Date.now()}`
+        }
+
+        try {
+            await addStockTransferRecord(record);
+            toast({ title: "تم بنجاح", description: "تم تأكيد تحويل المخزون بنجاح."});
+            resetForm();
+        } catch(error) {
+            toast({ variant: "destructive", title: "حدث خطأ", description: "فشل في حفظ إيصال التحويل. يرجى المحاولة مرة أخرى."});
+            console.error("Failed to save stock transfer record:", error);
+        }
+    };
+
     const loading = loadingItems || loadingWarehouses || loadingBranches;
+    const allSources = [...warehouses.map(w => ({id: `wh-${w.id}`, name: w.name})), ...branches.map(b => ({id: `br-${b.id}`, name: b.name}))]
 
   return (
     <>
@@ -100,7 +147,7 @@ export default function StockTransferPage() {
                 <div className="grid md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                         <Label htmlFor="from-warehouse">من مستودع / فرع</Label>
-                        <Select>
+                        <Select value={fromSource} onValueChange={setFromSource}>
                             <SelectTrigger id="from-warehouse">
                                 <SelectValue placeholder="اختر المحول منه" />
                             </SelectTrigger>
@@ -112,7 +159,7 @@ export default function StockTransferPage() {
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="to-warehouse">إلى مستودع/فرع</Label>
-                        <Select>
+                        <Select value={toSource} onValueChange={setToSource}>
                             <SelectTrigger id="to-warehouse">
                                 <SelectValue placeholder="اختر المحول إليه" />
                             </SelectTrigger>
@@ -174,7 +221,7 @@ export default function StockTransferPage() {
             )}
           </CardContent>
           <CardFooter className="flex justify-end">
-            <Button size="lg" disabled={loading}>تأكيد التحويل</Button>
+            <Button size="lg" disabled={loading} onClick={handleConfirm}>تأكيد التحويل</Button>
           </CardFooter>
         </Card>
       </main>

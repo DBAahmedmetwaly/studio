@@ -136,7 +136,7 @@ export default function ItemsPage() {
             </Button>
           }
         >
-          <ItemForm onSave={handleSave} />
+          <ItemForm onSave={handleSave} onClose={() => {}} />
         </AddEntityDialog>
       </PageHeader>
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
@@ -192,7 +192,7 @@ export default function ItemsPage() {
                                                 </DropdownMenuItem>
                                             }
                                         >
-                                           <ItemForm item={item} onSave={handleSave} />
+                                           <ItemForm item={item} onSave={handleSave} onClose={()=>{}} />
                                         </AddEntityDialog>
                                         <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(item.id!)}>
                                             <Trash2 className="ml-2 h-4 w-4" />

@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { PlusCircle, Trash2, Printer, Save, Loader2 } from "lucide-react";
 import React, { useState } from "react";
 import useFirebase from "@/hooks/use-firebase";
+import { useToast } from "@/hooks/use-toast";
 
 interface StockItem {
   id: string;
@@ -30,22 +31,36 @@ interface Warehouse {
 }
 
 export default function StockInPage() {
+    const { toast } = useToast();
     const [items, setItems] = useState<StockItem[]>([]);
     const [newItem, setNewItem] = useState({ id: "", name: "", qty: 1 });
+    const [selectedWarehouse, setSelectedWarehouse] = useState<string>("");
+    const [notes, setNotes] = useState<string>("");
+    const [reason, setReason] = useState<string>("");
     
     const { data: availableItems, loading: loadingItems } = useFirebase<Item>('items');
     const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
+    const { add: addStockInRecord } = useFirebase("stockInRecords");
+
 
     const handleAddItem = () => {
-        if (!newItem.id || newItem.qty <= 0) return;
+        if (!newItem.id || newItem.qty <= 0) {
+            toast({
+                variant: "destructive",
+                title: "خطأ",
+                description: "يرجى اختيار صنف وكمية صالحة.",
+            });
+            return;
+        }
         const selectedItem = availableItems.find(i => i.id === newItem.id);
         if (!selectedItem) return;
 
         setItems([
         ...items,
         { 
-            ...newItem,
+            id: selectedItem.id, // use the actual item id
             name: selectedItem.name,
+            qty: newItem.qty
         },
         ]);
         setNewItem({ id: "", name: "", qty: 1 });
@@ -57,6 +72,50 @@ export default function StockInPage() {
 
     const handlePrint = () => {
         window.print();
+    };
+
+    const resetForm = () => {
+        setItems([]);
+        setNewItem({ id: "", name: "", qty: 1 });
+        setSelectedWarehouse("");
+        setReason("");
+        setNotes("");
+    }
+
+    const handleConfirm = async () => {
+        if (!selectedWarehouse || items.length === 0) {
+            toast({
+                variant: "destructive",
+                title: "بيانات غير مكتملة",
+                description: "يرجى اختيار مستودع وإضافة صنف واحد على الأقل.",
+            });
+            return;
+        }
+
+        const record = {
+            warehouseId: selectedWarehouse,
+            date: new Date().toISOString(),
+            items,
+            reason,
+            notes,
+            receiptNumber: `IN-${Date.now()}`
+        };
+
+        try {
+            await addStockInRecord(record);
+            toast({
+                title: "تم بنجاح",
+                description: "تم تأكيد إدخال المخزون بنجاح.",
+            });
+            resetForm();
+        } catch(error) {
+             toast({
+                variant: "destructive",
+                title: "حدث خطأ",
+                description: "فشل في حفظ إيصال الإدخال. يرجى المحاولة مرة أخرى.",
+            });
+            console.error("Failed to save stock in record: ", error);
+        }
     };
 
     const loading = loadingItems || loadingWarehouses;
@@ -94,7 +153,7 @@ export default function StockInPage() {
                     <div className="grid md:grid-cols-2 gap-6">
                         <div className="space-y-2">
                             <Label htmlFor="warehouse">إلى مستودع</Label>
-                            <Select>
+                            <Select value={selectedWarehouse} onValueChange={setSelectedWarehouse}>
                                 <SelectTrigger id="warehouse">
                                     <SelectValue placeholder="اختر المستودع" />
                                 </SelectTrigger>
@@ -105,7 +164,7 @@ export default function StockInPage() {
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="reason">سبب الإدخال</Label>
-                            <Select>
+                            <Select value={reason} onValueChange={setReason}>
                                 <SelectTrigger id="reason">
                                     <SelectValue placeholder="اختر سبب الإدخال" />
                                 </SelectTrigger>
@@ -167,13 +226,13 @@ export default function StockInPage() {
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="notes">ملاحظات</Label>
-                        <Textarea id="notes" placeholder="أضف أي ملاحظات هنا..." />
+                        <Textarea id="notes" placeholder="أضف أي ملاحظات هنا..." value={notes} onChange={(e) => setNotes(e.target.value)} />
                     </div>
                 </>
             )}
           </CardContent>
           <CardFooter className="flex justify-end no-print">
-            <Button size="lg" disabled={loading}>تأكيد الإدخال</Button>
+            <Button size="lg" disabled={loading} onClick={handleConfirm}>تأكيد الإدخال</Button>
           </CardFooter>
         </Card>
       </main>
