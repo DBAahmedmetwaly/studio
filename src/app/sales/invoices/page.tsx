@@ -10,11 +10,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { PlusCircle, Trash2, Printer, Save, Loader2 } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import useFirebase from "@/hooks/use-firebase";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from 'next/navigation';
 import { Switch } from "@/components/ui/switch";
+import { usePermissions } from "@/contexts/permissions-context";
 
 
 interface InvoiceItem {
@@ -32,6 +33,7 @@ interface Item {
     unit: string;
     price?: number;
     cost?: number;
+    openingStock?: number;
 }
 
 interface Customer {
@@ -44,9 +46,19 @@ interface Warehouse {
     name: string;
 }
 
+interface SaleInvoice { id: string; warehouseId: string; items: { id: string; qty: number; }[]; }
+interface PurchaseInvoice { id: string; warehouseId: string; items: { id: string; qty: number; }[]; }
+interface StockInRecord { id: string; warehouseId: string; items: { id: string; qty: number; }[]; }
+interface StockOutRecord { id: string; sourceId: string; items: { id: string; qty: number; }[]; }
+interface StockTransferRecord { id: string; fromSourceId: string; toSourceId: string; items: { id: string; qty: number; }[]; }
+interface StockAdjustmentRecord { id: string; warehouseId: string; items: { itemId: string; difference: number; }[]; }
+
+
 export default function SalesInvoicePage() {
     const { toast } = useToast();
     const router = useRouter();
+    const { can } = usePermissions();
+
     const [items, setItems] = useState<InvoiceItem[]>([]);
     const [newItem, setNewItem] = useState({ id: "", name: "", qty: 1, price: 0, unit: "" });
     const [subtotal, setSubtotal] = useState(0);
@@ -62,10 +74,43 @@ export default function SalesInvoicePage() {
     const [invoiceDate, setInvoiceDate] = useState<string>('');
     const [dueDate, setDueDate] = useState<string>('');
 
-    const { data: availableItems, loading: loadingItems } = useFirebase<Item>('items');
+    const { data: allItems, loading: loadingItems } = useFirebase<Item>('items');
     const { data: customers, loading: loadingCustomers } = useFirebase<Customer>('customers');
     const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
+    const { data: sales, loading: l3 } = useFirebase<SaleInvoice>('salesInvoices');
+    const { data: purchases, loading: l4 } = useFirebase<PurchaseInvoice>('purchaseInvoices');
+    const { data: stockIns, loading: l5 } = useFirebase<StockInRecord>('stockInRecords');
+    const { data: stockOuts, loading: l6 } = useFirebase<StockOutRecord>('stockOutRecords');
+    const { data: transfers, loading: l7 } = useFirebase<StockTransferRecord>('stockTransferRecords');
+    const { data: adjustments, loading: l8 } = useFirebase<StockAdjustmentRecord>('stockAdjustmentRecords');
     const { add: addSaleInvoice, getNextId } = useFirebase('salesInvoices');
+    
+    const loading = loadingItems || loadingCustomers || loadingWarehouses || l3 || l4 || l5 || l6 || l7 || l8;
+
+    const availableItemsForWarehouse = useMemo(() => {
+        if (!warehouseId || warehouseId === "all" || !allItems.length) {
+            return [];
+        }
+
+        return allItems.map(item => {
+            let stock = item.openingStock || 0;
+            
+            // Increases
+            purchases.filter(p => p.warehouseId === warehouseId).forEach(p => p.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
+            stockIns.filter(si => si.warehouseId === warehouseId).forEach(si => si.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
+            transfers.filter(t => t.toSourceId === warehouseId).forEach(t => t.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
+            adjustments.filter(adj => adj.warehouseId === warehouseId).forEach(adj => adj.items.filter(i => i.itemId === item.id && i.difference > 0).forEach(i => stock += i.difference));
+
+            // Decreases
+            sales.filter(s => s.warehouseId === warehouseId).forEach(s => s.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
+            stockOuts.filter(so => so.sourceId === warehouseId).forEach(so => so.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
+            transfers.filter(t => t.fromSourceId === warehouseId).forEach(t => t.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
+            adjustments.filter(adj => adj.warehouseId === warehouseId).forEach(adj => adj.items.filter(i => i.itemId === item.id && i.difference < 0).forEach(i => stock += i.difference));
+
+            return { ...item, stock };
+        }).filter(item => item.stock > 0);
+
+    }, [warehouseId, allItems, purchases, sales, stockIns, stockOuts, transfers, adjustments]);
 
 
     useEffect(() => {
@@ -77,15 +122,23 @@ export default function SalesInvoicePage() {
     }, [items, discount, applyTax]);
 
     useEffect(() => {
-        // Set dates only on the client-side to avoid hydration errors
         setInvoiceDate(new Date().toLocaleDateString('ar-EG'));
         setDueDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('ar-EG'));
     }, []);
 
     const handleAddItem = () => {
         if (!newItem.id || newItem.qty <= 0 || newItem.price < 0) return;
-        const selectedItem = availableItems.find(i => i.id === newItem.id);
+        const selectedItem = availableItemsForWarehouse.find(i => i.id === newItem.id);
         if (!selectedItem) return;
+
+        if(newItem.qty > selectedItem.stock) {
+            toast({
+                variant: 'destructive',
+                title: 'كمية غير متوفرة',
+                description: `الكمية المتاحة من ${selectedItem.name} هي ${selectedItem.stock} فقط.`
+            });
+            return;
+        }
 
         setItems([
         ...items,
@@ -94,7 +147,7 @@ export default function SalesInvoicePage() {
             name: selectedItem.name,
             unit: selectedItem.unit,
             total: newItem.qty * newItem.price,
-            id: `${selectedItem.id}-${Date.now()}` // Use unique id for list
+            id: `${selectedItem.id}-${Date.now()}`
         },
         ]);
         setNewItem({ id: "", name: "", qty: 1, price: 0, unit: "" });
@@ -109,7 +162,7 @@ export default function SalesInvoicePage() {
     };
 
     const handleItemSelect = (itemId: string) => {
-        const selectedItem = availableItems.find(i => i.id === itemId);
+        const selectedItem = availableItemsForWarehouse.find(i => i.id === itemId);
         if (selectedItem) {
             setNewItem({
                 ...newItem,
@@ -119,9 +172,7 @@ export default function SalesInvoicePage() {
             });
         }
     }
-    
-    const loading = loadingItems || loadingCustomers || loadingWarehouses;
-    
+        
     const handleSaveInvoice = async () => {
         if (!customerId || !warehouseId || items.length === 0) {
             toast({
@@ -143,14 +194,17 @@ export default function SalesInvoicePage() {
                 customerId,
                 customerName,
                 warehouseId,
-                items: items.map(item => ({
-                    id: item.id.split('-')[0], // extract original item id
-                    name: item.name,
-                    qty: item.qty,
-                    price: item.price,
-                    total: item.total,
-                    cost: availableItems.find(i => i.id === item.id.split('-')[0])?.cost || 0
-                })),
+                items: items.map(item => {
+                    const originalItemId = item.id.split('-')[0];
+                    return {
+                        id: originalItemId,
+                        name: item.name,
+                        qty: item.qty,
+                        price: item.price,
+                        total: item.total,
+                        cost: allItems.find(i => i.id === originalItemId)?.cost || 0
+                    }
+                }),
                 subtotal,
                 discount,
                 tax,
@@ -267,12 +321,12 @@ export default function SalesInvoicePage() {
                             ))}
                             <TableRow className="no-print bg-muted/20">
                                 <TableCell className="p-2">
-                                    <Select value={newItem.id} onValueChange={handleItemSelect}>
+                                    <Select value={newItem.id} onValueChange={handleItemSelect} disabled={!warehouseId}>
                                         <SelectTrigger>
-                                            <SelectValue placeholder="اختر صنفًا" />
+                                            <SelectValue placeholder={warehouseId ? "اختر صنفًا" : "اختر المخزن أولاً"} />
                                         </SelectTrigger>
                                         <SelectContent>
-                                        {availableItems.map(item => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}
+                                        {availableItemsForWarehouse.map(item => <SelectItem key={item.id} value={item.id}>{`${item.name} (المتاح: ${item.stock})`}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
                                 </TableCell>
@@ -281,7 +335,7 @@ export default function SalesInvoicePage() {
                                     <Input type="number" placeholder="الكمية" value={newItem.qty} onChange={e => setNewItem({...newItem, qty: parseInt(e.target.value) || 1})} className="text-center" />
                                 </TableCell>
                                 <TableCell className="p-2">
-                                    <Input type="number" placeholder="السعر" value={newItem.price} onChange={e => setNewItem({...newItem, price: parseFloat(e.target.value) || 0})} className="text-center" />
+                                    <Input type="number" placeholder="السعر" value={newItem.price} onChange={e => setNewItem({...newItem, price: parseFloat(e.target.value) || 0})} className="text-center" readOnly={!can('edit', 'sales')} />
                                 </TableCell>
                                 <TableCell></TableCell>
                                 <TableCell className="p-2 text-center">
