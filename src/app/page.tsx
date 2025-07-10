@@ -77,7 +77,7 @@ export default function Dashboard() {
   const lowStockItems = items.filter(item => (item.openingStock || 0) <= 10).slice(0, 5);
   const recentTransactions = sales.slice(-5).reverse();
 
-  if (loading) {
+  if (loading && !warehouses.length) {
     return (
         <div className="flex flex-1 justify-center items-center">
             <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
@@ -92,10 +92,11 @@ export default function Dashboard() {
           <label htmlFor="warehouse-select" className="text-sm font-medium">
             المخزن:
           </label>
-          <Select defaultValue={warehouses[0]?.id}>
+           <Select defaultValue={warehouses[0]?.id}>
             <SelectTrigger
               id="warehouse-select"
               className="w-auto md:w-[180px] bg-card"
+              disabled={loadingWarehouses || warehouses.length === 0}
             >
               <SelectValue placeholder="اختر مخزنًا" />
             </SelectTrigger>
