@@ -15,9 +15,10 @@ import useFirebase from "@/hooks/use-firebase";
 import { useToast } from "@/hooks/use-toast";
 
 interface StockItem {
-  id: string;
+  id: string; // The database ID of the item
   name: string;
   qty: number;
+  uniqueId: string; // A unique ID for the list key
 }
 
 interface Item {
@@ -58,16 +59,17 @@ export default function StockInPage() {
         setItems([
         ...items,
         { 
-            id: selectedItem.id, // use the actual item id
+            id: selectedItem.id,
             name: selectedItem.name,
-            qty: newItem.qty
+            qty: newItem.qty,
+            uniqueId: `${selectedItem.id}-${Date.now()}` // Create a unique ID for the key
         },
         ]);
         setNewItem({ id: "", name: "", qty: 1 });
     };
 
-    const handleRemoveItem = (id: string) => {
-        setItems(items.filter((item) => item.id !== id));
+    const handleRemoveItem = (uniqueId: string) => {
+        setItems(items.filter((item) => item.uniqueId !== uniqueId));
     };
 
     const handlePrint = () => {
@@ -105,7 +107,7 @@ export default function StockInPage() {
         const record = {
             warehouseId: selectedWarehouse,
             date: new Date().toISOString(),
-            items,
+            items: items.map(({id, name, qty}) => ({id, name, qty})), // Remove uniqueId before saving
             reason,
             notes,
             receiptNumber: `IN-${nextId}`
@@ -200,11 +202,11 @@ export default function StockInPage() {
                         </TableHeader>
                         <TableBody>
                           {items.map((item) => (
-                            <TableRow key={item.id}>
+                            <TableRow key={item.uniqueId}>
                               <TableCell>{item.name}</TableCell>
                               <TableCell>{item.qty}</TableCell>
                               <TableCell className="text-left no-print">
-                                <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)}>
+                                <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.uniqueId)}>
                                   <Trash2 className="h-4 w-4 text-destructive" />
                                 </Button>
                               </TableCell>
@@ -249,3 +251,5 @@ export default function StockInPage() {
     </>
   );
 }
+
+    
