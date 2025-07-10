@@ -50,7 +50,7 @@ export default function PurchaseReturnPage() {
   const { data: suppliers, loading: loadingSuppliers } = useFirebase<Supplier>('suppliers');
   const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
   const { add: addPurchaseReturn } = useFirebase('purchaseReturns');
-  const { data: invoices } = useFirebase<PurchaseInvoice>('purchaseInvoices');
+  const { data: invoices, loading: loadingInvoices } = useFirebase<PurchaseInvoice>('purchaseInvoices');
 
   useEffect(() => {
     const today = new Date().toISOString().split('T')[0];
@@ -150,7 +150,7 @@ export default function PurchaseReturnPage() {
     }
   }
 
-  const loading = loadingItems || loadingSuppliers || loadingWarehouses;
+  const loading = loadingItems || loadingSuppliers || loadingWarehouses || loadingInvoices;
 
   return (
     <>
