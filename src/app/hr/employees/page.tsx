@@ -57,7 +57,7 @@ const EmployeeForm = ({ employee, onSave, onClose }: { employee?: Employee, onSa
   };
 
   return (
-    <>
+    <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
       <div className="grid gap-4 py-4">
         <div className="grid grid-cols-4 items-center gap-4">
           <Label htmlFor="employee-name" className="text-right">
@@ -85,9 +85,9 @@ const EmployeeForm = ({ employee, onSave, onClose }: { employee?: Employee, onSa
         </div>
       </div>
       <div className="flex justify-end">
-        <Button onClick={handleSubmit}>حفظ الموظف</Button>
+        <Button type="submit">حفظ الموظف</Button>
       </div>
-    </>
+    </form>
   );
 };
 

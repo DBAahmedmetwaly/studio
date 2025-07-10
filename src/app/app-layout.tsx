@@ -174,6 +174,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             
             <NavCollapsible title="الموارد البشرية" icon={<UserRound />} module="hr">
                 <NavSubLink href="/hr/employees">الموظفين</NavSubLink>
+                <NavSubLink href="/hr/advances">سلف الموظفين</NavSubLink>
             </NavCollapsible>
 
             <NavLink href="/analytics" icon={<BarChart />} module="analytics">التحليلات</NavLink>

@@ -151,47 +151,46 @@ export default function RolesPage() {
                     </div>
                   </AccordionTrigger>
                   <AccordionContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>الوحدة</TableHead>
-                          <TableHead className="text-center">عرض</TableHead>
-                          <TableHead className="text-center">إضافة</TableHead>
-                          <TableHead className="text-center">تعديل</TableHead>
-                          <TableHead className="text-center">حذف</TableHead>
-                          <TableHead className="text-center">إنشاء</TableHead>
-                          <TableHead className="text-center">طباعة</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {Object.keys(permissionsMap).map((moduleKey) => {
-                          const module = moduleKey as Module;
-                          const moduleInfo = permissionsMap[module as keyof typeof permissionsMap];
-                          const moduleActions = moduleInfo.actions;
-                          const rolePermissions = roles[role as Role][module];
+                    <div className="overflow-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>الوحدة</TableHead>
+                            {Object.keys(permissionsMap.masterData.actions).map(action => (
+                               <TableHead key={action} className="text-center">{(permissionsMap.masterData.actions as any)[action]}</TableHead>
+                            ))}
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {Object.keys(permissionsMap).map((moduleKey) => {
+                            const module = moduleKey as Module;
+                            const moduleInfo = permissionsMap[module as keyof typeof permissionsMap];
+                            const moduleActions = moduleInfo.actions as Record<string, string>;
+                            const rolePermissions = roles[role as Role][module];
 
-                          return (
-                            <TableRow key={module}>
-                              <TableCell className="font-medium">{moduleInfo.label}</TableCell>
-                              {["view", "add", "edit", "delete", "generate", "print"].map((actionKey) => {
-                                const action = actionKey as Action;
-                                return(
-                                  <TableCell key={action} className="text-center">
-                                    {rolePermissions && action in moduleActions ? (
-                                      <Checkbox
-                                        checked={rolePermissions[action]}
-                                        onCheckedChange={(checked) => handlePermissionChange(role as Role, module, action, !!checked)}
-                                        disabled={role === "مسؤول"}
-                                      />
-                                    ) : null}
-                                  </TableCell>
-                                )
-                              })}
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
+                            return (
+                              <TableRow key={module}>
+                                <TableCell className="font-medium">{moduleInfo.label}</TableCell>
+                                {Object.keys(permissionsMap.masterData.actions).map((actionKey) => {
+                                  const action = actionKey as Action;
+                                  return(
+                                    <TableCell key={action} className="text-center">
+                                      {rolePermissions && action in moduleActions ? (
+                                        <Checkbox
+                                          checked={rolePermissions[action]}
+                                          onCheckedChange={(checked) => handlePermissionChange(role as Role, module, action, !!checked)}
+                                          disabled={role === "مسؤول"}
+                                        />
+                                      ) : null}
+                                    </TableCell>
+                                  )
+                                })}
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
                   </AccordionContent>
                 </AccordionItem>
               ))}
