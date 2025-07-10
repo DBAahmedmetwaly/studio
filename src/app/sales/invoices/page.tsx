@@ -1,3 +1,4 @@
+
 "use client";
 
 import PageHeader from "@/components/page-header";
@@ -9,21 +10,64 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { PlusCircle, Trash2, Printer, Save } from "lucide-react";
-import React from "react";
+import React, { useState, useEffect } from "react";
 
-const invoiceItems = [
-  { id: "item001", name: "منتج 1", qty: 2, price: 150, total: 300 },
-  { id: "item002", name: "منتج 2", qty: 1, price: 250, total: 250 },
-];
+interface InvoiceItem {
+  id: string;
+  name: string;
+  qty: number;
+  price: number;
+  total: number;
+}
 
 export default function SalesInvoicePage() {
-    const handlePrint = () => {
-    window.print();
-  };
+    const [items, setItems] = useState<InvoiceItem[]>([
+      { id: "item001", name: "منتج 1", qty: 2, price: 150, total: 300 },
+      { id: "item002", name: "منتج 2", qty: 1, price: 250, total: 250 },
+    ]);
+    const [newItem, setNewItem] = useState({ id: "", name: "", qty: 1, price: 0 });
+    const [subtotal, setSubtotal] = useState(0);
+    const [tax, setTax] = useState(0);
+    const [total, setTotal] = useState(0);
 
-  const subtotal = invoiceItems.reduce((acc, item) => acc + item.total, 0);
-  const tax = subtotal * 0.14;
-  const total = subtotal + tax;
+    useEffect(() => {
+        const newSubtotal = items.reduce((acc, item) => acc + item.total, 0);
+        const newTax = newSubtotal * 0.14;
+        setSubtotal(newSubtotal);
+        setTax(newTax);
+        setTotal(newSubtotal + newTax);
+    }, [items]);
+
+    const handleAddItem = () => {
+        if (!newItem.id || newItem.qty <= 0 || newItem.price <= 0) return;
+        const selectedItem = availableItems.find(i => i.id === newItem.id);
+        if (!selectedItem) return;
+
+        setItems([
+        ...items,
+        { 
+            ...newItem,
+            name: selectedItem.name,
+            total: newItem.qty * newItem.price 
+        },
+        ]);
+        setNewItem({ id: "", name: "", qty: 1, price: 0 });
+    };
+
+    const handleRemoveItem = (id: string) => {
+        setItems(items.filter((item) => item.id !== id));
+    };
+
+    const handlePrint = () => {
+        window.print();
+    };
+
+    const availableItems = [
+      { id: "item001", name: "منتج 1" },
+      { id: "item002", name: "منتج 2" },
+      { id: "item003", name: "منتج 3" },
+      { id: "item004", name: "منتج 4" },
+    ]
 
   return (
     <>
@@ -97,14 +141,14 @@ export default function SalesInvoicePage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {invoiceItems.map((item) => (
+                  {items.map((item) => (
                     <TableRow key={item.id}>
                       <TableCell>{item.name}</TableCell>
                       <TableCell>{item.qty}</TableCell>
                       <TableCell>ج.م {item.price.toFixed(2)}</TableCell>
                       <TableCell className="text-left">ج.م {item.total.toFixed(2)}</TableCell>
                       <TableCell className="text-left no-print">
-                        <Button variant="ghost" size="icon">
+                        <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </TableCell>
@@ -112,25 +156,24 @@ export default function SalesInvoicePage() {
                   ))}
                   <TableRow className="no-print">
                      <TableCell>
-                        <Select>
+                        <Select value={newItem.id} onValueChange={(value) => setNewItem({ ...newItem, id: value })}>
                             <SelectTrigger>
                                 <SelectValue placeholder="اختر صنفًا" />
                             </SelectTrigger>
                             <SelectContent>
-                               <SelectItem value="item003">منتج 3</SelectItem>
-                               <SelectItem value="item004">منتج 4</SelectItem>
+                               {availableItems.map(item => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
                      </TableCell>
                      <TableCell>
-                        <Input type="number" placeholder="الكمية" />
+                        <Input type="number" placeholder="الكمية" value={newItem.qty} onChange={e => setNewItem({...newItem, qty: parseInt(e.target.value)})} />
                      </TableCell>
                      <TableCell>
-                        <Input type="number" placeholder="السعر" />
+                        <Input type="number" placeholder="السعر" value={newItem.price} onChange={e => setNewItem({...newItem, price: parseFloat(e.target.value)})} />
                      </TableCell>
                      <TableCell></TableCell>
                      <TableCell>
-                         <Button>
+                         <Button onClick={handleAddItem}>
                             <PlusCircle className="ml-2 h-4 w-4" />
                             إضافة
                          </Button>

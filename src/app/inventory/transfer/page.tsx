@@ -1,3 +1,4 @@
+
 "use client";
 
 import PageHeader from "@/components/page-header";
@@ -8,17 +9,49 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PlusCircle, Trash2, Printer, Save } from "lucide-react";
-import React from "react";
+import React, { useState } from "react";
 
-const items = [
-  { id: "item001", name: "منتج 1", qty: 2 },
-  { id: "item002", name: "منتج 2", qty: 5 },
-];
+interface StockItem {
+  id: string;
+  name: string;
+  qty: number;
+}
 
 export default function StockTransferPage() {
+    const [items, setItems] = useState<StockItem[]>([
+      { id: "item001", name: "منتج 1", qty: 2 },
+      { id: "item002", name: "منتج 2", qty: 5 },
+    ]);
+    const [newItem, setNewItem] = useState({ id: "", name: "", qty: 1 });
+
+    const handleAddItem = () => {
+        if (!newItem.id || newItem.qty <= 0) return;
+        const selectedItem = availableItems.find(i => i.id === newItem.id);
+        if (!selectedItem) return;
+
+        setItems([
+        ...items,
+        { 
+            ...newItem,
+            name: selectedItem.name,
+        },
+        ]);
+        setNewItem({ id: "", name: "", qty: 1 });
+    };
+
+    const handleRemoveItem = (id: string) => {
+        setItems(items.filter((item) => item.id !== id));
+    };
+
     const handlePrint = () => {
-    window.print();
-  };
+        window.print();
+    };
+
+    const availableItems = [
+      { id: "item003", name: "منتج 3" },
+      { id: "item004", name: "منتج 4" },
+    ];
+
 
   return (
     <>
@@ -89,7 +122,7 @@ export default function StockTransferPage() {
                       <TableCell>{item.name}</TableCell>
                       <TableCell>{item.qty}</TableCell>
                       <TableCell className="text-left no-print">
-                        <Button variant="ghost" size="icon">
+                        <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </TableCell>
@@ -97,21 +130,21 @@ export default function StockTransferPage() {
                   ))}
                   <TableRow className="no-print">
                      <TableCell>
-                        <Select>
+                        <Select value={newItem.id} onValueChange={(value) => setNewItem({ ...newItem, id: value })}>
                             <SelectTrigger>
                                 <SelectValue placeholder="اختر صنفًا" />
                             </SelectTrigger>
                             <SelectContent>
-                               <SelectItem value="item003">منتج 3</SelectItem>
-                               <SelectItem value="item004">منتج 4</SelectItem>
+                               {availableItems.map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
+                               {items.filter(i => !availableItems.find(a => a.id === i.id)).map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
                      </TableCell>
                      <TableCell>
-                        <Input type="number" placeholder="الكمية" />
+                        <Input type="number" placeholder="الكمية" value={newItem.qty} onChange={e => setNewItem({...newItem, qty: parseInt(e.target.value)})}/>
                      </TableCell>
                      <TableCell>
-                         <Button>
+                         <Button onClick={handleAddItem}>
                             <PlusCircle className="ml-2 h-4 w-4" />
                             إضافة
                          </Button>
