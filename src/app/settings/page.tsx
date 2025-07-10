@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -96,6 +97,15 @@ export default function SettingsPage() {
                       <SelectItem value="USD">الدولار الأمريكي (USD)</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="allow-negative-stock">السماح بالبيع بالرصيد السالب</Label>
+                     <p className="text-xs text-muted-foreground">
+                      السماح بإنشاء فواتير بيع حتى لو كان رصيد الصنف صفر أو أقل.
+                    </p>
+                  </div>
+                  <Switch id="allow-negative-stock" />
                 </div>
               </CardContent>
               <CardFooter>
