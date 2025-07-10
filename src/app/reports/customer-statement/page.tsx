@@ -1,3 +1,4 @@
+
 "use client";
 
 import PageHeader from "@/components/page-header";
@@ -13,7 +14,7 @@ import React, { useState } from "react";
 
 interface SaleInvoice {
   id: string;
-  invoiceNumber: string;
+  invoiceNumber?: string;
   date: string;
   customerId: string;
   total: number;
@@ -73,7 +74,7 @@ export default function CustomerStatementPage() {
       balance += sale.total;
       transactions.push({
         date: new Date(sale.date).toLocaleDateString('ar-EG'),
-        description: `فاتورة بيع رقم ${sale.invoiceNumber || sale.id}`,
+        description: `فاتورة بيع رقم ${sale.invoiceNumber || sale.id.slice(-6).toUpperCase()}`,
         debit: sale.total,
         credit: 0,
         balance: balance
@@ -87,6 +88,8 @@ export default function CustomerStatementPage() {
     window.print();
   };
   
+  const getSelectedCustomer = () => customers.find(c => c.id === selectedCustomerId);
+
   return (
     <>
       <PageHeader title="كشف حساب العملاء" />
@@ -94,10 +97,14 @@ export default function CustomerStatementPage() {
         <Card className="no-print">
             <CardHeader>
                 <CardTitle>تحديد العميل والفترة</CardTitle>
+                <CardDescription>اختر العميل والفترة الزمنية لعرض كشف الحساب.</CardDescription>
             </CardHeader>
             <CardContent>
                 {loading ? (
-                    <Loader2 className="animate-spin" />
+                    <div className="flex justify-center items-center py-4">
+                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                        <span className="mr-2">جارٍ تحميل البيانات...</span>
+                    </div>
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         <div className="space-y-2">
@@ -129,11 +136,11 @@ export default function CustomerStatementPage() {
 
         {reportData && (
             <Card className="printable-area">
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-row items-center justify-between border-b mb-4 pb-4">
                 <div>
-                    <CardTitle>كشف الحساب لـ: {customers.find(c => c.id === selectedCustomerId)?.name}</CardTitle>
+                    <CardTitle>كشف حساب العميل: {getSelectedCustomer()?.name}</CardTitle>
                     <CardDescription>
-                        عرض مفصل لمعاملات العميل من {fromDate || 'البداية'} إلى {toDate || 'النهاية'}.
+                        عرض مفصل لمعاملات العميل من {fromDate ? new Date(fromDate).toLocaleDateString('ar-EG') : 'البداية'} إلى {toDate ? new Date(toDate).toLocaleDateString('ar-EG') : 'النهاية'}.
                     </CardDescription>
                 </div>
                 <Button variant="outline" size="icon" onClick={handlePrint} className="no-print">
@@ -157,16 +164,16 @@ export default function CustomerStatementPage() {
                             <TableRow key={index}>
                                 <TableCell>{tx.date}</TableCell>
                                 <TableCell>{tx.description}</TableCell>
-                                <TableCell className="text-center">{tx.debit > 0 ? tx.debit.toLocaleString() : '-'}</TableCell>
-                                <TableCell className="text-center">{tx.credit > 0 ? tx.credit.toLocaleString() : '-'}</TableCell>
-                                <TableCell className="text-center font-medium">{tx.balance.toLocaleString()}</TableCell>
+                                <TableCell className="text-center">{tx.debit > 0 ? tx.debit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</TableCell>
+                                <TableCell className="text-center">{tx.credit > 0 ? tx.credit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}</TableCell>
+                                <TableCell className="text-center font-medium">{tx.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
                     <TableFooter>
                         <TableRow>
-                            <TableCell colSpan={4} className="font-bold">الرصيد النهائي</TableCell>
-                            <TableCell className="text-center font-bold">{reportData.at(-1)?.balance.toLocaleString()}</TableCell>
+                            <TableCell colSpan={4} className="font-bold text-base">الرصيد النهائي</TableCell>
+                            <TableCell className="text-center font-bold text-base">{reportData.at(-1)?.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
                         </TableRow>
                     </TableFooter>
                 </Table>
