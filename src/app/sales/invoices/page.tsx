@@ -267,7 +267,7 @@ export default function SalesInvoicePage() {
                                         </SelectContent>
                                     </Select>
                                 </TableCell>
-                                <TableCell></TableCell>
+                                <TableCell className="text-center text-muted-foreground">{newItem.unit}</TableCell>
                                 <TableCell className="p-2">
                                     <Input type="number" placeholder="الكمية" value={newItem.qty} onChange={e => setNewItem({...newItem, qty: parseInt(e.target.value) || 1})} className="text-center" />
                                 </TableCell>

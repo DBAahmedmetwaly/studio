@@ -29,6 +29,7 @@ interface Item {
     name: string;
     unit: string;
     price?: number;
+    cost?: number;
 }
 
 interface Supplier {
@@ -44,7 +45,7 @@ interface Warehouse {
 
 export default function PurchaseInvoicePage() {
   const [items, setItems] = useState<InvoiceItem[]>([]);
-  const [newItem, setNewItem] = useState({ id: "", name: "", qty: 1, price: 0 });
+  const [newItem, setNewItem] = useState({ id: "", name: "", qty: 1, price: 0, unit: "" });
   const [subtotal, setSubtotal] = useState(0);
   const [discount, setDiscount] = useState(0);
   const [tax, setTax] = useState(0);
@@ -78,7 +79,7 @@ export default function PurchaseInvoicePage() {
         total: newItem.qty * newItem.price 
       },
     ]);
-    setNewItem({ id: "", name: "", qty: 1, price: 0 });
+    setNewItem({ id: "", name: "", qty: 1, price: 0, unit: "" });
   };
 
   const handleRemoveItem = (id: string) => {
@@ -95,7 +96,8 @@ export default function PurchaseInvoicePage() {
         setNewItem({
             ...newItem,
             id: itemId,
-            price: selectedItem.price || 0,
+            price: selectedItem.cost || selectedItem.price || 0,
+            unit: selectedItem.unit,
         });
     }
   }
@@ -209,60 +211,62 @@ export default function PurchaseInvoicePage() {
                 
                 <div>
                 <Label>بنود الفاتورة</Label>
-                <Table>
-                    <TableHeader>
-                    <TableRow>
-                        <TableHead className="w-[40%]">الصنف</TableHead>
-                        <TableHead className="text-center">الوحدة</TableHead>
-                        <TableHead className="text-center">الكمية</TableHead>
-                        <TableHead className="text-center">سعر الوحدة</TableHead>
-                        <TableHead className="text-center">الإجمالي</TableHead>
-                        <TableHead className="text-center w-[100px] no-print">الإجراء</TableHead>
-                    </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                    {items.map((item, index) => (
-                        <TableRow key={item.id}>
-                        <TableCell>{item.name}</TableCell>
-                        <TableCell className="text-center">{getUnitForItem(item.id)}</TableCell>
-                        <TableCell className="text-center">{item.qty}</TableCell>
-                        <TableCell className="text-center">ج.م {item.price.toFixed(2)}</TableCell>
-                        <TableCell className="text-center">ج.م {item.total.toFixed(2)}</TableCell>
-                        <TableCell className="text-center no-print">
-                            <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                        </TableCell>
+                <div className="w-full overflow-auto border rounded-lg">
+                    <Table>
+                        <TableHeader>
+                        <TableRow>
+                            <TableHead className="w-[40%]">الصنف</TableHead>
+                            <TableHead className="text-center">الوحدة</TableHead>
+                            <TableHead className="text-center">الكمية</TableHead>
+                            <TableHead className="text-center">سعر الوحدة</TableHead>
+                            <TableHead className="text-center">الإجمالي</TableHead>
+                            <TableHead className="text-center w-[100px] no-print">الإجراء</TableHead>
                         </TableRow>
-                    ))}
-                    <TableRow className="no-print">
-                        <TableCell>
-                            <Select value={newItem.id} onValueChange={handleItemSelect}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="اختر صنفًا" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                {availableItems.map(item => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                        </TableCell>
-                        <TableCell></TableCell>
-                        <TableCell>
-                            <Input type="number" placeholder="الكمية" value={newItem.qty} onChange={e => setNewItem({...newItem, qty: parseInt(e.target.value) || 1})} />
-                        </TableCell>
-                        <TableCell>
-                            <Input type="number" placeholder="السعر" value={newItem.price} onChange={e => setNewItem({...newItem, price: parseFloat(e.target.value) || 0})} />
-                        </TableCell>
-                        <TableCell></TableCell>
-                        <TableCell>
-                            <Button onClick={handleAddItem}>
-                                <PlusCircle className="ml-2 h-4 w-4" />
-                                إضافة
-                            </Button>
-                        </TableCell>
-                    </TableRow>
-                    </TableBody>
-                </Table>
+                        </TableHeader>
+                        <TableBody>
+                        {items.map((item, index) => (
+                            <TableRow key={item.id}>
+                            <TableCell>{item.name}</TableCell>
+                            <TableCell className="text-center">{getUnitForItem(item.id)}</TableCell>
+                            <TableCell className="text-center">{item.qty}</TableCell>
+                            <TableCell className="text-center">ج.م {item.price.toFixed(2)}</TableCell>
+                            <TableCell className="text-center">ج.م {item.total.toFixed(2)}</TableCell>
+                            <TableCell className="text-center no-print">
+                                <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                            </TableCell>
+                            </TableRow>
+                        ))}
+                        <TableRow className="no-print">
+                            <TableCell>
+                                <Select value={newItem.id} onValueChange={handleItemSelect}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="اختر صنفًا" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                    {availableItems.map(item => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </TableCell>
+                            <TableCell className="text-center text-muted-foreground">{newItem.unit}</TableCell>
+                            <TableCell>
+                                <Input type="number" placeholder="الكمية" value={newItem.qty} onChange={e => setNewItem({...newItem, qty: parseInt(e.target.value) || 1})} />
+                            </TableCell>
+                            <TableCell>
+                                <Input type="number" placeholder="السعر" value={newItem.price} onChange={e => setNewItem({...newItem, price: parseFloat(e.target.value) || 0})} />
+                            </TableCell>
+                            <TableCell></TableCell>
+                            <TableCell>
+                                <Button onClick={handleAddItem}>
+                                    <PlusCircle className="ml-2 h-4 w-4" />
+                                    إضافة
+                                </Button>
+                            </TableCell>
+                        </TableRow>
+                        </TableBody>
+                    </Table>
+                </div>
                 </div>
                 
                 <div className="flex justify-end">
