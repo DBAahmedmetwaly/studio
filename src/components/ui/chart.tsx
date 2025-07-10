@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -6,7 +7,7 @@ import * as RechartsPrimitive from "recharts"
 import { cn } from "@/lib/utils"
 
 // Format: { THEME_NAME: CSS_SELECTOR }
-const THEMES = { light: "", dark: ".dark" } as const
+const THEMES = { light: "", dark: ".dark", neutral: ".neutral" } as const
 
 export type ChartConfig = {
   [k in string]: {

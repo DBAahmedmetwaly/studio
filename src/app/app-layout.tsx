@@ -30,6 +30,7 @@ import {
   ShoppingCart,
   ShoppingBag,
   Truck,
+  LineChart,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -145,6 +146,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </NavCollapsible>
 
             <NavCollapsible title="التقارير" icon={<AreaChart />}>
+                <NavSubLink href="/reports/analytics">التقارير الرسومية</NavSubLink>
                 <NavSubLink href="/reports/financial-statements">القوائم المالية</NavSubLink>
                 <NavSubLink href="/reports/partner-shares">حصص الشركاء</NavSubLink>
                 <NavSubLink href="/reports/customer-statement">كشف حساب العملاء</NavSubLink>
