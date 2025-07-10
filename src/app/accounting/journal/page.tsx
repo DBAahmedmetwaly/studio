@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -43,6 +44,14 @@ interface Item {
     cost?: number;
     price: number;
 }
+interface TreasuryTransaction {
+    id: string;
+    date: string;
+    type: 'deposit' | 'withdrawal';
+    amount: number;
+    accountId: string;
+    description: string;
+}
 
 
 export default function JournalPage() {
@@ -60,9 +69,10 @@ export default function JournalPage() {
     const { data: transfers, loading: l6 } = useFirebase<StockTransferRecord>("stockTransferRecords");
     const { data: itemsData, loading: l7 } = useFirebase<Item>("items");
     const { data: cashAccounts, loading: l8 } = useFirebase<CashAccount>("cashAccounts");
+    const { data: treasuryTxs, loading: l9 } = useFirebase<TreasuryTransaction>("treasuryTransactions");
 
 
-    const loading = l1 || l2 || l3 || l4 || l5 || l6 || l7 || l8;
+    const loading = l1 || l2 || l3 || l4 || l5 || l6 || l7 || l8 || l9;
     
     const itemsMap = useMemo(() => {
         const map = new Map<string, Item>();
@@ -136,9 +146,22 @@ export default function JournalPage() {
             // Credit the sending warehouse (asset decrease)
             entries.push({ id: `trn-credit-${t.id}`, date: t.date, warehouseId: t.fromSourceId, number: `TRN-${t.id.slice(-4)}`, description: `تحويل إلى ${toWarehouseName}`, debit: 0, credit: transferCost, account: `مخزون - ${fromWarehouseName}` });
         });
+        
+        // Treasury Transactions
+        treasuryTxs.forEach(tx => {
+            const accountName = getCashAccountName(tx.accountId);
+            if(tx.type === 'deposit') {
+                entries.push({ id: `trx-dep-debit-${tx.id}`, date: tx.date, warehouseId: undefined, number: `TRX-${tx.id.slice(-4)}`, description: `إيداع: ${tx.description}`, debit: tx.amount, credit: 0, account: accountName });
+                entries.push({ id: `trx-dep-credit-${tx.id}`, date: tx.date, warehouseId: undefined, number: `TRX-${tx.id.slice(-4)}`, description: `إيداع: ${tx.description}`, debit: 0, credit: tx.amount, account: 'حساب وسيط للإيداع' });
+            } else { // withdrawal
+                 entries.push({ id: `trx-wit-debit-${tx.id}`, date: tx.date, warehouseId: undefined, number: `TRX-${tx.id.slice(-4)}`, description: `سحب: ${tx.description}`, debit: tx.amount, credit: 0, account: 'حساب وسيط للسحب' });
+                 entries.push({ id: `trx-wit-credit-${tx.id}`, date: tx.date, warehouseId: undefined, number: `TRX-${tx.id.slice(-4)}`, description: `سحب: ${tx.description}`, debit: 0, credit: tx.amount, account: accountName });
+            }
+        });
+
 
         return entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [sales, purchases, expenses, exceptionalIncomes, transfers, warehouses, itemsMap, cashAccounts]);
+    }, [sales, purchases, expenses, exceptionalIncomes, transfers, warehouses, itemsMap, cashAccounts, treasuryTxs]);
 
     const filteredEntries = useMemo(() => {
         return journalEntries.filter(entry => {
