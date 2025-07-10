@@ -14,6 +14,7 @@ import React, { useState, useEffect } from "react";
 import useFirebase from "@/hooks/use-firebase";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from 'next/navigation';
+import { Switch } from "@/components/ui/switch";
 
 
 interface InvoiceItem {
@@ -52,6 +53,7 @@ export default function SalesInvoicePage() {
     const [discount, setDiscount] = useState(0);
     const [tax, setTax] = useState(0);
     const [total, setTotal] = useState(0);
+    const [applyTax, setApplyTax] = useState(true);
     const [customerId, setCustomerId] = useState("");
     const [warehouseId, setWarehouseId] = useState("");
     const [notes, setNotes] = useState("");
@@ -65,11 +67,11 @@ export default function SalesInvoicePage() {
 
     useEffect(() => {
         const newSubtotal = items.reduce((acc, item) => acc + item.total, 0);
-        const newTax = (newSubtotal - discount) * 0.14; // Tax calculated after discount
+        const newTax = applyTax ? (newSubtotal - discount) * 0.14 : 0;
         setSubtotal(newSubtotal);
         setTax(newTax);
         setTotal(newSubtotal - discount + newTax);
-    }, [items, discount]);
+    }, [items, discount, applyTax]);
 
     const handleAddItem = () => {
         if (!newItem.id || newItem.qty <= 0 || newItem.price < 0) return;
@@ -294,6 +296,10 @@ export default function SalesInvoicePage() {
                             <div className="flex justify-between items-center">
                                 <span>الخصم</span>
                                 <Input type="number" value={discount} onChange={e => setDiscount(parseFloat(e.target.value) || 0)} className="h-8 max-w-[120px] text-left" placeholder="0.00"/>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <span>تطبيق ضريبة القيمة المضافة (14%)</span>
+                                <Switch checked={applyTax} onCheckedChange={setApplyTax} />
                             </div>
                             <div className="flex justify-between">
                                 <span>ضريبة القيمة المضافة (14%)</span>
