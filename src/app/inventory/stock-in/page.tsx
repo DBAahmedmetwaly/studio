@@ -117,14 +117,14 @@ export default function StockInPage() {
             await addStockInRecord(record);
             toast({
                 title: "تم بنجاح",
-                description: `تم تأكيد إدخال المخزون بنجاح برقم إيصال: ${record.receiptNumber}`,
+                description: `تم تأكيد استلام المخزون بنجاح برقم إيصال: ${record.receiptNumber}`,
             });
             resetForm();
         } catch(error) {
              toast({
                 variant: "destructive",
                 title: "حدث خطأ",
-                description: "فشل في حفظ إيصال الإدخال. يرجى المحاولة مرة أخرى.",
+                description: "فشل في حفظ إيصال الاستلام. يرجى المحاولة مرة أخرى.",
             });
             console.error("Failed to save stock in record: ", error);
         }
@@ -134,7 +134,7 @@ export default function StockInPage() {
 
   return (
     <>
-      <PageHeader title="إدخال مخزون">
+      <PageHeader title="استلام مخزون">
         <div className="flex gap-2 no-print">
             <Button variant="outline">
                 <Save className="ml-2 h-4 w-4" />
@@ -149,10 +149,10 @@ export default function StockInPage() {
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6 printable-area">
         <Card>
           <CardHeader>
-            <CardTitle>إيصال إدخال مخزني</CardTitle>
+            <CardTitle>إيصال استلام مخزني</CardTitle>
             <div className="grid md:grid-cols-3 gap-4 text-sm text-muted-foreground">
                 <div>رقم الإيصال: (سيتم إنشاؤه عند الحفظ)</div>
-                <div>تاريخ الإدخال: {new Date().toLocaleDateString('ar-EG')}</div>
+                <div>تاريخ الاستلام: {new Date().toLocaleDateString('ar-EG')}</div>
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -175,10 +175,10 @@ export default function StockInPage() {
                             </Select>
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="reason">سبب الإدخال</Label>
+                            <Label htmlFor="reason">سبب الاستلام</Label>
                             <Select value={reason} onValueChange={setReason}>
                                 <SelectTrigger id="reason">
-                                    <SelectValue placeholder="اختر سبب الإدخال" />
+                                    <SelectValue placeholder="اختر سبب الاستلام" />
                                 </SelectTrigger>
                                 <SelectContent>
                                    <SelectItem value="purchase">مشتريات</SelectItem>
@@ -191,7 +191,7 @@ export default function StockInPage() {
                     </div>
                     
                     <div>
-                      <Label>الأصناف المدخلة</Label>
+                      <Label>الأصناف المستلمة</Label>
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -244,12 +244,10 @@ export default function StockInPage() {
             )}
           </CardContent>
           <CardFooter className="flex justify-end no-print">
-            <Button size="lg" disabled={loading} onClick={handleConfirm}>تأكيد الإدخال</Button>
+            <Button size="lg" disabled={loading} onClick={handleConfirm}>تأكيد الاستلام</Button>
           </CardFooter>
         </Card>
       </main>
     </>
   );
 }
-
-    

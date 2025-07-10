@@ -108,10 +108,10 @@ export default function StockOutPage() {
 
         try {
             await addStockOutRecord(record);
-            toast({ title: "تم بنجاح", description: `تم تأكيد إخراج المخزون بنجاح برقم إيصال: ${record.receiptNumber}`});
+            toast({ title: "تم بنجاح", description: `تم تأكيد صرف المخزون بنجاح برقم إيصال: ${record.receiptNumber}`});
             resetForm();
         } catch(error) {
-            toast({ variant: "destructive", title: "حدث خطأ", description: "فشل في حفظ إيصال الإخراج. يرجى المحاولة مرة أخرى."});
+            toast({ variant: "destructive", title: "حدث خطأ", description: "فشل في حفظ إيصال الصرف. يرجى المحاولة مرة أخرى."});
             console.error("Failed to save stock out record:", error);
         }
     };
@@ -120,7 +120,7 @@ export default function StockOutPage() {
 
   return (
     <>
-      <PageHeader title="إخراج مخزون">
+      <PageHeader title="صرف مخزون">
         <div className="flex gap-2 no-print">
             <Button variant="outline">
                 <Save className="ml-2 h-4 w-4" />
@@ -135,10 +135,10 @@ export default function StockOutPage() {
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6 printable-area">
         <Card>
           <CardHeader>
-            <CardTitle>إيصال إخراج مخزني</CardTitle>
+            <CardTitle>إيصال صرف مخزني</CardTitle>
             <div className="grid md:grid-cols-3 gap-4 text-sm text-muted-foreground">
                 <div>رقم الإيصال: (سيتم إنشاؤه عند الحفظ)</div>
-                <div>تاريخ الإخراج: {new Date().toLocaleDateString('ar-EG')}</div>
+                <div>تاريخ الصرف: {new Date().toLocaleDateString('ar-EG')}</div>
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -161,10 +161,10 @@ export default function StockOutPage() {
                             </Select>
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="reason">سبب الإخراج</Label>
+                            <Label htmlFor="reason">سبب الصرف</Label>
                             <Select value={reason} onValueChange={setReason}>
                                 <SelectTrigger id="reason">
-                                    <SelectValue placeholder="اختر سبب الإخراج" />
+                                    <SelectValue placeholder="اختر سبب الصرف" />
                                 </SelectTrigger>
                                 <SelectContent>
                                    <SelectItem value="damaged">تالف</SelectItem>
@@ -177,7 +177,7 @@ export default function StockOutPage() {
                     </div>
                     
                     <div>
-                      <Label>الأصناف المخرجة</Label>
+                      <Label>الأصناف المصروفة</Label>
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -230,12 +230,10 @@ export default function StockOutPage() {
             )}
           </CardContent>
           <CardFooter className="flex justify-end no-print">
-            <Button size="lg" disabled={loading} onClick={handleConfirm}>تأكيد الإخراج</Button>
+            <Button size="lg" disabled={loading} onClick={handleConfirm}>تأكيد الصرف</Button>
           </CardFooter>
         </Card>
       </main>
     </>
   );
 }
-
-    

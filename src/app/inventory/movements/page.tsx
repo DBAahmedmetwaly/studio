@@ -65,8 +65,8 @@ export default function InventoryMovementsPage() {
 
   const filteredMovements = useMemo(() => {
     const allMovements = [
-      ...stockIns.map(r => ({ ...r, type: 'in', typeLabel: 'إدخال' })),
-      ...stockOuts.map(r => ({ ...r, type: 'out', typeLabel: 'إخراج' })),
+      ...stockIns.map(r => ({ ...r, type: 'in', typeLabel: 'استلام' })),
+      ...stockOuts.map(r => ({ ...r, type: 'out', typeLabel: 'صرف' })),
       ...stockTransfers.map(r => ({ ...r, type: 'transfer', typeLabel: 'تحويل' })),
     ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -132,8 +132,8 @@ export default function InventoryMovementsPage() {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">الكل</SelectItem>
-                                <SelectItem value="in">إدخال</SelectItem>
-                                <SelectItem value="out">إخراج</SelectItem>
+                                <SelectItem value="in">استلام</SelectItem>
+                                <SelectItem value="out">صرف</SelectItem>
                                 <SelectItem value="transfer">تحويل</SelectItem>
                             </SelectContent>
                         </Select>
@@ -154,7 +154,7 @@ export default function InventoryMovementsPage() {
           <CardHeader>
             <CardTitle>سجل حركات المخزون</CardTitle>
             <CardDescription>
-              عرض لجميع عمليات الإدخال والإخراج والتحويل التي تمت في المخازن.
+              عرض لجميع عمليات الاستلام والصرف والتحويل التي تمت في المخازن.
             </CardDescription>
           </CardHeader>
           <CardContent>

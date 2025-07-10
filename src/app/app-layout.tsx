@@ -125,8 +125,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </NavCollapsible>
 
             <NavCollapsible title="المخزون" icon={<Boxes />}>
-                <NavSubLink href="/inventory/stock-in">إدخال مخزون</NavSubLink>
-                <NavSubLink href="/inventory/stock-out">إخراج مخزون</NavSubLink>
+                <NavSubLink href="/inventory/stock-in">استلام مخزون</NavSubLink>
+                <NavSubLink href="/inventory/stock-out">صرف مخزون</NavSubLink>
                 <NavSubLink href="/inventory/transfer">تحويل مخزون</NavSubLink>
                 <NavSubLink href="/inventory/adjustment">تسوية المخزون</NavSubLink>
                 <NavSubLink href="/inventory/movements">حركة المخزون</NavSubLink>

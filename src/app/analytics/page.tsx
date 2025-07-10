@@ -1,8 +1,9 @@
 
 "use client"
 
-import { Bar, CartesianGrid, LabelList, XAxis, YAxis, Pie, PieChart as RechartsPieChart, BarChart as RechartsBarChart } from "recharts"
-
+import { Bar, CartesianGrid, LabelList, XAxis, YAxis, Pie, PieChart as RechartsPieChart, BarChart as RechartsBarChart, Cell } from "recharts"
+import React, { useMemo } from 'react';
+import useFirebase from "@/hooks/use-firebase";
 import {
   Card,
   CardContent,
@@ -16,32 +17,15 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart"
 import PageHeader from "@/components/page-header"
+import { Loader2 } from "lucide-react";
 
-const itemProfitData = [
-  { name: "منتج 1", profit: 2000, loss: 0 },
-  { name: "منتج 2", profit: 1500, loss: 0 },
-  { name: "منتج 3", profit: 0, loss: 300 },
-  { name: "منتج 4", profit: 1800, loss: 0 },
-  { name: "منتج 5", profit: 900, loss: 0 },
-]
-
-const supplierActivityData = [
-  { name: "مورد تكنولوجيا", value: 456 },
-  { name: "مورد أثاث", value: 321 },
-  { name: "مورد أدوات مكتبية", value: 234 },
-  { name: "مورد مواد خام", value: 189 },
-]
-
-const branchActivityData = [
-  { name: "فرع القاهرة", sales: 2400 },
-  { name: "فرع الإسكندرية", sales: 1398 },
-  { name: "فرع الجيزة", sales: 9800 },
-]
-
-const receivablesPayablesData = [
-    { name: 'ديون العملاء', value: 85000, fill: "var(--color-receivables)" },
-    { name: 'مستحقات الموردين', value: 45000, fill: "var(--color-payables)" },
-]
+// Interfaces for Firebase data
+interface Item { id: string; name: string; cost?: number; }
+interface SaleInvoice { id: string; items: { id: string; qty: number; price: number }[]; }
+interface PurchaseInvoice { id: string; supplierId: string, total: number; }
+interface Supplier { id: string; name: string; }
+interface Warehouse { id: string; name: string; }
+interface Customer { id: string; openingBalance: number; }
 
 const chartConfig = {
   profit: {
@@ -60,9 +44,80 @@ const chartConfig = {
     label: "مستحقات الموردين",
     color: "hsl(var(--chart-3))",
   },
+  sales: {
+    label: "مبيعات",
+    color: "hsl(var(--primary))",
+  }
 }
 
+const COLORS = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
+
 export default function AnalyticsPage() {
+    const { data: items, loading: loadingItems } = useFirebase<Item>('items');
+    const { data: sales, loading: loadingSales } = useFirebase<SaleInvoice>('salesInvoices');
+    const { data: purchases, loading: loadingPurchases } = useFirebase<PurchaseInvoice>('purchaseInvoices');
+    const { data: suppliers, loading: loadingSuppliers } = useFirebase<Supplier>('suppliers');
+    const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
+    const { data: customers, loading: loadingCustomers } = useFirebase<Customer>('customers');
+
+    const loading = loadingItems || loadingSales || loadingPurchases || loadingSuppliers || loadingWarehouses || loadingCustomers;
+
+    const itemProfitData = useMemo(() => {
+        return items.map(item => {
+            let totalRevenue = 0;
+            let totalCost = 0;
+            sales.forEach(sale => {
+                sale.items.forEach(saleItem => {
+                    if (saleItem.id === item.id) {
+                        totalRevenue += saleItem.qty * saleItem.price;
+                        totalCost += saleItem.qty * (item.cost || saleItem.price * 0.8); // Fallback cost
+                    }
+                });
+            });
+            const profit = totalRevenue - totalCost;
+            return {
+                name: item.name,
+                profit: profit >= 0 ? profit : 0,
+                loss: profit < 0 ? -profit : 0
+            };
+        }).filter(d => d.profit > 0 || d.loss > 0).slice(0, 5);
+    }, [items, sales]);
+
+    const supplierActivityData = useMemo(() => {
+        const activity: { [key: string]: number } = {};
+        purchases.forEach(purchase => {
+            const supplierName = suppliers.find(s => s.id === purchase.supplierId)?.name || "غير محدد";
+            activity[supplierName] = (activity[supplierName] || 0) + purchase.total;
+        });
+        return Object.entries(activity).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value).slice(0, 5);
+    }, [purchases, suppliers]);
+    
+    const warehouseActivityData = useMemo(() => {
+         const activity: { [key: string]: number } = {};
+         sales.forEach(sale => {
+            const warehouseName = warehouses.find(w => w.id === (sale as any).warehouseId)?.name || "غير محدد";
+            activity[warehouseName] = (activity[warehouseName] || 0) + (sale as any).total;
+        });
+        return Object.entries(activity).map(([name, sales]) => ({ name, sales })).sort((a,b) => b.sales - a.sales);
+    }, [sales, warehouses]);
+
+    const receivablesPayablesData = useMemo(() => {
+        const totalReceivables = customers.reduce((acc, c) => acc + (c.openingBalance || 0), 0);
+        const totalPayables = suppliers.reduce((acc, s) => acc + (s.openingBalance || 0), 0);
+        return [
+            { name: 'ديون العملاء', value: totalReceivables, fill: "var(--color-receivables)" },
+            { name: 'مستحقات الموردين', value: totalPayables, fill: "var(--color-payables)" },
+        ]
+    }, [customers, suppliers]);
+
+    if (loading) {
+        return (
+            <div className="flex flex-1 justify-center items-center">
+                <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+            </div>
+        )
+    }
+
   return (
     <>
       <PageHeader title="التحليلات الرسومية" />
@@ -146,7 +201,11 @@ export default function AnalyticsPage() {
                     <ChartContainer config={chartConfig} className="h-[300px] w-full">
                        <RechartsPieChart>
                             <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                            <Pie data={receivablesPayablesData} dataKey="value" nameKey="name" />
+                            <Pie data={receivablesPayablesData} dataKey="value" nameKey="name" >
+                                {receivablesPayablesData.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                                ))}
+                            </Pie>
                        </RechartsPieChart>
                     </ChartContainer>
                 </CardContent>
@@ -154,14 +213,14 @@ export default function AnalyticsPage() {
 
              <Card className="lg:col-span-1">
                 <CardHeader>
-                    <CardTitle>نشاط الفروع</CardTitle>
+                    <CardTitle>نشاط المخازن</CardTitle>
                     <CardDescription>
-                        مقارنة أداء الفروع من حيث المبيعات
+                        مقارنة أداء المخازن من حيث المبيعات
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <ChartContainer config={{}} className="h-[300px] w-full">
-                        <RechartsBarChart data={branchActivityData}>
+                    <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                        <RechartsBarChart data={warehouseActivityData}>
                             <CartesianGrid vertical={false} />
                             <XAxis
                             dataKey="name"
@@ -174,7 +233,7 @@ export default function AnalyticsPage() {
                             cursor={false}
                             content={<ChartTooltipContent />}
                             />
-                            <Bar dataKey="sales" fill="hsl(var(--primary))" radius={8}>
+                            <Bar dataKey="sales" fill="var(--color-sales)" radius={8}>
                                 <LabelList
                                     position="top"
                                     offset={12}
