@@ -1,9 +1,11 @@
+
 import type { Metadata } from "next";
 import { Inter, Noto_Kufi_Arabic } from "next/font/google";
 import "./globals.css";
 import { AppLayout } from "@/app/app-layout";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
+import { PermissionsProvider } from "@/contexts/permissions-context";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -37,7 +39,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AppLayout>{children}</AppLayout>
+          <PermissionsProvider>
+            <AppLayout>{children}</AppLayout>
+          </PermissionsProvider>
           <Toaster />
         </ThemeProvider>
       </body>

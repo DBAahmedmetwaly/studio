@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { usePermissions } from "@/contexts/permissions-context";
 
 interface Item {
   id?: string;
@@ -124,6 +125,7 @@ const ItemForm = ({ item, onSave, onClose }: { item?: Item, onSave: (item: Omit<
 export default function ItemsPage() {
     const { data: items, loading, add, update, remove, getNextId } = useFirebase<Item>("items");
     const { toast } = useToast();
+    const { can } = usePermissions();
 
     const handleSave = async (item: Omit<Item, 'id' | 'code'> & { id?: string, code?: string }) => {
         try {
@@ -159,18 +161,20 @@ export default function ItemsPage() {
   return (
     <>
       <PageHeader title="إدارة الأصناف">
-        <AddEntityDialog
-          title="إضافة صنف جديد"
-          description="أدخل تفاصيل الصنف الجديد هنا."
-          triggerButton={
-            <Button size="sm" className="gap-1">
-              <PlusCircle className="h-4 w-4" />
-              إضافة صنف
-            </Button>
-          }
-        >
-          <ItemForm onSave={handleSave} onClose={() => {}} />
-        </AddEntityDialog>
+        {can('add', 'masterData') && (
+            <AddEntityDialog
+            title="إضافة صنف جديد"
+            description="أدخل تفاصيل الصنف الجديد هنا."
+            triggerButton={
+                <Button size="sm" className="gap-1">
+                <PlusCircle className="h-4 w-4" />
+                إضافة صنف
+                </Button>
+            }
+            >
+            <ItemForm onSave={handleSave} onClose={() => {}} />
+            </AddEntityDialog>
+        )}
       </PageHeader>
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
         <Card>
@@ -218,22 +222,26 @@ export default function ItemsPage() {
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
                                             <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                                            <AddEntityDialog
-                                                title="تعديل الصنف"
-                                                description="قم بتحديث تفاصيل الصنف هنا."
-                                                triggerButton={
-                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                                    <Edit className="ml-2 h-4 w-4" />
-                                                    تعديل
-                                                    </DropdownMenuItem>
-                                                }
-                                            >
-                                            <ItemForm item={item} onSave={handleSave} onClose={()=>{}} />
-                                            </AddEntityDialog>
-                                            <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(item.id!)}>
-                                                <Trash2 className="ml-2 h-4 w-4" />
-                                                حذف
-                                            </DropdownMenuItem>
+                                            {can('edit', 'masterData') && (
+                                                <AddEntityDialog
+                                                    title="تعديل الصنف"
+                                                    description="قم بتحديث تفاصيل الصنف هنا."
+                                                    triggerButton={
+                                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                        <Edit className="ml-2 h-4 w-4" />
+                                                        تعديل
+                                                        </DropdownMenuItem>
+                                                    }
+                                                >
+                                                <ItemForm item={item} onSave={handleSave} onClose={()=>{}} />
+                                                </AddEntityDialog>
+                                            )}
+                                            {can('delete', 'masterData') && (
+                                                <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(item.id!)}>
+                                                    <Trash2 className="ml-2 h-4 w-4" />
+                                                    حذف
+                                                </DropdownMenuItem>
+                                            )}
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </TableCell>
@@ -249,4 +257,3 @@ export default function ItemsPage() {
     </>
   );
 }
-

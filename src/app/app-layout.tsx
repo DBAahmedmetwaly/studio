@@ -45,6 +45,7 @@ import { usePathname } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ModeToggle } from "@/components/mode-toggle";
+import { usePermissions } from "@/contexts/permissions-context";
 
 const Logo = () => (
     <div className="flex items-center gap-2" >
@@ -54,10 +55,16 @@ const Logo = () => (
 );
 
 
-const NavLink = ({ href, children, icon }: { href: string; children: React.ReactNode; icon: React.ReactNode }) => {
+const NavLink = ({ href, children, icon, module }: { href: string; children: React.ReactNode; icon: React.ReactNode, module: string }) => {
   const pathname = usePathname();
   const { setOpenMobile } = useSidebar();
+  const { can } = usePermissions();
   const isActive = pathname === href;
+  
+  if (!can('view', module)) {
+    return null;
+  }
+
   return (
     <SidebarMenuItem>
       <SidebarMenuButton asChild isActive={isActive}>
@@ -70,8 +77,14 @@ const NavLink = ({ href, children, icon }: { href: string; children: React.React
   );
 };
 
-const NavCollapsible = ({ title, icon, children, defaultOpen = false }: { title: string; icon: React.ReactNode; children: React.ReactNode; defaultOpen?: boolean }) => {
+const NavCollapsible = ({ title, icon, children, module, defaultOpen = false }: { title: string; icon: React.ReactNode; children: React.ReactNode; module: string, defaultOpen?: boolean }) => {
     const pathname = usePathname();
+    const { can } = usePermissions();
+    
+    if (!can('view', module)) {
+        return null;
+    }
+
     const childPaths = React.Children.map(children, child => {
         if (React.isValidElement(child) && child.props.href) {
             return child.props.href;
@@ -123,9 +136,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>
-            <NavLink href="/" icon={<LayoutDashboard />}>لوحة التحكم</NavLink>
+            <NavLink href="/" icon={<LayoutDashboard />} module="dashboard">لوحة التحكم</NavLink>
             
-            <NavCollapsible title="البيانات الرئيسية" icon={<Package />}>
+            <NavCollapsible title="البيانات الرئيسية" icon={<Package />} module="masterData">
                 <NavSubLink href="/master-data/items">الأصناف</NavSubLink>
                 <NavSubLink href="/master-data/warehouses">المخازن</NavSubLink>
                 <NavSubLink href="/master-data/customers">العملاء</NavSubLink>
@@ -134,7 +147,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <NavSubLink href="/master-data/cash-accounts">الخزائن والبنوك</NavSubLink>
             </NavCollapsible>
 
-            <NavCollapsible title="المخزون" icon={<Boxes />}>
+            <NavCollapsible title="المخزون" icon={<Boxes />} module="inventory">
                 <NavSubLink href="/inventory/stock-in">استلام مخزون</NavSubLink>
                 <NavSubLink href="/inventory/stock-out">صرف مخزون</NavSubLink>
                 <NavSubLink href="/inventory/transfer">تحويل مخزون</NavSubLink>
@@ -142,15 +155,15 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <NavSubLink href="/inventory/movements">حركة المخزون</NavSubLink>
             </NavCollapsible>
 
-            <NavCollapsible title="المبيعات" icon={<ShoppingCart />}>
+            <NavCollapsible title="المبيعات" icon={<ShoppingCart />} module="sales">
                 <NavSubLink href="/sales/invoices/list">فواتير البيع</NavSubLink>
             </NavCollapsible>
             
-            <NavCollapsible title="المشتريات" icon={<ShoppingBag />}>
+            <NavCollapsible title="المشتريات" icon={<ShoppingBag />} module="purchases">
                 <NavSubLink href="/purchases/invoices">فاتورة شراء</NavSubLink>
             </NavCollapsible>
 
-             <NavCollapsible title="المحاسبة" icon={<BookUser />}>
+             <NavCollapsible title="المحاسبة" icon={<BookUser />} module="accounting">
                 <NavSubLink href="/accounting/journal">قيود اليومية</NavSubLink>
                 <NavSubLink href="/accounting/expenses">إدارة المصروفات</NavSubLink>
                 <NavSubLink href="/accounting/exceptional-income">الدخل الاستثنائي</NavSubLink>
@@ -159,9 +172,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <NavSubLink href="/accounting/ai-analysis">تحليل مالي بالذكاء الاصطناعي</NavSubLink>
             </NavCollapsible>
             
-            <NavLink href="/analytics" icon={<BarChart />}>التحليلات</NavLink>
+            <NavLink href="/analytics" icon={<BarChart />} module="analytics">التحليلات</NavLink>
 
-            <NavCollapsible title="التقارير" icon={<AreaChart />}>
+            <NavCollapsible title="التقارير" icon={<AreaChart />} module="reports">
                 <NavSubLink href="/reports/financial-statements">القوائم المالية</NavSubLink>
                 <NavSubLink href="/reports/partner-shares">حصص الشركاء</NavSubLink>
                 <NavSubLink href="/reports/customer-statement">كشف حساب العملاء</NavSubLink>
@@ -169,7 +182,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <NavSubLink href="/reports/item-profit-loss">أرباح وخسائر الأصناف</NavSubLink>
             </NavCollapsible>
             
-            <NavCollapsible title="الإعدادات" icon={<Settings />}>
+            <NavCollapsible title="الإعدادات" icon={<Settings />} module="settings">
               <NavSubLink href="/users">المستخدمون</NavSubLink>
               <NavSubLink href="/roles">الأدوار والصلاحيات</NavSubLink>
               <NavSubLink href="/settings">الإعدادات العامة</NavSubLink>
