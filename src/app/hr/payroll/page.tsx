@@ -32,24 +32,36 @@ interface EmployeeAdvance {
     employeeId: string;
 }
 
+interface EmployeeAdjustment {
+    id: string;
+    date: string;
+    employeeId: string;
+    type: 'reward' | 'penalty';
+    amount: number;
+}
+
+
 interface PayrollResult {
     employeeId: string;
     employeeName: string;
     basicSalary: number;
     totalAdvances: number;
+    totalRewards: number;
+    totalPenalties: number;
     netSalary: number;
 }
 
 export default function PayrollPage() {
     const { data: employees, loading: loadingEmployees } = useFirebase<Employee>('employees');
     const { data: advances, loading: loadingAdvances } = useFirebase<EmployeeAdvance>('employeeAdvances');
+    const { data: adjustments, loading: loadingAdjustments } = useFirebase<EmployeeAdjustment>('employeeAdjustments');
     const { toast } = useToast();
     
     const [selectedMonth, setSelectedMonth] = useState<string>(String(new Date().getMonth() + 1));
     const [selectedYear, setSelectedYear] = useState<string>(String(new Date().getFullYear()));
     const [payrollData, setPayrollData] = useState<PayrollResult[] | null>(null);
 
-    const loading = loadingEmployees || loadingAdvances;
+    const loading = loadingEmployees || loadingAdvances || loadingAdjustments;
 
     const handleCalculatePayroll = () => {
         if (!selectedMonth || !selectedYear) {
@@ -61,21 +73,34 @@ export default function PayrollPage() {
         const month = parseInt(selectedMonth);
 
         const results = employees.map(employee => {
-            const employeeAdvances = advances.filter(advance => {
-                const advanceDate = new Date(advance.date);
-                return advance.employeeId === employee.id &&
-                       advanceDate.getFullYear() === year &&
-                       advanceDate.getMonth() + 1 === month;
-            });
+            const filterByMonth = (item: { date: string, employeeId: string }) => {
+                const itemDate = new Date(item.date);
+                return item.employeeId === employee.id &&
+                       itemDate.getFullYear() === year &&
+                       itemDate.getMonth() + 1 === month;
+            }
 
-            const totalAdvances = employeeAdvances.reduce((sum, advance) => sum + advance.amount, 0);
-            const netSalary = employee.basicSalary - totalAdvances;
+            const totalAdvances = advances
+                .filter(filterByMonth)
+                .reduce((sum, item) => sum + item.amount, 0);
+
+            const totalRewards = adjustments
+                .filter(item => item.type === 'reward' && filterByMonth(item))
+                .reduce((sum, item) => sum + item.amount, 0);
+
+            const totalPenalties = adjustments
+                .filter(item => item.type === 'penalty' && filterByMonth(item))
+                .reduce((sum, item) => sum + item.amount, 0);
+            
+            const netSalary = employee.basicSalary + totalRewards - totalAdvances - totalPenalties;
 
             return {
                 employeeId: employee.id,
                 employeeName: employee.name,
                 basicSalary: employee.basicSalary,
                 totalAdvances: totalAdvances,
+                totalRewards: totalRewards,
+                totalPenalties: totalPenalties,
                 netSalary: netSalary,
             };
         });
@@ -89,7 +114,9 @@ export default function PayrollPage() {
     }
 
     const totalBasicSalaries = useMemo(() => payrollData?.reduce((sum, p) => sum + p.basicSalary, 0) || 0, [payrollData]);
-    const totalDeductions = useMemo(() => payrollData?.reduce((sum, p) => sum + p.totalAdvances, 0) || 0, [payrollData]);
+    const totalAdvances = useMemo(() => payrollData?.reduce((sum, p) => sum + p.totalAdvances, 0) || 0, [payrollData]);
+    const totalRewards = useMemo(() => payrollData?.reduce((sum, p) => sum + p.totalRewards, 0) || 0, [payrollData]);
+    const totalPenalties = useMemo(() => payrollData?.reduce((sum, p) => sum + p.totalPenalties, 0) || 0, [payrollData]);
     const totalNetSalaries = useMemo(() => payrollData?.reduce((sum, p) => sum + p.netSalary, 0) || 0, [payrollData]);
     
     const years = Array.from({ length: 5 }, (_, i) => String(new Date().getFullYear() - i));
@@ -164,8 +191,10 @@ export default function PayrollPage() {
                             <TableRow>
                                 <TableHead>اسم الموظف</TableHead>
                                 <TableHead className="text-center">الراتب الأساسي</TableHead>
-                                <TableHead className="text-center">إجمالي السلف والخصومات</TableHead>
-                                <TableHead className="text-center">صافي الراتب المستحق</TableHead>
+                                <TableHead className="text-center">المكافآت</TableHead>
+                                <TableHead className="text-center">السلف</TableHead>
+                                <TableHead className="text-center">الجزاءات</TableHead>
+                                <TableHead className="text-center">صافي الراتب</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -173,8 +202,10 @@ export default function PayrollPage() {
                                 <TableRow key={p.employeeId}>
                                     <TableCell>{p.employeeName}</TableCell>
                                     <TableCell className="text-center">{p.basicSalary.toLocaleString()} ج.م</TableCell>
+                                    <TableCell className="text-center text-green-600">{p.totalRewards > 0 ? `${p.totalRewards.toLocaleString()} ج.م` : '-'}</TableCell>
                                     <TableCell className="text-center text-destructive">{p.totalAdvances > 0 ? `${p.totalAdvances.toLocaleString()} ج.م` : '-'}</TableCell>
-                                    <TableCell className="text-center font-bold text-green-600">{p.netSalary.toLocaleString()} ج.م</TableCell>
+                                    <TableCell className="text-center text-destructive">{p.totalPenalties > 0 ? `${p.totalPenalties.toLocaleString()} ج.م` : '-'}</TableCell>
+                                    <TableCell className="text-center font-bold text-primary">{p.netSalary.toLocaleString()} ج.م</TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
@@ -182,8 +213,10 @@ export default function PayrollPage() {
                             <TableRow className="font-bold bg-muted/50">
                                 <TableCell>الإجمالي</TableCell>
                                 <TableCell className="text-center">{totalBasicSalaries.toLocaleString()} ج.م</TableCell>
-                                <TableCell className="text-center text-destructive">{totalDeductions.toLocaleString()} ج.م</TableCell>
-                                <TableCell className="text-center text-green-600">{totalNetSalaries.toLocaleString()} ج.م</TableCell>
+                                <TableCell className="text-center text-green-600">{totalRewards.toLocaleString()} ج.م</TableCell>
+                                <TableCell className="text-center text-destructive">{totalAdvances.toLocaleString()} ج.م</TableCell>
+                                <TableCell className="text-center text-destructive">{totalPenalties.toLocaleString()} ج.م</TableCell>
+                                <TableCell className="text-center text-primary">{totalNetSalaries.toLocaleString()} ج.م</TableCell>
                             </TableRow>
                         </TableFooter>
                     </Table>

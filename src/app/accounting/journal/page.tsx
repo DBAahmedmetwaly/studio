@@ -59,6 +59,14 @@ interface EmployeeAdvance {
     amount: number;
     paidFromAccountId: string;
 }
+interface EmployeeAdjustment {
+    id: string;
+    date: string;
+    employeeId: string;
+    type: 'reward' | 'penalty';
+    amount: number;
+    description: string;
+}
 interface Employee {
     id: string;
     name: string;
@@ -83,9 +91,10 @@ export default function JournalPage() {
     const { data: treasuryTxs, loading: l9 } = useFirebase<TreasuryTransaction>("treasuryTransactions");
     const { data: employeeAdvances, loading: l10 } = useFirebase<EmployeeAdvance>("employeeAdvances");
     const { data: employees, loading: l11 } = useFirebase<Employee>("employees");
+    const { data: employeeAdjustments, loading: l12 } = useFirebase<EmployeeAdjustment>("employeeAdjustments");
 
 
-    const loading = l1 || l2 || l3 || l4 || l5 || l6 || l7 || l8 || l9 || l10 || l11;
+    const loading = l1 || l2 || l3 || l4 || l5 || l6 || l7 || l8 || l9 || l10 || l11 || l12;
     
     const itemsMap = useMemo(() => {
         const map = new Map<string, Item>();
@@ -180,10 +189,22 @@ export default function JournalPage() {
             entries.push({ id: `adv-debit-${adv.id}`, date: adv.date, number: `ADV-${adv.id.slice(-4)}`, description: `سلفة للموظف ${employeeName}`, debit: adv.amount, credit: 0, account: 'سلف الموظفين' });
             entries.push({ id: `adv-credit-${adv.id}`, date: adv.date, number: `ADV-${adv.id.slice(-4)}`, description: `دفع من ${cashAccountName}`, debit: 0, credit: adv.amount, account: cashAccountName });
         });
+        
+        // Employee Adjustments (Rewards/Penalties)
+        employeeAdjustments.forEach(adj => {
+             const employeeName = getEmployeeName(adj.employeeId);
+             if (adj.type === 'reward') {
+                 entries.push({ id: `adj-rew-debit-${adj.id}`, date: adj.date, number: `ADJ-${adj.id.slice(-4)}`, description: `مكافأة لـ ${employeeName}: ${adj.description}`, debit: adj.amount, credit: 0, account: 'مصروف مكافآت' });
+                 entries.push({ id: `adj-rew-credit-${adj.id}`, date: adj.date, number: `ADJ-${adj.id.slice(-4)}`, description: `استحقاق مكافأة لـ ${employeeName}`, debit: 0, credit: adj.amount, account: 'رواتب مستحقة' });
+             } else { // penalty
+                 entries.push({ id: `adj-pen-debit-${adj.id}`, date: adj.date, number: `ADJ-${adj.id.slice(-4)}`, description: `خصم من ${employeeName}: ${adj.description}`, debit: adj.amount, credit: 0, account: 'رواتب مستحقة' });
+                 entries.push({ id: `adj-pen-credit-${adj.id}`, date: adj.date, number: `ADJ-${adj.id.slice(-4)}`, description: `إيراد جزاءات من ${employeeName}`, debit: 0, credit: adj.amount, account: 'إيرادات أخرى - جزاءات' });
+             }
+        });
 
 
         return entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [sales, purchases, expenses, exceptionalIncomes, transfers, warehouses, itemsMap, cashAccounts, treasuryTxs, employeeAdvances, employees]);
+    }, [sales, purchases, expenses, exceptionalIncomes, transfers, warehouses, itemsMap, cashAccounts, treasuryTxs, employeeAdvances, employees, employeeAdjustments]);
 
     const filteredEntries = journalEntries.filter(entry => {
         const entryDate = new Date(entry.date);
