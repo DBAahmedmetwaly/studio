@@ -20,34 +20,24 @@ import {
   LayoutDashboard,
   GitFork,
   Package,
-  Warehouse,
   Users,
-  Truck,
-  Handshake,
-  Boxes,
   BookUser,
-  Sparkles,
   AreaChart,
   UserCog,
   Settings,
   ChevronDown,
-  ShieldCheck,
-  Receipt,
-  FileText,
-  TrendingUp,
+  Boxes,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Button } from "./ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
-import { cn } from "@/lib/utils";
 import { ModeToggle } from "./mode-toggle";
 
 const Logo = () => (
     <div className="flex items-center gap-2" >
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-7 w-7 text-primary"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
-        <h1 className="text-lg font-bold font-headline text-primary-foreground">متعدد الفروع</h1>
+        <h1 className="text-lg font-bold text-primary">المحاسب الذكي</h1>
     </div>
 );
 
@@ -67,7 +57,7 @@ const NavLink = ({ href, children, icon }: { href: string; children: React.React
   );
 };
 
-const NavCollapsible = ({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) => {
+const NavCollapsible = ({ title, icon, children, defaultOpen = false }: { title: string; icon: React.ReactNode; children: React.ReactNode; defaultOpen?: boolean }) => {
     const pathname = usePathname();
     const childPaths = React.Children.map(children, child => {
         if (React.isValidElement(child) && child.props.href) {
@@ -75,10 +65,11 @@ const NavCollapsible = ({ title, icon, children }: { title: string; icon: React.
         }
         return null;
     }) || [];
-    const isOpen = childPaths.some(path => path && pathname.startsWith(path));
+    
+    const isAnyChildActive = childPaths.some(path => path && pathname.startsWith(path));
 
     return (
-        <Collapsible defaultOpen={isOpen}>
+        <Collapsible defaultOpen={isAnyChildActive || defaultOpen}>
             <SidebarMenuItem>
                 <CollapsibleTrigger asChild>
                     <SidebarMenuButton>
@@ -111,8 +102,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider>
       <Sidebar side="right">
-        <SidebarHeader className="bg-sidebar-primary">
-            <div className="flex w-full items-center justify-between p-2">
+        <SidebarHeader>
+            <div className="flex w-full items-center justify-between p-4 border-b">
                 <Logo />
             </div>
         </SidebarHeader>
@@ -150,16 +141,16 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <NavSubLink href="/reports/item-profit-loss">أرباح وخسائر الأصناف</NavSubLink>
             </NavCollapsible>
             
-            <NavCollapsible title="المستخدمون والإعدادات" icon={<UserCog />}>
+            <NavCollapsible title="الإعدادات" icon={<Settings />}>
               <NavSubLink href="/users">المستخدمون</NavSubLink>
               <NavSubLink href="/roles">الأدوار والصلاحيات</NavSubLink>
-              <NavSubLink href="/settings">الإعدادات</NavSubLink>
+              <NavSubLink href="/settings">الإعدادات العامة</NavSubLink>
             </NavCollapsible>
 
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter>
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-sidebar-accent m-2">
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-card m-2">
                 <Avatar>
                     <AvatarImage src="https://placehold.co/100x100.png" />
                     <AvatarFallback>AD</AvatarFallback>
@@ -168,16 +159,16 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     <span className="font-semibold text-sm">مستخدم مسؤول</span>
                     <span className="text-xs text-muted-foreground">admin@example.com</span>
                 </div>
+                 <ModeToggle />
             </div>
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <header className="flex h-14 items-center gap-4 border-b bg-background px-6">
+        <header className="flex h-14 items-center gap-4 border-b bg-background px-6 sticky top-0 z-30">
+            <SidebarTrigger className="md:hidden" />
             <div className="flex-1">
                 {/* Header content can go here */}
             </div>
-            <ModeToggle />
-            <SidebarTrigger className="md:hidden" />
         </header>
         {children}
         </SidebarInset>

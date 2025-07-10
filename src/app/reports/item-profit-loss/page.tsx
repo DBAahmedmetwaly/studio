@@ -1,3 +1,5 @@
+"use client";
+
 import PageHeader from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Printer } from "lucide-react";
+import React from "react";
 
 const profitData = [
     {
@@ -35,11 +38,15 @@ const profitData = [
 ];
 
 export default function ItemProfitLossPage() {
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
     <>
       <PageHeader title="تقرير أرباح وخسائر الأصناف" />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
-        <Card>
+        <Card className="no-print">
             <CardHeader>
                 <CardTitle>تحديد الفلاتر</CardTitle>
             </CardHeader>
@@ -73,7 +80,7 @@ export default function ItemProfitLossPage() {
             </CardContent>
         </Card>
 
-        <Card>
+        <Card className="printable-area">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
                 <CardTitle>نتائج التقرير</CardTitle>
@@ -81,7 +88,7 @@ export default function ItemProfitLossPage() {
                 تحليل أرباح وخسائر كل صنف خلال الفترة المحددة.
                 </CardDescription>
             </div>
-            <Button variant="outline" size="icon">
+            <Button variant="outline" size="icon" onClick={handlePrint} className="no-print">
                 <Printer className="h-4 w-4" />
                 <span className="sr-only">طباعة</span>
             </Button>
@@ -106,10 +113,10 @@ export default function ItemProfitLossPage() {
                             </TableCell>
                             <TableCell>ج.م {data.revenue.toLocaleString()}</TableCell>
                             <TableCell>ج.م {data.cost.toLocaleString()}</TableCell>
-                            <TableCell className={data.profit > 0 ? "text-green-600" : "text-destructive"}>
+                            <TableCell className={data.profit >= 0 ? "text-green-500" : "text-destructive"}>
                                 ج.م {data.profit.toLocaleString()}
                             </TableCell>
-                            <TableCell className={data.profit > 0 ? "text-green-600" : "text-destructive"}>
+                            <TableCell className={data.profit >= 0 ? "text-green-500" : "text-destructive"}>
                                 {data.margin}
                             </TableCell>
                         </TableRow>

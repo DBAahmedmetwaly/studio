@@ -1,3 +1,5 @@
+"use client";
+
 import PageHeader from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -5,13 +7,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Printer } from "lucide-react";
+import React from "react";
 
 export default function SupplierStatementPage() {
+    const handlePrint = () => {
+    window.print();
+  };
+
   return (
     <>
       <PageHeader title="كشف حساب الموردين" />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
-        <Card>
+        <Card className="no-print">
             <CardHeader>
                 <CardTitle>تحديد المورد والفترة</CardTitle>
             </CardHeader>
@@ -44,7 +51,7 @@ export default function SupplierStatementPage() {
             </CardContent>
         </Card>
 
-        <Card>
+        <Card className="printable-area">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
                 <CardTitle>كشف الحساب</CardTitle>
@@ -52,7 +59,7 @@ export default function SupplierStatementPage() {
                 عرض مفصل لمعاملات المورد.
                 </CardDescription>
             </div>
-            <Button variant="outline" size="icon">
+            <Button variant="outline" size="icon" onClick={handlePrint} className="no-print">
                 <Printer className="h-4 w-4" />
                 <span className="sr-only">طباعة</span>
             </Button>
