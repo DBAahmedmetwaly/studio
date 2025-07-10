@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { database } from '@/lib/firebase';
-import { ref, onValue, set, push, remove as fbRemove, update as fbUpdate, runTransaction } from 'firebase/database';
+import { ref, onValue, set, push, remove as fbRemove, update as fbUpdate, runTransaction, get } from 'firebase/database';
 
 interface FirebaseData {
   id: string;
@@ -16,36 +16,30 @@ const useFirebase = <T extends object>(path: string) => {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    const dbRef = ref(database, path);
-    const unsubscribe = onValue(
-      dbRef,
-      (snapshot) => {
+    const fetchData = async () => {
+        const dbRef = ref(database, path);
         try {
-          const snapshotData = snapshot.val();
-          if (snapshotData) {
-            const dataArray = Object.keys(snapshotData).map((key) => ({
-              id: key,
-              ...snapshotData[key],
-            }));
-            setData(dataArray);
-          } else {
-            setData([]);
-          }
+            const snapshot = await get(dbRef);
+            if (snapshot.exists()) {
+                const snapshotData = snapshot.val();
+                 const dataArray = Object.keys(snapshotData).map((key) => ({
+                  id: key,
+                  ...snapshotData[key],
+                }));
+                setData(dataArray);
+            } else {
+                setData([]);
+            }
         } catch (e: any) {
-          setError(e);
-          console.error(e);
+            setError(e);
+            console.error(`Firebase read failed for path: ${path}`, e);
         } finally {
-          setLoading(false);
+            setLoading(false);
         }
-      },
-      (error) => {
-        setError(error);
-        setLoading(false);
-        console.error(`Firebase read failed for path: ${path}`, error);
-      }
-    );
-
-    return () => unsubscribe();
+    };
+    
+    fetchData();
+    
   }, [path]);
 
   const add = useCallback(async (newData: T) => {
