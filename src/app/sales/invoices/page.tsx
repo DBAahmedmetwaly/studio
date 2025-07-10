@@ -32,7 +32,7 @@ interface Customer {
     name: string;
 }
 
-interface Branch {
+interface Warehouse {
     id: string;
     name: string;
 }
@@ -46,7 +46,7 @@ export default function SalesInvoicePage() {
 
     const { data: availableItems, loading: loadingItems } = useFirebase<Item>('items');
     const { data: customers, loading: loadingCustomers } = useFirebase<Customer>('customers');
-    const { data: branches, loading: loadingBranches } = useFirebase<Branch>('branches');
+    const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
 
     useEffect(() => {
         const newSubtotal = items.reduce((acc, item) => acc + item.total, 0);
@@ -91,7 +91,7 @@ export default function SalesInvoicePage() {
         }
     }
     
-    const loading = loadingItems || loadingCustomers || loadingBranches;
+    const loading = loadingItems || loadingCustomers || loadingWarehouses;
 
   return (
     <>
@@ -144,13 +144,13 @@ export default function SalesInvoicePage() {
                             </Select>
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="branch">من فرع</Label>
+                            <Label htmlFor="warehouse">من مخزن</Label>
                             <Select>
-                                <SelectTrigger id="branch">
-                                    <SelectValue placeholder="اختر فرعًا" />
+                                <SelectTrigger id="warehouse">
+                                    <SelectValue placeholder="اختر مخزنًا" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {branches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+                                  {warehouses.map(w => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
                                 </SelectContent>
                             </Select>
                         </div>

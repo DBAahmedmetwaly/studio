@@ -30,10 +30,6 @@ interface Warehouse {
     name: string;
 }
 
-interface Branch {
-    id: string;
-    name: string;
-}
 
 export default function StockOutPage() {
     const { toast } = useToast();
@@ -45,7 +41,6 @@ export default function StockOutPage() {
 
     const { data: availableItems, loading: loadingItems } = useFirebase<Item>('items');
     const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
-    const { data: branches, loading: loadingBranches } = useFirebase<Branch>('branches');
     const { add: addStockOutRecord } = useFirebase("stockOutRecords");
 
 
@@ -109,7 +104,7 @@ export default function StockOutPage() {
         }
     };
 
-    const loading = loadingItems || loadingWarehouses || loadingBranches;
+    const loading = loadingItems || loadingWarehouses;
 
   return (
     <>
@@ -143,14 +138,13 @@ export default function StockOutPage() {
                 <>
                     <div className="grid md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                            <Label htmlFor="warehouse">من مستودع / فرع</Label>
+                            <Label htmlFor="warehouse">من مخزن</Label>
                             <Select value={source} onValueChange={setSource}>
                                 <SelectTrigger id="warehouse">
                                     <SelectValue placeholder="اختر المصدر" />
                                 </SelectTrigger>
                                 <SelectContent>
                                    {warehouses.map(w => <SelectItem key={`wh-${w.id}`} value={w.id}>{w.name}</SelectItem>)}
-                                   {branches.map(b => <SelectItem key={`br-${b.id}`} value={b.id}>{b.name}</SelectItem>)}
                                 </SelectContent>
                             </Select>
                         </div>

@@ -1,3 +1,4 @@
+
 import PageHeader from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,7 +24,7 @@ export default function ExpensesPage() {
           <CardHeader>
             <CardTitle>إضافة مصروف جديد</CardTitle>
             <CardDescription>
-              سجل المصروفات وقم بتحميلها على الفروع أو المستودعات.
+              سجل المصروفات وقم بتحميلها على المخازن.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -49,22 +50,19 @@ export default function ExpensesPage() {
                         <SelectValue placeholder="اختر نوع التحميل" />
                         </SelectTrigger>
                         <SelectContent>
-                        <SelectItem value="branch">فرع</SelectItem>
-                        <SelectItem value="warehouse">مستودع</SelectItem>
+                        <SelectItem value="warehouse">مخزن</SelectItem>
                         <SelectItem value="general">عام</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="expense-entity">اختر الكيان</Label>
+                    <Label htmlFor="expense-entity">اختر المخزن</Label>
                     <Select>
                         <SelectTrigger>
-                        <SelectValue placeholder="اختر الفرع أو المستودع" />
+                        <SelectValue placeholder="اختر المخزن" />
                         </SelectTrigger>
                         <SelectContent>
-                           <SelectItem value="br001">الفرع الرئيسي - القاهرة</SelectItem>
-                            <SelectItem value="br002">فرع الإسكندرية</SelectItem>
-                             <SelectItem value="wh001">مستودع القاهرة</SelectItem>
+                             <SelectItem value="wh001">مخزن القاهرة</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>

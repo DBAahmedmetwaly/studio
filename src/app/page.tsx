@@ -9,6 +9,7 @@ import {
   Package,
   Users,
   Loader2,
+  Warehouse
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -55,7 +56,7 @@ interface Item {
   openingStock: number;
   price: number;
 }
-interface Branch {
+interface WarehouseData {
   id: string;
   name: string;
 }
@@ -64,9 +65,9 @@ export default function Dashboard() {
   const { data: sales, loading: loadingSales } = useFirebase<SaleInvoice>("salesInvoices");
   const { data: customers, loading: loadingCustomers } = useFirebase<Customer>("customers");
   const { data: items, loading: loadingItems } = useFirebase<Item>("items");
-  const { data: branches, loading: loadingBranches } = useFirebase<Branch>("branches");
+  const { data: warehouses, loading: loadingWarehouses } = useFirebase<WarehouseData>("warehouses");
 
-  const loading = loadingSales || loadingCustomers || loadingItems || loadingBranches;
+  const loading = loadingSales || loadingCustomers || loadingItems || loadingWarehouses;
 
   const totalRevenue = sales.reduce((acc, sale) => acc + sale.total, 0);
   const totalSalesCount = sales.length;
@@ -88,19 +89,19 @@ export default function Dashboard() {
     <>
       <PageHeader title="لوحة التحكم">
         <div className="flex items-center space-x-2">
-          <label htmlFor="branch-select" className="text-sm font-medium">
-            الفرع:
+          <label htmlFor="warehouse-select" className="text-sm font-medium">
+            المخزن:
           </label>
-          <Select defaultValue={branches[0]?.id}>
+          <Select defaultValue={warehouses[0]?.id}>
             <SelectTrigger
-              id="branch-select"
+              id="warehouse-select"
               className="w-auto md:w-[180px] bg-card"
             >
-              <SelectValue placeholder="اختر فرعًا" />
+              <SelectValue placeholder="اختر مخزنًا" />
             </SelectTrigger>
             <SelectContent>
-                {branches.map(branch => (
-                    <SelectItem key={branch.id} value={branch.id}>{branch.name}</SelectItem>
+                {warehouses.map(warehouse => (
+                    <SelectItem key={warehouse.id} value={warehouse.id}>{warehouse.name}</SelectItem>
                 ))}
             </SelectContent>
           </Select>

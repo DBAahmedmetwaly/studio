@@ -40,6 +40,10 @@ interface Expense {
   id: string;
   amount: number;
 }
+interface ExceptionalIncome {
+    id: string;
+    amount: number;
+}
 interface Customer {
   id: string;
   openingBalance: number;
@@ -65,15 +69,19 @@ function IncomeStatement() {
   const { data: sales, loading: loadingSales } = useFirebase<SaleInvoice>("salesInvoices");
   const { data: purchases, loading: loadingPurchases } = useFirebase<PurchaseInvoice>("purchaseInvoices");
   const { data: expenses, loading: loadingExpenses } = useFirebase<Expense>("expenses");
+  const { data: exceptionalIncomes, loading: loadingExceptionalIncomes } = useFirebase<ExceptionalIncome>("exceptionalIncomes");
 
-  const loading = loadingSales || loadingPurchases || loadingExpenses;
+
+  const loading = loadingSales || loadingPurchases || loadingExpenses || loadingExceptionalIncomes;
 
   const totalRevenue = sales.reduce((acc, sale) => acc + sale.total, 0);
   const costOfGoodsSold = purchases.reduce((acc, purchase) => acc + purchase.total, 0);
   const totalExpenses = expenses.reduce((acc, expense) => acc + expense.amount, 0);
+  const totalExceptionalIncome = exceptionalIncomes.reduce((acc, income) => acc + income.amount, 0);
   
   const grossProfit = totalRevenue - costOfGoodsSold;
-  const netIncome = grossProfit - totalExpenses;
+  const netOperatingIncome = grossProfit - totalExpenses;
+  const netIncome = netOperatingIncome + totalExceptionalIncome;
 
   if (loading) {
     return <div className="flex justify-center items-center py-10"><Loader2 className="h-8 w-8 animate-spin" /></div>;
@@ -98,10 +106,18 @@ function IncomeStatement() {
           <TableCell className="font-medium">المصروفات العمومية</TableCell>
           <TableCell className="text-left text-destructive">- ج.م {totalExpenses.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
         </TableRow>
+         <TableRow>
+          <TableHead>صافي الدخل التشغيلي</TableHead>
+          <TableHead className="text-left">ج.م {netOperatingIncome.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableHead>
+        </TableRow>
+        <TableRow>
+          <TableCell className="font-medium">الدخل الاستثنائي</TableCell>
+          <TableCell className="text-left">ج.م {totalExceptionalIncome.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+        </TableRow>
       </TableBody>
       <TableFooter>
         <TableRow className="bg-muted/50">
-          <TableHead className="font-bold text-lg">صافي الدخل</TableHead>
+          <TableHead className="font-bold text-lg">صافي الدخل النهائي</TableHead>
           <TableHead className={`font-bold text-lg text-left ${netIncome >= 0 ? 'text-green-600' : 'text-destructive'}`}>
             ج.م {netIncome.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </TableHead>

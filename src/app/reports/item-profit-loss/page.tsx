@@ -1,3 +1,4 @@
+
 "use client";
 
 import PageHeader from "@/components/page-header";
@@ -53,15 +54,15 @@ export default function ItemProfitLossPage() {
             <CardContent className="space-y-4">
                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div className="space-y-2">
-                        <Label htmlFor="branch">الفرع</Label>
+                        <Label htmlFor="warehouse">المخزن</Label>
                         <Select>
                             <SelectTrigger>
-                                <SelectValue placeholder="كل الفروع" />
+                                <SelectValue placeholder="كل المخازن" />
                             </SelectTrigger>
                             <SelectContent>
-                               <SelectItem value="all">كل الفروع</SelectItem>
-                               <SelectItem value="br001">الفرع الرئيسي - القاهرة</SelectItem>
-                               <SelectItem value="br002">فرع الإسكندرية</SelectItem>
+                               <SelectItem value="all">كل المخازن</SelectItem>
+                               <SelectItem value="wh001">مخزن القاهرة الرئيسي</SelectItem>
+                               <SelectItem value="wh002">مخزن الإسكندرية</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>

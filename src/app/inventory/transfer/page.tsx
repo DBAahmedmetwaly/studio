@@ -29,12 +29,6 @@ interface Warehouse {
     name: string;
 }
 
-interface Branch {
-    id: string;
-    name: string;
-}
-
-
 export default function StockTransferPage() {
     const { toast } = useToast();
     const [items, setItems] = useState<StockItem[]>([]);
@@ -44,7 +38,6 @@ export default function StockTransferPage() {
 
     const { data: availableItems, loading: loadingItems } = useFirebase<Item>('items');
     const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
-    const { data: branches, loading: loadingBranches } = useFirebase<Branch>('branches');
     const { add: addStockTransferRecord } = useFirebase("stockTransferRecords");
 
 
@@ -89,7 +82,7 @@ export default function StockTransferPage() {
         }
 
         if(fromSource === toSource) {
-            toast({ variant: "destructive", title: "خطأ", description: "لا يمكن التحويل من وإلى نفس الجهة."});
+            toast({ variant: "destructive", title: "خطأ", description: "لا يمكن التحويل من وإلى نفس المخزن."});
             return;
         }
 
@@ -111,8 +104,7 @@ export default function StockTransferPage() {
         }
     };
 
-    const loading = loadingItems || loadingWarehouses || loadingBranches;
-    const allSources = [...warehouses.map(w => ({id: `wh-${w.id}`, name: w.name})), ...branches.map(b => ({id: `br-${b.id}`, name: b.name}))]
+    const loading = loadingItems || loadingWarehouses;
 
   return (
     <>
@@ -146,26 +138,24 @@ export default function StockTransferPage() {
             <>
                 <div className="grid md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                        <Label htmlFor="from-warehouse">من مستودع / فرع</Label>
+                        <Label htmlFor="from-warehouse">من مخزن</Label>
                         <Select value={fromSource} onValueChange={setFromSource}>
                             <SelectTrigger id="from-warehouse">
                                 <SelectValue placeholder="اختر المحول منه" />
                             </SelectTrigger>
                             <SelectContent>
                                {warehouses.map(w => <SelectItem key={`from-wh-${w.id}`} value={w.id}>{w.name}</SelectItem>)}
-                               {branches.map(b => <SelectItem key={`from-br-${b.id}`} value={b.id}>{b.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="to-warehouse">إلى مستودع/فرع</Label>
+                        <Label htmlFor="to-warehouse">إلى مخزن</Label>
                         <Select value={toSource} onValueChange={setToSource}>
                             <SelectTrigger id="to-warehouse">
                                 <SelectValue placeholder="اختر المحول إليه" />
                             </SelectTrigger>
                             <SelectContent>
                                {warehouses.map(w => <SelectItem key={`to-wh-${w.id}`} value={w.id}>{w.name}</SelectItem>)}
-                               {branches.map(b => <SelectItem key={`to-br-${b.id}`} value={b.id}>{b.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>

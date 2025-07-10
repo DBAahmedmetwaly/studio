@@ -1,3 +1,4 @@
+
 "use client";
 
 import PageHeader from "@/components/page-header";
@@ -43,19 +44,19 @@ const users = [
     name: "أحمد محمود",
     email: "ahmad@example.com",
     role: "مسؤول",
-    branch: "الفرع الرئيسي - القاهرة",
+    warehouse: "المخزن الرئيسي - القاهرة",
   },
   {
     name: "فاطمة علي",
     email: "fatima@example.com",
     role: "محاسب",
-    branch: "فرع الإسكندرية",
+    warehouse: "مخزن الإسكندرية",
   },
   {
     name: "محمد حسن",
     email: "mohamed@example.com",
     role: "أمين مخزن",
-    branch: "الفرع الرئيسي - القاهرة",
+    warehouse: "المخزن الرئيسي - القاهرة",
   },
 ];
 
@@ -90,16 +91,16 @@ const UserForm = ({ user }: { user?: typeof users[0] }) => (
       </Select>
     </div>
       <div className="grid grid-cols-4 items-center gap-4">
-      <Label htmlFor="user-branch" className="text-right">
-        الفرع
+      <Label htmlFor="user-warehouse" className="text-right">
+        المخزن
       </Label>
-        <Select defaultValue={user?.branch}>
+        <Select defaultValue={user?.warehouse}>
         <SelectTrigger className="col-span-3">
-          <SelectValue placeholder="اختر فرعًا" />
+          <SelectValue placeholder="اختر مخزنًا" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="الفرع الرئيسي - القاهرة">الفرع الرئيسي - القاهرة</SelectItem>
-          <SelectItem value="فرع الإسكندرية">فرع الإسكندرية</SelectItem>
+          <SelectItem value="المخزن الرئيسي - القاهرة">المخزن الرئيسي - القاهرة</SelectItem>
+          <SelectItem value="مخزن الإسكندرية">مخزن الإسكندرية</SelectItem>
         </SelectContent>
       </Select>
     </div>
@@ -137,7 +138,7 @@ export default function UsersPage() {
                 <TableRow>
                   <TableHead>المستخدم</TableHead>
                   <TableHead>الدور</TableHead>
-                  <TableHead>الفرع</TableHead>
+                  <TableHead>المخزن</TableHead>
                   <TableHead>
                     <span className="sr-only">الإجراءات</span>
                   </TableHead>
@@ -160,7 +161,7 @@ export default function UsersPage() {
                     <TableCell>
                       <Badge variant="outline">{user.role}</Badge>
                     </TableCell>
-                    <TableCell>{user.branch}</TableCell>
+                    <TableCell>{user.warehouse}</TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>

@@ -4,7 +4,6 @@
 import PageHeader from "@/components/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import useFirebase from "@/hooks/use-firebase";
 import { Loader2, ArrowUp, ArrowDown, ArrowLeftRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -34,21 +33,23 @@ interface StockTransferRecord {
   items: { name: string; qty: number }[];
 }
 
+interface Warehouse {
+    id: string;
+    name: string;
+}
+
 export default function InventoryMovementsPage() {
   const { data: stockIns, loading: loadingIn } = useFirebase<StockInRecord>("stockInRecords");
   const { data: stockOuts, loading: loadingOut } = useFirebase<StockOutRecord>("stockOutRecords");
   const { data: stockTransfers, loading: loadingTransfers } = useFirebase<StockTransferRecord>("stockTransferRecords");
 
-  const { data: warehouses, loading: loadingWarehouses } = useFirebase("warehouses");
-  const { data: branches, loading: loadingBranches } = useFirebase("branches");
+  const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>("warehouses");
 
-  const loading = loadingIn || loadingOut || loadingTransfers || loadingWarehouses || loadingBranches;
+  const loading = loadingIn || loadingOut || loadingTransfers || loadingWarehouses;
 
   const getSourceName = (id: string) => {
     const warehouse = warehouses.find(w => w.id === id);
     if (warehouse) return warehouse.name;
-    const branch = branches.find(b => b.id === id);
-    if (branch) return branch.name;
     return id;
   };
 

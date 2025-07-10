@@ -18,21 +18,19 @@ import {
 } from "@/components/ui/sidebar";
 import {
   LayoutDashboard,
-  GitFork,
   Package,
   Users,
   BookUser,
   AreaChart,
-  UserCog,
   Settings,
   ChevronDown,
   Boxes,
   ShoppingCart,
   ShoppingBag,
-  Truck,
-  LineChart,
   BarChart,
   History,
+  Gift,
+  Warehouse
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -116,11 +114,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <SidebarContent>
           <SidebarMenu>
             <NavLink href="/" icon={<LayoutDashboard />}>لوحة التحكم</NavLink>
-            <NavLink href="/branches" icon={<GitFork />}>الفروع</NavLink>
             
             <NavCollapsible title="البيانات الرئيسية" icon={<Package />}>
                 <NavSubLink href="/master-data/items">الأصناف</NavSubLink>
-                <NavSubLink href="/master-data/warehouses">المستودعات</NavSubLink>
+                <NavSubLink href="/master-data/warehouses">المخازن</NavSubLink>
                 <NavSubLink href="/master-data/customers">العملاء</NavSubLink>
                 <NavSubLink href="/master-data/suppliers">الموردون</NavSubLink>
                 <NavSubLink href="/master-data/partners">الشركاء</NavSubLink>
@@ -145,6 +142,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
              <NavCollapsible title="المحاسبة" icon={<BookUser />}>
                 <NavSubLink href="/accounting/journal">قيود اليومية</NavSubLink>
                 <NavSubLink href="/accounting/expenses">إدارة المصروفات</NavSubLink>
+                <NavSubLink href="/accounting/exceptional-income">الدخل الاستثنائي</NavSubLink>
                 <NavSubLink href="/accounting/ai-analysis">تحليل مالي بالذكاء الاصطناعي</NavSubLink>
             </NavCollapsible>
             
