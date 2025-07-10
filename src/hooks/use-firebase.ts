@@ -87,11 +87,14 @@ const useFirebase = <T extends object>(path: string) => {
     }
   }, [path]);
 
-  const getNextId = useCallback(async (counterName: string): Promise<number | null> => {
+  const getNextId = useCallback(async (counterName: string, startFrom = 0): Promise<number | null> => {
     const counterRef = ref(database, `counters/${counterName}`);
     try {
         const { committed, snapshot } = await runTransaction(counterRef, (currentValue) => {
-            return (currentValue || 0) + 1;
+            if (currentValue === null) {
+                return startFrom + 1;
+            }
+            return currentValue + 1;
         });
         if (committed) {
             return snapshot.val();

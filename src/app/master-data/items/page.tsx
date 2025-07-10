@@ -32,24 +32,29 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 
 interface Item {
   id?: string;
+  code?: string;
   name: string;
   unit: 'piece' | 'weight' | 'meter' | 'kilo' | 'gram';
   price: number;
+  cost?: number;
   openingStock: number;
 }
 
-const ItemForm = ({ item, onSave, onClose }: { item?: Item, onSave: (item: Item) => void, onClose: () => void }) => {
-  const [formData, setFormData] = useState<Item>(
-    item || { name: "", unit: "piece", price: 0, openingStock: 0 }
+const ItemForm = ({ item, onSave, onClose }: { item?: Item, onSave: (item: Omit<Item, 'id' | 'code'> & { id?: string, code?: string }) => void, onClose: () => void }) => {
+  const [formData, setFormData] = useState<Omit<Item, 'id'>>(
+    item || { name: "", unit: "piece", price: 0, cost: 0, openingStock: 0 }
   );
 
   const handleSubmit = () => {
     onSave({
+        ...item, // Pass existing id and code for updates
         ...formData,
         price: Number(formData.price),
+        cost: Number(formData.cost),
         openingStock: Number(formData.openingStock)
     });
     onClose();
@@ -58,11 +63,19 @@ const ItemForm = ({ item, onSave, onClose }: { item?: Item, onSave: (item: Item)
   return (
     <>
         <div className="grid gap-4 py-4">
+        {item?.code && (
+            <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="item-code" className="text-right">
+                كود الصنف
+                </Label>
+                <Input id="item-code" value={item.code} readOnly disabled className="col-span-3" />
+            </div>
+        )}
         <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="item-name" className="text-right">
             اسم الصنف
             </Label>
-            <Input id="item-name" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="col-span-3" />
+            <Input id="item-name" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="col-span-3" required />
         </div>
         <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="item-unit" className="text-right">
@@ -80,6 +93,12 @@ const ItemForm = ({ item, onSave, onClose }: { item?: Item, onSave: (item: Item)
                 <SelectItem value="gram">جرام</SelectItem>
             </SelectContent>
             </Select>
+        </div>
+        <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="item-cost" className="text-right">
+            التكلفة
+            </Label>
+            <Input id="item-cost" type="number" value={formData.cost} onChange={(e) => setFormData({...formData, cost: e.target.value as any})} className="col-span-3" />
         </div>
             <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="item-price" className="text-right">
@@ -102,13 +121,26 @@ const ItemForm = ({ item, onSave, onClose }: { item?: Item, onSave: (item: Item)
 };
 
 export default function ItemsPage() {
-    const { data: items, loading, add, update, remove } = useFirebase<Item>("items");
+    const { data: items, loading, add, update, remove, getNextId } = useFirebase<Item>("items");
+    const { toast } = useToast();
 
-    const handleSave = (item: Item) => {
-        if (item.id) {
-            update(item.id, item);
-        } else {
-            add(item);
+    const handleSave = async (item: Omit<Item, 'id' | 'code'> & { id?: string, code?: string }) => {
+        try {
+            if (item.id) {
+                await update(item.id, item);
+                toast({ title: "تم التحديث بنجاح" });
+            } else {
+                const nextId = await getNextId('item', 100000);
+                 if (!nextId) {
+                    toast({ variant: "destructive", title: "خطأ", description: "فشل في إنشاء كود الصنف." });
+                    return;
+                }
+                const newItem = { ...item, code: String(nextId) };
+                await add(newItem);
+                toast({ title: "تمت الإضافة بنجاح", description: `تم إنشاء الصنف بكود: ${newItem.code}` });
+            }
+        } catch (e) {
+             toast({ variant: "destructive", title: "خطأ", description: "فشل حفظ الصنف." });
         }
     };
 
@@ -153,56 +185,62 @@ export default function ItemsPage() {
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
             ) : (
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>اسم الصنف</TableHead>
-                            <TableHead className="text-center">الوحدة</TableHead>
-                            <TableHead className="text-center">السعر</TableHead>
-                            <TableHead className="text-center">رصيد أول المدة</TableHead>
-                            <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {items.map((item) => (
-                            <TableRow key={item.id}>
-                                <TableCell className="font-medium">{item.name}</TableCell>
-                                <TableCell className="text-center">{getUnitLabel(item.unit)}</TableCell>
-                                <TableCell className="text-center">{item.price}</TableCell>
-                                <TableCell className="text-center">{item.openingStock}</TableCell>
-                                <TableCell className="text-center">
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button aria-haspopup="true" size="icon" variant="ghost">
-                                                <MoreHorizontal className="h-4 w-4" />
-                                                <span className="sr-only">تبديل القائمة</span>
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                        <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                                        <AddEntityDialog
-                                            title="تعديل الصنف"
-                                            description="قم بتحديث تفاصيل الصنف هنا."
-                                            triggerButton={
-                                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                                <Edit className="ml-2 h-4 w-4" />
-                                                تعديل
-                                                </DropdownMenuItem>
-                                            }
-                                        >
-                                           <ItemForm item={item} onSave={handleSave} onClose={()=>{}} />
-                                        </AddEntityDialog>
-                                        <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(item.id!)}>
-                                            <Trash2 className="ml-2 h-4 w-4" />
-                                            حذف
-                                        </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </TableCell>
+                <div className="w-full overflow-auto border rounded-lg">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="w-[120px]">كود الصنف</TableHead>
+                                <TableHead>اسم الصنف</TableHead>
+                                <TableHead className="text-center">الوحدة</TableHead>
+                                <TableHead className="text-center">التكلفة</TableHead>
+                                <TableHead className="text-center">السعر</TableHead>
+                                <TableHead className="text-center">رصيد أول المدة</TableHead>
+                                <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
                             </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
+                        </TableHeader>
+                        <TableBody>
+                            {items.map((item) => (
+                                <TableRow key={item.id}>
+                                    <TableCell className="font-mono">{item.code}</TableCell>
+                                    <TableCell className="font-medium">{item.name}</TableCell>
+                                    <TableCell className="text-center">{getUnitLabel(item.unit)}</TableCell>
+                                    <TableCell className="text-center">{item.cost?.toLocaleString() || '-'}</TableCell>
+                                    <TableCell className="text-center">{item.price.toLocaleString()}</TableCell>
+                                    <TableCell className="text-center">{item.openingStock}</TableCell>
+                                    <TableCell className="text-center">
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button aria-haspopup="true" size="icon" variant="ghost">
+                                                    <MoreHorizontal className="h-4 w-4" />
+                                                    <span className="sr-only">تبديل القائمة</span>
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                            <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+                                            <AddEntityDialog
+                                                title="تعديل الصنف"
+                                                description="قم بتحديث تفاصيل الصنف هنا."
+                                                triggerButton={
+                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                    <Edit className="ml-2 h-4 w-4" />
+                                                    تعديل
+                                                    </DropdownMenuItem>
+                                                }
+                                            >
+                                            <ItemForm item={item} onSave={handleSave} onClose={()=>{}} />
+                                            </AddEntityDialog>
+                                            <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(item.id!)}>
+                                                <Trash2 className="ml-2 h-4 w-4" />
+                                                حذف
+                                            </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
             )}
           </CardContent>
         </Card>
