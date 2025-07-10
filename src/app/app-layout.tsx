@@ -35,7 +35,8 @@ import {
   Gift,
   Warehouse,
   ArrowRightLeft,
-  Banknote
+  Banknote,
+  DatabaseBackup
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -168,6 +169,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <NavSubLink href="/users">المستخدمون</NavSubLink>
               <NavSubLink href="/roles">الأدوار والصلاحيات</NavSubLink>
               <NavSubLink href="/settings">الإعدادات العامة</NavSubLink>
+              <NavSubLink href="/settings/backup">النسخ الاحتياطي</NavSubLink>
             </NavCollapsible>
 
           </SidebarMenu>
