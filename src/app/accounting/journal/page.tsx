@@ -143,8 +143,9 @@ export default function JournalPage() {
             const expenseAccount = e.warehouseId && e.warehouseId !== 'none'
                 ? `${e.expenseType} - ${getWarehouseName(e.warehouseId)}`
                 : `${e.expenseType} (عام)`;
+            const cashAccountName = getCashAccountName(e.paidFromAccountId)
             entries.push({ id: `exp-debit-${e.id}`, date: e.date, warehouseId: e.warehouseId, number: `EXP-${e.id.slice(-4)}`, description: e.description, debit: e.amount, credit: 0, account: expenseAccount });
-            entries.push({ id: `exp-credit-${e.id}`, date: e.date, warehouseId: e.warehouseId, number: `EXP-${e.id.slice(-4)}`, description: `دفع من ${getCashAccountName(e.paidFromAccountId)}`, debit: 0, credit: e.amount, account: getCashAccountName(e.paidFromAccountId) });
+            entries.push({ id: `exp-credit-${e.id}`, date: e.date, warehouseId: e.warehouseId, number: `EXP-${e.id.slice(-4)}`, description: `دفع من ${cashAccountName}`, debit: 0, credit: e.amount, account: cashAccountName });
         });
         
         // Exceptional Incomes
@@ -308,3 +309,5 @@ export default function JournalPage() {
     </>
   );
 }
+
+    

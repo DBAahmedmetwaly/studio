@@ -37,10 +37,17 @@ interface TreasuryTransaction {
     description: string;
     accountId: string;
     type: 'deposit' | 'withdrawal';
+    receiptNumber?: string;
 }
 
-const TransactionForm = ({ onSave, cashAccounts }: { onSave: (data: TreasuryTransaction) => void, cashAccounts: CashAccount[] }) => {
-    const [formData, setFormData] = useState<Omit<TreasuryTransaction, 'id'>>({
+interface Expense {
+    id: string;
+    amount: number;
+    paidFromAccountId: string;
+}
+
+const TransactionForm = ({ onSave, cashAccounts, onClose }: { onSave: (data: Omit<TreasuryTransaction, 'id' | 'receiptNumber'>) => void, cashAccounts: CashAccount[], onClose: () => void }) => {
+    const [formData, setFormData] = useState<Omit<TreasuryTransaction, 'id' | 'receiptNumber'>>({
         date: new Date().toISOString().split('T')[0],
         amount: 0,
         description: "",
@@ -59,6 +66,7 @@ const TransactionForm = ({ onSave, cashAccounts }: { onSave: (data: TreasuryTran
             accountId: "",
             type: "deposit",
         });
+        onClose();
     };
 
     return (
@@ -106,11 +114,12 @@ const TransactionForm = ({ onSave, cashAccounts }: { onSave: (data: TreasuryTran
 
 
 export default function TreasuryPage() {
-    const { data: transactions, loading: loadingTxs, add, getNextId } = useFirebase<TreasuryTransaction>('treasuryTransactions');
+    const { data: transactions, loading: loadingTxs, add, getNextId, setData } = useFirebase<TreasuryTransaction>('treasuryTransactions');
     const { data: cashAccounts, loading: loadingAccounts } = useFirebase<CashAccount>('cashAccounts');
+    const { data: expenses, loading: loadingExpenses } = useFirebase<Expense>('expenses');
     const { toast } = useToast();
     
-    const loading = loadingTxs || loadingAccounts;
+    const loading = loadingTxs || loadingAccounts || loadingExpenses;
     
     const getAccountName = (accountId: string) => cashAccounts.find(acc => acc.id === accountId)?.name || 'غير معروف';
     const getAccountTypeIcon = (accountId: string) => {
@@ -119,18 +128,51 @@ export default function TreasuryPage() {
         return <Wallet className="h-4 w-4 text-muted-foreground" />;
     };
 
-    const handleSave = async (data: TreasuryTransaction) => {
+    const handleSave = async (data: Omit<TreasuryTransaction, 'id' | 'receiptNumber'>) => {
         try {
             const receiptNumber = data.type === 'deposit' 
                 ? `DEP-${await getNextId('deposit')}` 
                 : `WTH-${await getNextId('withdrawal')}`;
             
-            await add({ ...data, receiptNumber });
+            const newTransaction = { ...data, receiptNumber };
+            await add(newTransaction);
+
+            // Optimistically update local state
+            const optimisticId = `temp-${Date.now()}`;
+            setData(prev => [...prev, { ...newTransaction, id: optimisticId }]);
+
             toast({ title: "تمت إضافة الحركة بنجاح" });
         } catch (error) {
             toast({ variant: "destructive", title: "حدث خطأ", description: "فشل حفظ الحركة" });
         }
     };
+
+    const accountBalances = useMemo(() => {
+        return cashAccounts.map(account => {
+            const openingBalance = account.openingBalance || 0;
+
+            const totalDeposits = transactions
+                .filter(tx => tx.accountId === account.id && tx.type === 'deposit')
+                .reduce((sum, tx) => sum + tx.amount, 0);
+
+            const totalWithdrawals = transactions
+                .filter(tx => tx.accountId === account.id && tx.type === 'withdrawal')
+                .reduce((sum, tx) => sum + tx.amount, 0);
+
+            const totalExpenses = expenses
+                .filter(ex => ex.paidFromAccountId === account.id)
+                .reduce((sum, ex) => sum + ex.amount, 0);
+            
+            // TODO: Add other outflows like supplier payments, employee advances etc.
+            
+            const currentBalance = openingBalance + totalDeposits - totalWithdrawals - totalExpenses;
+
+            return {
+                ...account,
+                currentBalance
+            };
+        });
+    }, [cashAccounts, transactions, expenses]);
     
     const sortedTransactions = useMemo(() => {
         return [...transactions].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -141,6 +183,38 @@ export default function TreasuryPage() {
     <>
       <PageHeader title="إدارة حركة الخزينة" />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
+        
+         <Card>
+            <CardHeader>
+                <CardTitle>أرصدة الحسابات</CardTitle>
+                <CardDescription>نظرة سريعة على الأرصدة الحالية في الخزائن والبنوك.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {loading ? (
+                    <div className="flex justify-center items-center py-10">
+                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    </div>
+                ) : (
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {accountBalances.map(acc => (
+                             <Card key={acc.id}>
+                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                     <CardTitle className="text-sm font-medium">{acc.name}</CardTitle>
+                                     {acc.type === 'bank' ? <Landmark className="h-4 w-4 text-muted-foreground" /> : <Wallet className="h-4 w-4 text-muted-foreground" />}
+                                 </CardHeader>
+                                 <CardContent>
+                                     <div className="text-2xl font-bold">{acc.currentBalance.toLocaleString()} ج.م</div>
+                                     <p className="text-xs text-muted-foreground">
+                                         رصيد افتتاحي: {acc.openingBalance.toLocaleString()} ج.م
+                                     </p>
+                                 </CardContent>
+                             </Card>
+                        ))}
+                    </div>
+                )}
+            </CardContent>
+         </Card>
+
         <div className="grid gap-6 lg:grid-cols-5">
             <Card className="lg:col-span-2">
             <CardHeader>
@@ -150,7 +224,7 @@ export default function TreasuryPage() {
                 </CardDescription>
             </CardHeader>
             <CardContent>
-                {loading ? <Loader2 className="animate-spin" /> : <TransactionForm onSave={handleSave} cashAccounts={cashAccounts} />}
+                {loading ? <div className="flex justify-center items-center"><Loader2 className="animate-spin" /></div> : <TransactionForm onSave={handleSave} cashAccounts={cashAccounts} onClose={()=>{}} />}
             </CardContent>
             </Card>
             
@@ -164,7 +238,7 @@ export default function TreasuryPage() {
                             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                         </div>
                     ) : (
-                         <div className="w-full overflow-auto border rounded-lg">
+                         <div className="w-full overflow-auto border rounded-lg max-h-96">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
@@ -194,6 +268,13 @@ export default function TreasuryPage() {
                                             </TableCell>
                                         </TableRow>
                                     ))}
+                                    {sortedTransactions.length === 0 && (
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
+                                                لا توجد حركات مسجلة.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
                                 </TableBody>
                             </Table>
                         </div>
@@ -205,3 +286,5 @@ export default function TreasuryPage() {
     </>
     );
 }
+
+    

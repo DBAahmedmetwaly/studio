@@ -17,6 +17,7 @@ const useFirebase = <T extends object>(path: string) => {
 
   useEffect(() => {
     const fetchData = async () => {
+        setLoading(true);
         const dbRef = ref(database, path);
         try {
             const snapshot = await get(dbRef);
@@ -101,7 +102,9 @@ const useFirebase = <T extends object>(path: string) => {
     }
   }, []);
 
-  return { data, loading, error, add, update, remove, getNextId };
+  return { data, loading, error, add, update, remove, getNextId, setData };
 };
 
 export default useFirebase;
+
+    
