@@ -7,23 +7,28 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
 import { PlusCircle, Trash2, Printer, Save } from "lucide-react";
 import React from "react";
 
-const items = [
-  { id: "item001", name: "منتج 1", qty: 2 },
-  { id: "item002", name: "منتج 2", qty: 5 },
+const invoiceItems = [
+  { id: "item001", name: "وحدة معالجة مركزية i7", qty: 2, price: 300, total: 600 },
+  { id: "item002", name: "لوحة أم Gigabyte", qty: 5, price: 150, total: 750 },
 ];
 
-export default function StockTransferPage() {
+export default function PurchaseInvoicePage() {
     const handlePrint = () => {
     window.print();
   };
 
+  const subtotal = invoiceItems.reduce((acc, item) => acc + item.total, 0);
+  const tax = subtotal * 0.14;
+  const total = subtotal + tax;
+
   return (
     <>
-      <PageHeader title="تحويل مخزون">
-        <div className="flex gap-2">
+      <PageHeader title="فاتورة شراء">
+        <div className="flex gap-2 no-print">
             <Button variant="outline">
                 <Save className="ml-2 h-4 w-4" />
                 حفظ كمسودة
@@ -37,57 +42,67 @@ export default function StockTransferPage() {
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6 printable-area">
         <Card>
           <CardHeader>
-            <CardTitle>إيصال تحويل مخزني</CardTitle>
-            <div className="grid md:grid-cols-3 gap-4 text-sm text-muted-foreground">
-                <div>رقم الإيصال: TRN-00123</div>
-                <div>تاريخ التحويل: {new Date().toLocaleDateString('ar-EG')}</div>
+            <div className="flex justify-between items-start">
+                <div>
+                    <CardTitle>فاتورة شراء</CardTitle>
+                    <CardDescription>
+                        شركة المحاسب الذكي
+                    </CardDescription>
+                </div>
+                <div className="text-left">
+                    <div className="font-bold text-lg">فاتورة #PUR-00123</div>
+                    <div>تاريخ الفاتورة: {new Date().toLocaleDateString('ar-EG')}</div>
+                    <div>تاريخ الاستحقاق: {new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('ar-EG')}</div>
+                </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                    <Label htmlFor="from-warehouse">من مستودع</Label>
+                    <Label htmlFor="supplier">المورد</Label>
                     <Select>
-                        <SelectTrigger id="from-warehouse">
-                            <SelectValue placeholder="اختر المستودع المحول منه" />
+                        <SelectTrigger id="supplier">
+                            <SelectValue placeholder="اختر موردًا" />
                         </SelectTrigger>
                         <SelectContent>
-                           <SelectItem value="wh001">مستودع القاهرة</SelectItem>
-                           <SelectItem value="wh002">مستودع الإسكندرية</SelectItem>
+                           <SelectItem value="sup001">مورد تكنولوجيا</SelectItem>
+                           <SelectItem value="sup002">مورد أثاث</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
                  <div className="space-y-2">
-                    <Label htmlFor="to-warehouse">إلى مستودع/فرع</Label>
+                    <Label htmlFor="warehouse">المستودع المستلم</Label>
                     <Select>
-                        <SelectTrigger id="to-warehouse">
-                            <SelectValue placeholder="اختر المستودع أو الفرع المحول إليه" />
+                        <SelectTrigger id="warehouse">
+                            <SelectValue placeholder="اختر مستودعًا" />
                         </SelectTrigger>
                         <SelectContent>
                            <SelectItem value="wh001">مستودع القاهرة</SelectItem>
                            <SelectItem value="wh002">مستودع الإسكندرية</SelectItem>
-                           <SelectItem value="br001">الفرع الرئيسي - القاهرة</SelectItem>
-                           <SelectItem value="br002">فرع الإسكندرية</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
             </div>
             
             <div>
-              <Label>الأصناف المحولة</Label>
+              <Label>بنود الفاتورة</Label>
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[40%]">الصنف</TableHead>
                     <TableHead>الكمية</TableHead>
+                    <TableHead>سعر الوحدة</TableHead>
+                    <TableHead className="text-left">الإجمالي</TableHead>
                     <TableHead className="text-left no-print">الإجراء</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {items.map((item) => (
+                  {invoiceItems.map((item) => (
                     <TableRow key={item.id}>
                       <TableCell>{item.name}</TableCell>
                       <TableCell>{item.qty}</TableCell>
+                      <TableCell>ج.م {item.price.toFixed(2)}</TableCell>
+                      <TableCell className="text-left">ج.م {item.total.toFixed(2)}</TableCell>
                       <TableCell className="text-left no-print">
                         <Button variant="ghost" size="icon">
                           <Trash2 className="h-4 w-4 text-destructive" />
@@ -111,6 +126,10 @@ export default function StockTransferPage() {
                         <Input type="number" placeholder="الكمية" />
                      </TableCell>
                      <TableCell>
+                        <Input type="number" placeholder="السعر" />
+                     </TableCell>
+                     <TableCell></TableCell>
+                     <TableCell>
                          <Button>
                             <PlusCircle className="ml-2 h-4 w-4" />
                             إضافة
@@ -120,9 +139,32 @@ export default function StockTransferPage() {
                 </TableBody>
               </Table>
             </div>
+            
+            <div className="flex justify-end">
+                <div className="w-full max-w-sm space-y-2 text-sm">
+                    <div className="flex justify-between">
+                        <span>الإجمالي الفرعي</span>
+                        <span>ج.م {subtotal.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span>ضريبة القيمة المضافة (14%)</span>
+                        <span>ج.م {tax.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between font-bold text-base">
+                        <span>الإجمالي الكلي</span>
+                        <span>ج.م {total.toFixed(2)}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div className="space-y-2">
+                <Label htmlFor="notes">ملاحظات</Label>
+                <Textarea id="notes" placeholder="أضف أي ملاحظات هنا..." />
+            </div>
+
           </CardContent>
-          <CardFooter className="flex justify-end">
-            <Button size="lg">تأكيد التحويل</Button>
+          <CardFooter className="flex justify-end no-print">
+            <Button size="lg">تسجيل الفاتورة</Button>
           </CardFooter>
         </Card>
       </main>

@@ -33,6 +33,8 @@ const initialRoles = {
     branches: { view: true, add: true, edit: true, delete: true },
     masterData: { view: true, add: true, edit: true, delete: true },
     inventory: { view: true, add: true, edit: true, delete: true },
+    sales: { view: true, add: true, edit: true, delete: true, print: true },
+    purchases: { view: true, add: true, edit: true, delete: true, print: true },
     accounting: { view: true, add: true, edit: true, delete: true },
     reports: { view: true, generate: true },
     users: { view: true, add: true, edit: true, delete: true },
@@ -44,6 +46,8 @@ const initialRoles = {
     branches: { view: false, add: false, edit: false, delete: false },
     masterData: { view: true, add: true, edit: true, delete: false },
     inventory: { view: true, add: false, edit: false, delete: false },
+    sales: { view: true, add: true, edit: true, delete: false, print: true },
+    purchases: { view: true, add: true, edit: true, delete: false, print: true },
     accounting: { view: true, add: true, edit: true, delete: true },
     reports: { view: true, generate: true },
     users: { view: false, add: false, edit: false, delete: false },
@@ -55,6 +59,8 @@ const initialRoles = {
     branches: { view: false, add: false, edit: false, delete: false },
     masterData: { view: true, add: false, edit: false, delete: false },
     inventory: { view: true, add: true, edit: true, delete: true },
+    sales: { view: false, add: false, edit: false, delete: false, print: false },
+    purchases: { view: false, add: false, edit: false, delete: false, print: false },
     accounting: { view: false, add: false, edit: false, delete: false },
     reports: { view: true, generate: false },
     users: { view: false, add: false, edit: false, delete: false },
@@ -66,6 +72,8 @@ const initialRoles = {
     branches: { view: false, add: false, edit: false, delete: false },
     masterData: { view: true, add: false, edit: false, delete: false },
     inventory: { view: false, add: false, edit: false, delete: false },
+    sales: { view: true, add: true, edit: false, delete: false, print: true },
+    purchases: { view: true, add: true, edit: false, delete: false, print: true },
     accounting: { view: true, add: true, edit: false, delete: false },
     reports: { view: true, generate: false },
     users: { view: false, add: false, edit: false, delete: false },
@@ -79,6 +87,8 @@ const permissionsMap = {
   branches: { label: "الفروع", actions: { view: "عرض", add: "إضافة", edit: "تعديل", delete: "حذف" } },
   masterData: { label: "البيانات الرئيسية", actions: { view: "عرض", add: "إضافة", edit: "تعديل", delete: "حذف" } },
   inventory: { label: "المخزون", actions: { view: "عرض", add: "إضافة", edit: "تعديل", delete: "حذف" } },
+  sales: { label: "المبيعات", actions: { view: "عرض", add: "إضافة", edit: "تعديل", delete: "حذف", print: "طباعة" } },
+  purchases: { label: "المشتريات", actions: { view: "عرض", add: "إضافة", edit: "تعديل", delete: "حذف", print: "طباعة" } },
   accounting: { label: "المحاسبة", actions: { view: "عرض", add: "إضافة", edit: "تعديل", delete: "حذف" } },
   reports: { label: "التقارير", actions: { view: "عرض", generate: "إنشاء" } },
   users: { label: "المستخدمون", actions: { view: "عرض", add: "إضافة", edit: "تعديل", delete: "حذف" } },
@@ -144,6 +154,7 @@ export default function RolesPage() {
                           <TableHead className="text-center">تعديل</TableHead>
                           <TableHead className="text-center">حذف</TableHead>
                           <TableHead className="text-center">إنشاء</TableHead>
+                          <TableHead className="text-center">طباعة</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -156,7 +167,7 @@ export default function RolesPage() {
                           return (
                             <TableRow key={module}>
                               <TableCell className="font-medium">{moduleInfo.label}</TableCell>
-                              {["view", "add", "edit", "delete", "generate"].map((actionKey) => {
+                              {["view", "add", "edit", "delete", "generate", "print"].map((actionKey) => {
                                 const action = actionKey as Action;
                                 return(
                                   <TableCell key={action} className="text-center">
