@@ -45,6 +45,8 @@ interface SaleInvoice {
   total: number;
   items: any[];
   status?: 'pending' | 'approved';
+  paidAmount?: number;
+  paidToAccountId?: string;
 }
 
 interface User {
@@ -55,6 +57,7 @@ interface User {
 
 export default function RepInvoicesPage() {
   const { data: invoices, loading: loadingInvoices, update, remove } = useFirebase<SaleInvoice>("salesInvoices");
+  const { add: addCustomerPayment, getNextId } = useFirebase('customerPayments');
   const { data: users, loading: loadingUsers } = useFirebase<User>("users");
   const [filters, setFilters] = useState({
     salesRepId: "all",
@@ -87,14 +90,28 @@ export default function RepInvoicesPage() {
       }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [invoices, filters]);
 
-  const handleApprove = async (invoiceId: string) => {
+  const handleApprove = async (invoice: SaleInvoice) => {
     if (!can('approve', 'sales_repInvoices')) {
       toast({ variant: 'destructive', title: 'غير مصرح به' });
       return;
     }
     try {
-      await update(invoiceId, { status: 'approved' });
-      toast({ title: 'تم الاعتماد بنجاح', description: 'تم اعتماد الفاتورة وستظهر في الحسابات.' });
+      // Step 1: Approve the invoice
+      await update(invoice.id, { status: 'approved' });
+
+      // Step 2: If there's a paid amount, create a customer payment record
+      if (invoice.paidAmount && invoice.paidAmount > 0 && invoice.paidToAccountId) {
+          await addCustomerPayment({
+              date: new Date().toISOString(),
+              amount: invoice.paidAmount,
+              customerId: invoice.customerId,
+              paidToAccountId: invoice.paidToAccountId,
+              notes: `دفعة من فاتورة بيع رقم ${invoice.invoiceNumber}`,
+              receiptNumber: `س-ع-${await getNextId('customerPayment')}`
+          });
+      }
+
+      toast({ title: 'تم الاعتماد بنجاح', description: 'تم اعتماد الفاتورة وتحديث الحسابات.' });
     } catch (error) {
       toast({ variant: 'destructive', title: 'خطأ', description: 'فشل اعتماد الفاتورة.' });
     }
@@ -200,7 +217,7 @@ export default function RepInvoicesPage() {
                                 <DropdownMenuContent align="end">
                                     <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
                                     {can('approve', 'sales_repInvoices') && (
-                                        <DropdownMenuItem onClick={() => handleApprove(invoice.id)}>
+                                        <DropdownMenuItem onClick={() => handleApprove(invoice)}>
                                             <CheckCircle className="ml-2 h-4 w-4 text-green-500" />
                                             اعتماد الفاتورة
                                         </DropdownMenuItem>
