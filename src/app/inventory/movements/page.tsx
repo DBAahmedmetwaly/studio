@@ -13,6 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import React, { useState, useMemo } from "react";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import Link from "next/link";
+import { getLinkForReceipt } from "@/lib/utils";
 
 interface StockInRecord {
   id: string;
@@ -203,7 +205,9 @@ export default function InventoryMovementsPage() {
                                 <TableCell className="font-mono">
                                     <Tooltip>
                                         <TooltipTrigger asChild>
-                                            <span>{move.receiptNumber}</span>
+                                            <Link href={getLinkForReceipt(move.receiptNumber, move.id)} className="hover:underline hover:text-primary">
+                                                <span>{move.receiptNumber}</span>
+                                            </Link>
                                         </TooltipTrigger>
                                         <TooltipContent>
                                             <p>{getReceiptTooltip(move.receiptNumber)}</p>
