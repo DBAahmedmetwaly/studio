@@ -98,16 +98,19 @@ export default function SalesInvoicePage() {
     const { data: adjustments, loading: l8 } = useFirebase<StockAdjustmentRecord>('stockAdjustmentRecords');
     const { data: salesReturns, loading: l9 } = useFirebase<SalesReturn>('salesReturns');
     const { data: purchaseReturns, loading: l10 } = useFirebase<PurchaseReturn>('purchaseReturns');
+    const { data: settings, loading: loadingSettings } = useFirebase<any>('settings');
     const { add: addSaleInvoice, getNextId } = useFirebase('salesInvoices');
     const { add: addCustomerPayment } = useFirebase('customerPayments');
 
     
-    const loading = loadingItems || loadingCustomers || loadingWarehouses || l3 || l4 || l5 || l6 || l7 || l8 || loadingCashAccounts || l9 || l10;
+    const loading = loadingItems || loadingCustomers || loadingWarehouses || l3 || l4 || l5 || l6 || l7 || l8 || loadingCashAccounts || l9 || l10 || loadingSettings;
 
     const availableItemsForWarehouse = useMemo(() => {
         if (!warehouseId || warehouseId === "all" || !allItems.length) {
             return [];
         }
+        
+        const mainSettings = settings.find((s:any) => s.id === 'main');
 
         return allItems.map(item => {
             let stock = item.openingStock || 0;
@@ -128,9 +131,9 @@ export default function SalesInvoicePage() {
 
 
             return { ...item, stock };
-        }).filter(item => item.stock > 0 || (settings as any)?.financial?.allowNegativeStock);
+        }).filter(item => item.stock > 0 || (mainSettings?.financial?.allowNegativeStock));
 
-    }, [warehouseId, allItems, purchases, sales, stockIns, stockOuts, transfers, adjustments, salesReturns, purchaseReturns]);
+    }, [warehouseId, allItems, purchases, sales, stockIns, stockOuts, transfers, adjustments, salesReturns, purchaseReturns, settings]);
 
 
     useEffect(() => {
@@ -152,8 +155,9 @@ export default function SalesInvoicePage() {
         if (!newItem.id || newItem.qty <= 0 || newItem.price < 0) return;
         const selectedItem = availableItemsForWarehouse.find(i => i.id === newItem.id);
         if (!selectedItem) return;
-
-        if(newItem.qty > selectedItem.stock) {
+        
+        const mainSettings = settings.find((s:any) => s.id === 'main');
+        if(newItem.qty > selectedItem.stock && !mainSettings?.financial?.allowNegativeStock) {
             toast({
                 variant: 'destructive',
                 title: 'كمية غير متوفرة',

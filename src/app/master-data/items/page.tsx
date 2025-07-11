@@ -130,9 +130,11 @@ export default function ItemsPage() {
     const handleSave = async (item: Omit<Item, 'id' | 'code'> & { id?: string, code?: string }) => {
         try {
             if (item.id) {
+                if (!can('edit', 'masterData')) return toast({ variant: "destructive", title: "غير مصرح به" });
                 await update(item.id, item);
                 toast({ title: "تم التحديث بنجاح" });
             } else {
+                if (!can('add', 'masterData')) return toast({ variant: "destructive", title: "غير مصرح به" });
                 const nextId = await getNextId('item', 100000);
                  if (!nextId) {
                     toast({ variant: "destructive", title: "خطأ", description: "فشل في إنشاء كود الصنف." });
@@ -148,6 +150,7 @@ export default function ItemsPage() {
     };
 
     const handleDelete = (id: string) => {
+        if (!can('delete', 'masterData')) return toast({ variant: "destructive", title: "غير مصرح به" });
         if (confirm("هل أنت متأكد من حذف هذا الصنف؟")) {
             remove(id);
         }
