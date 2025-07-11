@@ -48,6 +48,7 @@ import {
   LogOut,
   FileCheck,
   Monitor,
+  List,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -171,17 +172,18 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </NavCollapsible>
 
             <NavCollapsible title="المخزون" icon={<Boxes />} modules={['inventory_stockIn', 'inventory_stockOut', 'inventory_transfer', 'inventory_adjustment', 'inventory_movements']}>
-                <NavSubLink href="/inventory/stock-in" module="inventory_stockIn">استلام مخزون</NavSubLink>
-                <NavSubLink href="/inventory/stock-out" module="inventory_stockOut">صرف مخزون</NavSubLink>
-                <NavSubLink href="/inventory/transfer" module="inventory_transfer">تحويل مخزون</NavSubLink>
+                <NavSubLink href="/inventory/stock-in/new" module="inventory_stockIn">استلام مخزون</NavSubLink>
+                <NavSubLink href="/inventory/stock-out/new" module="inventory_stockOut">صرف مخزون</NavSubLink>
+                <NavSubLink href="/inventory/transfer/new" module="inventory_transfer">تحويل مخزون</NavSubLink>
                 <NavSubLink href="/inventory/adjustment" module="inventory_adjustment">تسوية المخزون</NavSubLink>
                 <NavSubLink href="/inventory/movements" module="inventory_movements">حركة المخزون</NavSubLink>
             </NavCollapsible>
 
             <NavCollapsible title="المبيعات" icon={<ShoppingCart />} modules={['sales_invoices', 'sales_returns', 'sales_repInvoices', 'sales_issueToRep', 'sales_returnFromRep', 'sales_remitFromRep', 'sales_repOperations']}>
-                <NavSubLink href="/sales/invoices/list" module="sales_invoices">فواتير البيع</NavSubLink>
+                <NavSubLink href="/sales/invoices" module="sales_invoices">إنشاء فاتورة بيع</NavSubLink>
+                <NavSubLink href="/sales/invoices/list" module="sales_invoices"><List className="h-4 w-4" />سجل فواتير البيع</NavSubLink>
                 <NavSubLink href="/sales/rep-invoices" module="sales_repInvoices"><FileCheck className="h-4 w-4" />اعتماد فواتير المناديب</NavSubLink>
-                <NavSubLink href="/sales/returns" module="sales_returns">مرتجعات البيع</NavSubLink>
+                <NavSubLink href="/sales/returns/new" module="sales_returns">مرتجعات البيع</NavSubLink>
                  <SidebarMenuSubItem>
                     <hr className="my-2" />
                 </SidebarMenuSubItem>
@@ -196,8 +198,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </NavCollapsible>
             
             <NavCollapsible title="المشتريات" icon={<ShoppingBag />} modules={['purchases_invoices', 'purchases_returns']}>
-                <NavSubLink href="/purchases/invoices/list" module="purchases_invoices">فواتير الشراء</NavSubLink>
-                <NavSubLink href="/purchases/returns" module="purchases_returns">مرتجعات الشراء</NavSubLink>
+                <NavSubLink href="/purchases/invoices" module="purchases_invoices">إنشاء فاتورة شراء</NavSubLink>
+                <NavSubLink href="/purchases/invoices/list" module="purchases_invoices"><List className="h-4 w-4" />سجل فواتير الشراء</NavSubLink>
+                <NavSubLink href="/purchases/returns/new" module="purchases_returns">مرتجعات الشراء</NavSubLink>
             </NavCollapsible>
 
              <NavCollapsible title="المحاسبة" icon={<BookUser />} modules={['accounting_journal', 'accounting_expenses', 'accounting_exceptionalIncome', 'accounting_supplierPayments', 'accounting_customerPayments', 'accounting_treasury', 'accounting_aiAnalysis']}>

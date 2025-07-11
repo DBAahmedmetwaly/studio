@@ -86,7 +86,7 @@ export default function SalesInvoicesListPage() {
 
   return (
     <>
-      <PageHeader title="فواتير المبيعات المعتمدة">
+      <PageHeader title="سجل فواتير البيع المعتمدة">
         <Button size="sm" className="gap-1" onClick={() => router.push('/sales/invoices')}>
           <PlusCircle className="h-4 w-4" />
           إضافة فاتورة جديدة

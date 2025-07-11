@@ -86,7 +86,7 @@ export default function PurchaseInvoicesListPage() {
 
   return (
     <>
-      <PageHeader title="فواتير الشراء">
+      <PageHeader title="سجل فواتير الشراء">
         <Button size="sm" className="gap-1" onClick={() => router.push('/purchases/invoices')}>
           <PlusCircle className="h-4 w-4" />
           إضافة فاتورة شراء
