@@ -189,8 +189,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                     <Truck className="h-4 w-4" />
                     <span>عمليات المناديب</span>
                 </SidebarMenuSubButton>
-                 <NavSubLink href="/sales/issue-to-rep" module="sales_issueToRep"><FileUp className="h-3 w-3" />صرف بضاعة لمندوب</NavSubLink>
-                <NavSubLink href="/sales/return-from-rep" module="sales_returnFromRep"><FileDown className="h-3 w-3" />مرتجع بضاعة من مندوب</NavSubLink>
+                 <NavSubLink href="/sales/issue-to-rep/list" module="sales_issueToRep"><FileUp className="h-3 w-3" />صرف بضاعة لمندوب</NavSubLink>
+                <NavSubLink href="/sales/return-from-rep/list" module="sales_returnFromRep"><FileDown className="h-3 w-3" />مرتجع بضاعة من مندوب</NavSubLink>
                 <NavSubLink href="/sales/remit-from-rep" module="sales_remitFromRep"><Coins className="h-3 w-3" />توريد نقدية من مندوب</NavSubLink>
                 <NavSubLink href="/sales/rep-operations" module="sales_repOperations"><Monitor className="h-3 w-3" />مراقبة أداء المناديب</NavSubLink>
             </NavCollapsible>

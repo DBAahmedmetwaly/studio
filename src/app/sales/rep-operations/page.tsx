@@ -19,9 +19,8 @@ import {
   TableRow,
   TableFooter,
 } from "@/components/ui/table";
-import { Loader2 } from "lucide-react";
+import { Loader2, Coins, Package, ShoppingCart, Undo, Banknote } from "lucide-react";
 import useFirebase from "@/hooks/use-firebase";
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -30,7 +29,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 interface User {
     id: string;
     name: string;
-    warehouse: string;
     isSalesRep?: boolean;
 }
 interface Item {
@@ -41,30 +39,32 @@ interface IssueToRep {
     id: string;
     salesRepId: string;
     date: string;
-    items: { id: string; qty: number; }[];
+    items: { id: string; qty: number; price: number; }[];
 }
 interface ReturnFromRep {
     id: string;
     salesRepId: string;
     date: string;
-    items: { id: string; qty: number; }[];
+    items: { id: string; qty: number; price: number; }[];
 }
 interface SaleInvoice {
     id: string;
     salesRepId: string;
     date: string;
+    total: number;
     items: { id: string; qty: number; }[];
     status?: 'pending' | 'approved';
 }
-interface Warehouse {
+interface RepRemittance {
     id: string;
-    name: string;
+    salesRepId: string;
+    date: string;
+    amount: number;
 }
 
 export default function RepOperationsPage() {
     const [filters, setFilters] = useState({
         salesRepId: "",
-        warehouseId: "all",
         fromDate: "",
         toDate: "",
     });
@@ -74,7 +74,7 @@ export default function RepOperationsPage() {
     const { data: issues, loading: l3 } = useFirebase<IssueToRep>('stockIssuesToReps');
     const { data: returns, loading: l4 } = useFirebase<ReturnFromRep>('stockReturnsFromReps');
     const { data: sales, loading: l5 } = useFirebase<SaleInvoice>('salesInvoices');
-    const { data: warehouses, loading: l6 } = useFirebase<Warehouse>('warehouses');
+    const { data: remittances, loading: l6 } = useFirebase<RepRemittance>('repRemittances');
 
     const loading = l1 || l2 || l3 || l4 || l5 || l6;
     const salesReps = users.filter(u => u.isSalesRep);
@@ -96,56 +96,68 @@ export default function RepOperationsPage() {
             return true;
         };
         
-        const itemMovements = new Map<string, { name: string; issued: number; sold: number; returned: number; }>();
+        const itemMovements = new Map<string, { name: string; issued: number; issuedValue: number; sold: number; soldValue: number; returned: number; returnedValue: number; }>();
         
         allItems.forEach(item => {
-            itemMovements.set(item.id, { name: item.name, issued: 0, sold: 0, returned: 0 });
+            itemMovements.set(item.id, { name: item.name, issued: 0, issuedValue: 0, sold: 0, soldValue: 0, returned: 0, returnedValue: 0 });
         });
 
         issues.filter(i => i.salesRepId === filters.salesRepId && filterByDate(i)).forEach(issue => {
             issue.items.forEach(item => {
                 const current = itemMovements.get(item.id);
-                if (current) current.issued += item.qty;
+                if (current) {
+                    current.issued += item.qty;
+                    current.issuedValue += item.qty * item.price;
+                }
             });
         });
 
         sales.filter(s => s.salesRepId === filters.salesRepId && s.status === 'approved' && filterByDate(s)).forEach(sale => {
             sale.items.forEach(item => {
                 const current = itemMovements.get(item.id);
-                if (current) current.sold += item.qty;
+                const issueItem = issues.flatMap(i => i.items).find(i => i.id === item.id);
+                const price = issueItem?.price || 0;
+                if (current) {
+                    current.sold += item.qty;
+                    current.soldValue += item.qty * price; // Use price from issued doc for consistency
+                }
             });
         });
 
         returns.filter(r => r.salesRepId === filters.salesRepId && filterByDate(r)).forEach(ret => {
             ret.items.forEach(item => {
                 const current = itemMovements.get(item.id);
-                if (current) current.returned += item.qty;
+                const issueItem = issues.flatMap(i => i.items).find(i => i.id === item.id);
+                const price = issueItem?.price || 0;
+                 if (current) {
+                    current.returned += item.qty;
+                    current.returnedValue += item.qty * price;
+                }
             });
         });
         
-        return Array.from(itemMovements.values())
+        const totalRemitted = remittances
+            .filter(rem => rem.salesRepId === filters.salesRepId && filterByDate(rem))
+            .reduce((sum, rem) => sum + rem.amount, 0);
+
+        const inventory = Array.from(itemMovements.values())
             .filter(d => d.issued > 0 || d.sold > 0 || d.returned > 0)
             .map(d => ({
                 ...d,
-                balance: d.issued - d.sold - d.returned
+                balance: d.issued - d.sold - d.returned,
+                balanceValue: d.issuedValue - d.soldValue - d.returnedValue,
             }));
 
-    }, [filters, issues, sales, returns, allItems]);
-    
-    const totals = useMemo(() => {
-        if (!reportData) return { issued: 0, sold: 0, returned: 0, balance: 0 };
-        return {
-            issued: reportData.reduce((acc, item) => acc + item.issued, 0),
-            sold: reportData.reduce((acc, item) => acc + item.sold, 0),
-            returned: reportData.reduce((acc, item) => acc + item.returned, 0),
-            balance: reportData.reduce((acc, item) => acc + item.balance, 0),
-        }
-    }, [reportData]);
+        const totalSoldValue = inventory.reduce((sum, item) => sum + item.soldValue, 0);
+        
+        return { inventory, totalRemitted, totalSoldValue };
 
+    }, [filters, issues, sales, returns, allItems, remittances]);
+    
 
   return (
     <>
-      <PageHeader title="تقرير حركة أصناف المندوب" />
+      <PageHeader title="تقرير حركة ومستحقات المندوب" />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
         <Card>
             <CardHeader>
@@ -153,7 +165,7 @@ export default function RepOperationsPage() {
                 <CardDescription>اختر المندوب والفترة الزمنية لعرض التقرير المفصل.</CardDescription>
             </CardHeader>
             <CardContent>
-                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                      <div className="space-y-2">
                         <Label>المندوب</Label>
                         <Select value={filters.salesRepId} onValueChange={(v) => handleFilterChange("salesRepId", v)}>
@@ -162,18 +174,6 @@ export default function RepOperationsPage() {
                             </SelectTrigger>
                             <SelectContent>
                                 {salesReps.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                     <div className="space-y-2">
-                        <Label>المخزن</Label>
-                        <Select value={filters.warehouseId} onValueChange={(v) => handleFilterChange("warehouseId", v)}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="كل المخازن" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">كل المخازن</SelectItem>
-                                {warehouses.map(w => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
@@ -192,12 +192,10 @@ export default function RepOperationsPage() {
         {loading && <div className="flex justify-center py-10"><Loader2 className="h-8 w-8 animate-spin" /></div>}
         
         {reportData && !loading && (
-            <Card>
+            <div className="grid gap-6 lg:grid-cols-3">
+            <Card className="lg:col-span-3">
             <CardHeader>
                 <CardTitle>تقرير حركة الأصناف</CardTitle>
-                <CardDescription>
-                تقرير مفصل بالكميات المصروفة، المباعة، المرتجعة، والرصيد الدفتري لكل صنف في عهدة المندوب المحدد.
-                </CardDescription>
             </CardHeader>
             <CardContent>
                 <div className="w-full overflow-auto border rounded-lg">
@@ -205,21 +203,21 @@ export default function RepOperationsPage() {
                     <TableHeader>
                         <TableRow>
                         <TableHead>الصنف</TableHead>
-                        <TableHead className="text-center">كمية مصروفة</TableHead>
-                        <TableHead className="text-center">كمية مباعة</TableHead>
-                        <TableHead className="text-center">كمية مرتجعة</TableHead>
+                        <TableHead className="text-center">كمية/قيمة مصروفة</TableHead>
+                        <TableHead className="text-center">كمية/قيمة مباعة</TableHead>
+                        <TableHead className="text-center">كمية/قيمة مرتجعة</TableHead>
                         <TableHead className="text-center font-bold">الرصيد لدى المندوب</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {reportData.length > 0 ? reportData.map((item) => (
+                        {reportData.inventory.length > 0 ? reportData.inventory.map((item) => (
                         <TableRow key={item.name}>
                             <TableCell className="font-medium">{item.name}</TableCell>
-                            <TableCell className="text-center">{item.issued > 0 ? item.issued : '-'}</TableCell>
-                            <TableCell className="text-center text-green-600">{item.sold > 0 ? item.sold : '-'}</TableCell>
-                            <TableCell className="text-center text-amber-600">{item.returned > 0 ? item.returned : '-'}</TableCell>
+                            <TableCell className="text-center">{item.issued} / {item.issuedValue.toLocaleString()}</TableCell>
+                            <TableCell className="text-center text-green-600">{item.sold} / {item.soldValue.toLocaleString()}</TableCell>
+                            <TableCell className="text-center text-amber-600">{item.returned} / {item.returnedValue.toLocaleString()}</TableCell>
                             <TableCell className={`text-center font-bold ${item.balance < 0 ? 'text-destructive' : 'text-primary'}`}>
-                                {item.balance}
+                                {item.balance} / {item.balanceValue.toLocaleString()}
                             </TableCell>
                         </TableRow>
                         )) : (
@@ -228,21 +226,41 @@ export default function RepOperationsPage() {
                             </TableRow>
                         )}
                     </TableBody>
-                     {reportData.length > 0 && (
-                        <TableFooter>
-                            <TableRow className="font-bold bg-muted/50">
-                                <TableCell>الإجمالي</TableCell>
-                                <TableCell className="text-center">{totals.issued}</TableCell>
-                                <TableCell className="text-center">{totals.sold}</TableCell>
-                                <TableCell className="text-center">{totals.returned}</TableCell>
-                                <TableCell className="text-center">{totals.balance}</TableCell>
-                            </TableRow>
-                        </TableFooter>
-                     )}
                     </Table>
                 </div>
             </CardContent>
             </Card>
+
+             <Card className="lg:col-span-3">
+                <CardHeader>
+                    <CardTitle>الملخص المالي للمندوب</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                        <div className="flex items-center gap-3">
+                            <ShoppingCart className="h-6 w-6 text-green-500"/>
+                            <span className="font-semibold">إجمالي قيمة المبيعات المعتمدة</span>
+                        </div>
+                        <span className="font-bold text-lg">{reportData.totalSoldValue.toLocaleString()} ج.م</span>
+                    </div>
+                     <div className="flex items-center justify-between p-4 border rounded-lg">
+                        <div className="flex items-center gap-3">
+                            <Banknote className="h-6 w-6 text-blue-500"/>
+                            <span className="font-semibold">إجمالي النقدية الموردة</span>
+                        </div>
+                        <span className="font-bold text-lg">{reportData.totalRemitted.toLocaleString()} ج.م</span>
+                    </div>
+                     <div className="flex items-center justify-between p-4 border rounded-lg bg-muted">
+                        <div className="flex items-center gap-3">
+                            <Coins className="h-6 w-6 text-destructive"/>
+                            <span className="font-bold">الرصيد المستحق على المندوب</span>
+                        </div>
+                        <span className="font-bold text-xl text-destructive">{(reportData.totalSoldValue - reportData.totalRemitted).toLocaleString()} ج.م</span>
+                    </div>
+                </CardContent>
+             </Card>
+
+            </div>
         )}
 
       </main>
