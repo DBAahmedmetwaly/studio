@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState } from "react";
@@ -44,13 +45,15 @@ import { useToast } from "@/hooks/use-toast";
 interface User {
   id?: string;
   name: string;
+  loginName: string;
+  password?: string; // Optional for security reasons when fetching/displaying
   email: string;
   role: string;
   warehouse: string;
 }
 
 const UserForm = ({ user, onSave, onClose }: { user?: User, onSave: (data: Omit<User, 'id'> & { id?: string }) => void, onClose: () => void }) => {
-  const [formData, setFormData] = useState(user || { name: "", email: "", role: "محاسب", warehouse: "" });
+  const [formData, setFormData] = useState(user || { name: "", loginName: "", email: "", password: "", role: "محاسب", warehouse: "" });
 
   const handleSubmit = () => {
     onSave({
@@ -65,9 +68,21 @@ const UserForm = ({ user, onSave, onClose }: { user?: User, onSave: (data: Omit<
       <div className="grid gap-4 py-4">
         <div className="grid grid-cols-4 items-center gap-4">
           <Label htmlFor="user-name" className="text-right">
-            الاسم
+            الاسم الكامل
           </Label>
           <Input id="user-name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="col-span-3" />
+        </div>
+        <div className="grid grid-cols-4 items-center gap-4">
+          <Label htmlFor="user-loginName" className="text-right">
+            اسم الدخول
+          </Label>
+          <Input id="user-loginName" value={formData.loginName} onChange={e => setFormData({...formData, loginName: e.target.value})} className="col-span-3" />
+        </div>
+         <div className="grid grid-cols-4 items-center gap-4">
+          <Label htmlFor="user-password" className="text-right">
+            كلمة المرور
+          </Label>
+          <Input id="user-password" type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="col-span-3" placeholder={user ? "اتركه فارغاً لعدم التغيير" : ""} />
         </div>
         <div className="grid grid-cols-4 items-center gap-4">
           <Label htmlFor="user-email" className="text-right">
@@ -176,6 +191,7 @@ export default function UsersPage() {
                 <TableHeader>
                     <TableRow>
                     <TableHead>المستخدم</TableHead>
+                    <TableHead>اسم الدخول</TableHead>
                     <TableHead className="text-center">الدور</TableHead>
                     <TableHead>المخزن</TableHead>
                     <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
@@ -195,6 +211,7 @@ export default function UsersPage() {
                             </div>
                         </div>
                         </TableCell>
+                        <TableCell className="font-mono">{user.loginName}</TableCell>
                         <TableCell className="text-center">
                         <Badge variant="outline">{user.role}</Badge>
                         </TableCell>
