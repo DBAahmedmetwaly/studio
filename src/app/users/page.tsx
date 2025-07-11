@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { MoreHorizontal, PlusCircle, Edit, Trash2, Loader2 } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Edit, Trash2, Loader2, CheckCircle } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,6 +44,7 @@ import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/contexts/permissions-context";
 import { auth } from "@/lib/firebase";
 import { createUserWithEmailAndPassword } from "firebase/auth";
+import { Checkbox } from "@/components/ui/checkbox";
 
 
 interface User {
@@ -54,6 +55,7 @@ interface User {
   password?: string; // Optional for security reasons when fetching/displaying
   role: string;
   warehouse: string; // Can be an ID or "all"
+  isSalesRep?: boolean;
 }
 
 interface Warehouse {
@@ -67,7 +69,8 @@ const UserForm = ({ user, onSave, onClose, warehouses, roles }: { user?: User, o
     loginName: user?.loginName || "",
     password: "", // Always initialize password to an empty string for controlled input
     role: user?.role || "",
-    warehouse: user?.warehouse || ""
+    warehouse: user?.warehouse || "",
+    isSalesRep: user?.isSalesRep || false,
   });
 
 
@@ -131,6 +134,12 @@ const UserForm = ({ user, onSave, onClose, warehouses, roles }: { user?: User, o
             </SelectContent>
           </Select>
         </div>
+        <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="is-sales-rep" className="text-right">
+                مندوب مبيعات
+            </Label>
+            <Checkbox id="is-sales-rep" checked={formData.isSalesRep} onCheckedChange={(checked) => setFormData({...formData, isSalesRep: !!checked})} />
+        </div>
       </div>
        <div className="flex justify-end">
         <Button onClick={handleSubmit}>حفظ</Button>
@@ -140,7 +149,7 @@ const UserForm = ({ user, onSave, onClose, warehouses, roles }: { user?: User, o
 };
 
 export default function UsersPage() {
-  const { data: users, loading: loadingUsers, add, update, remove } = useFirebase<User>('users');
+  const { data: usersData, loading: loadingUsers, add, update, remove } = useFirebase<User>('users');
   const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
   const { data: rolesData, loading: loadingRoles } = useFirebase<any>('roles');
   const { toast } = useToast();
@@ -155,7 +164,8 @@ export default function UsersPage() {
     try {
         if (user.id) {
             if (!can('edit', moduleName)) return toast({variant: 'destructive', title: 'غير مصرح به'});
-            await update(user.id, user);
+            const { id, ...dataToUpdate } = user;
+            await update(id, dataToUpdate);
             toast({ title: "تم تحديث المستخدم بنجاح" });
         } else {
             if (!can('add', moduleName)) return toast({variant: 'destructive', title: 'غير مصرح به'});
@@ -252,13 +262,14 @@ export default function UsersPage() {
                     <TableRow>
                     <TableHead>المستخدم</TableHead>
                     <TableHead>اسم الدخول</TableHead>
+                    <TableHead className="text-center">مندوب</TableHead>
                     <TableHead className="text-center">الوظيفة</TableHead>
                     <TableHead>المخزن</TableHead>
                     <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {users.map((user) => (
+                    {usersData.map((user) => (
                     <TableRow key={user.id}>
                         <TableCell>
                         <div className="flex items-center gap-3">
@@ -271,6 +282,9 @@ export default function UsersPage() {
                         </div>
                         </TableCell>
                         <TableCell className="font-mono">{user.loginName}</TableCell>
+                        <TableCell className="text-center">
+                            {user.isSalesRep && <CheckCircle className="h-5 w-5 text-green-500 mx-auto" />}
+                        </TableCell>
                         <TableCell className="text-center">
                         <Badge variant="outline">{user.role}</Badge>
                         </TableCell>
