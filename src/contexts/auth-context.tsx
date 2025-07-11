@@ -1,16 +1,8 @@
 
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { onAuthStateChanged, User as FirebaseUser, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut } from 'firebase/auth';
-import { auth, database } from '@/lib/firebase';
+import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { Loader2 } from 'lucide-react';
-import { ref, set, query, orderByChild, equalTo, get } from 'firebase/database';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-
 
 interface User {
   id: string;
@@ -30,68 +22,33 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Mock user for bypassing Firebase Auth issues
+const mockUser: User = {
+    id: 'admin_user_id',
+    name: 'مسؤول النظام',
+    loginName: 'admin',
+    role: 'مسؤول',
+    warehouse: 'all',
+    uid: 'mock_admin_uid'
+};
+
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(mockUser); // Directly set mock user
+  const [loading, setLoading] = useState(false); // Set loading to false as we are not fetching anything
 
-  const fetchUserAppData = useCallback(async (firebaseUser: FirebaseUser) => {
-    const usersRef = ref(database, 'users');
-    const q = query(usersRef, orderByChild('uid'), equalTo(firebaseUser.uid));
-    const snapshot = await get(q);
-
-    if (snapshot.exists()) {
-        const userData = snapshot.val();
-        const userId = Object.keys(userData)[0];
-        setUser({ id: userId, ...userData[userId] });
-    } else {
-        console.error("User app data not found in Realtime Database.");
-        setUser(null);
-    }
-  }, []);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        await fetchUserAppData(firebaseUser);
-      } else {
-        setUser(null);
-      }
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [fetchUserAppData]);
-  
-  const signIn = async (loginName: string, pass: string) => {
-    const usersRef = ref(database, 'users');
-    const snapshot = await get(usersRef);
-    
-    if(!snapshot.exists()) {
-        throw new Error("لا يوجد مستخدمون في قاعدة البيانات.");
-    }
-
-    const allUsers = snapshot.val();
-    const foundUserEntry = Object.entries(allUsers).find(([key, val]: [string, any]) => val.loginName === loginName);
-    
-    if (!foundUserEntry) {
-         throw new Error("اسم الدخول غير صحيح.");
-    }
-
-    const [userKey, userData] = foundUserEntry;
-
-    // This is a workaround for not having a direct email field.
-    // Firebase Auth requires a unique email for each user. We create it from the loginName.
-    const userEmail = `${loginName}@smart-accountant.app`;
-    
-    const userCredential = await signInWithEmailAndPassword(auth, userEmail, pass);
-    await fetchUserAppData(userCredential.user);
+  const signIn = async (loginName: string, pass: string): Promise<void> => {
+    // This function will not be called in mock mode but is kept for interface compatibility
+    console.log("Attempted to sign in with:", loginName);
+    return Promise.resolve();
   };
 
-  const signOut = async () => {
-    await firebaseSignOut(auth);
+  const signOut = async (): Promise<void> => {
+     // In a real scenario, you might want to clear the user
     setUser(null);
+    console.log("Signed out.");
+    return Promise.resolve();
   };
-
 
   if (loading) {
       return (
@@ -104,7 +61,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   return (
     <AuthContext.Provider value={{ user, loading, signIn, signOut }}>
-      {user ? children : <LoginPage />}
+      {children}
     </AuthContext.Provider>
   );
 };
@@ -116,70 +73,3 @@ export const useAuth = (): AuthContextType => {
   }
   return context;
 };
-
-// Simple Login Page Component to be used when user is not authenticated
-function LoginPage() {
-    const [loginName, setLoginName] = useState('');
-    const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const { signIn } = useAuth();
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setError('');
-        setIsSubmitting(true);
-        try {
-            await signIn(loginName, password);
-        } catch (err: any) {
-            setError(err.message || 'فشل تسجيل الدخول. يرجى التحقق من اسم الدخول وكلمة المرور.');
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    return (
-        <div className="flex items-center justify-center min-h-screen bg-background">
-            <Card className="w-full max-w-sm">
-                <CardHeader>
-                    <CardTitle className="text-2xl">تسجيل الدخول</CardTitle>
-                    <CardDescription>
-                        أدخل اسم الدخول وكلمة المرور للوصول إلى حسابك.
-                    </CardDescription>
-                </CardHeader>
-                <form onSubmit={handleSubmit}>
-                    <CardContent className="grid gap-4">
-                        {error && <p className="text-sm font-medium text-destructive">{error}</p>}
-                        <div className="grid gap-2">
-                            <Label htmlFor="loginName">اسم الدخول</Label>
-                            <Input
-                                id="loginName"
-                                type="text"
-                                value={loginName}
-                                onChange={(e) => setLoginName(e.target.value)}
-                                placeholder="اسم المستخدم"
-                                required
-                            />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="password">كلمة المرور</Label>
-                            <Input
-                                id="password"
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                required
-                            />
-                        </div>
-                    </CardContent>
-                    <CardFooter>
-                        <Button className="w-full" type="submit" disabled={isSubmitting}>
-                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            تسجيل الدخول
-                        </Button>
-                    </CardFooter>
-                </form>
-            </Card>
-        </div>
-    );
-}
