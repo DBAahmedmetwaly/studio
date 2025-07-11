@@ -41,6 +41,7 @@ export const permissionsConfig = {
     sales_issueToRep: { label: "صرف بضاعة لمندوب", group: "sales", actions: ["view", "add", "delete"] },
     sales_returnFromRep: { label: "مرتجع بضاعة من مندوب", group: "sales", actions: ["view", "add", "delete"] },
     sales_remitFromRep: { label: "توريد نقدية من مندوب", group: "sales", actions: ["view", "add", "delete"] },
+    sales_repOperations: { label: "مراقبة أداء المناديب", group: "sales", actions: ["view"] },
 
     purchases_invoices: { label: "فواتير الشراء", group: "purchases", actions: ["view", "add", "edit", "delete", "print"] },
     purchases_returns: { label: "مرتجعات الشراء", group: "purchases", actions: ["view", "add", "edit", "delete", "print"] },

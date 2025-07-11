@@ -7,27 +7,32 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { PlusCircle, Trash2, Loader2, Save } from "lucide-react";
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import useFirebase from "@/hooks/use-firebase";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from 'next/navigation';
 import { Combobox } from "@/components/ui/combobox";
 
 interface IssueItem {
-  id: string; // The database ID of the item
+  id: string; 
   name: string;
   qty: number;
+  price: number;
+  cost: number;
+  total: number;
   unit: string;
-  uniqueId: string; // A unique ID for the list key
+  uniqueId: string;
 }
 
 interface Item {
     id: string;
     name: string;
     unit: string;
+    price?: number;
+    cost?: number;
 }
 
 interface User {
@@ -46,9 +51,11 @@ export default function IssueToRepPage() {
     const router = useRouter();
     const { toast } = useToast();
     const [items, setItems] = useState<IssueItem[]>([]);
-    const [newItem, setNewItem] = useState({ id: "", qty: 1 });
+    const [newItem, setNewItem] = useState({ id: "", qty: 1, price: 0, cost: 0, unit: "" });
     const [selectedRepId, setSelectedRepId] = useState<string>("");
     const [notes, setNotes] = useState<string>("");
+    const [totalValue, setTotalValue] = useState(0);
+    const [totalQty, setTotalQty] = useState(0);
     
     const { data: availableItems, loading: loadingItems } = useFirebase<Item>('items');
     const { data: users, loading: loadingUsers } = useFirebase<User>("users");
@@ -62,6 +69,13 @@ export default function IssueToRepPage() {
         return availableItems.map(item => ({ value: item.id, label: item.name }));
     }, [availableItems]);
 
+    useEffect(() => {
+        const newTotalValue = items.reduce((acc, item) => acc + item.total, 0);
+        const newTotalQty = items.reduce((acc, item) => acc + item.qty, 0);
+        setTotalValue(newTotalValue);
+        setTotalQty(newTotalQty);
+    }, [items]);
+
     const handleAddItem = () => {
         if (!newItem.id || newItem.qty <= 0) {
             toast({ variant: "destructive", title: "خطأ", description: "يرجى اختيار صنف وكمية صالحة."});
@@ -74,11 +88,27 @@ export default function IssueToRepPage() {
             id: selectedItem.id,
             name: selectedItem.name,
             qty: newItem.qty,
+            price: selectedItem.price || 0,
+            cost: selectedItem.cost || 0,
+            total: newItem.qty * (selectedItem.price || 0),
             unit: selectedItem.unit,
             uniqueId: `${selectedItem.id}-${Date.now()}`
         }]);
-        setNewItem({ id: "", qty: 1 });
+        setNewItem({ id: "", qty: 1, price: 0, cost: 0, unit: "" });
     };
+
+    const handleItemSelect = (itemId: string) => {
+        const selectedItem = availableItems.find(i => i.id === itemId);
+        if (selectedItem) {
+            setNewItem({
+                id: itemId,
+                qty: 1,
+                price: selectedItem.price || 0,
+                cost: selectedItem.cost || 0,
+                unit: selectedItem.unit,
+            });
+        }
+    }
 
     const handleRemoveItem = (uniqueId: string) => {
         setItems(items.filter((item) => item.uniqueId !== uniqueId));
@@ -104,7 +134,7 @@ export default function IssueToRepPage() {
             salesRepId: selectedRepId,
             warehouseId: rep.warehouse,
             date: new Date().toISOString(),
-            items: items.map(({id, name, qty}) => ({id, name, qty})),
+            items: items.map(({id, name, qty, price, cost, total}) => ({id, name, qty, price, cost, total})),
             notes,
             receiptNumber: `ص-م-${nextId}`
         };
@@ -156,9 +186,11 @@ export default function IssueToRepPage() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead className="w-[50%]">الصنف</TableHead>
+                                    <TableHead className="w-[40%]">الصنف</TableHead>
                                     <TableHead className="text-center">الوحدة</TableHead>
                                     <TableHead className="text-center">الكمية</TableHead>
+                                    <TableHead className="text-center">السعر</TableHead>
+                                    <TableHead className="text-center">الإجمالي</TableHead>
                                     <TableHead className="text-center w-[100px]">الإجراء</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -168,6 +200,8 @@ export default function IssueToRepPage() {
                                 <TableCell>{item.name}</TableCell>
                                 <TableCell className="text-center">{item.unit}</TableCell>
                                 <TableCell className="text-center">{item.qty}</TableCell>
+                                <TableCell className="text-center">{item.price.toLocaleString()}</TableCell>
+                                <TableCell className="text-center font-semibold">{item.total.toLocaleString()}</TableCell>
                                 <TableCell className="text-center">
                                     <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.uniqueId)}>
                                     <Trash2 className="h-4 w-4 text-destructive" />
@@ -177,18 +211,23 @@ export default function IssueToRepPage() {
                             ))}
                             <TableRow className="bg-muted/30">
                                 <TableCell className="p-2">
-                                    <Combobox
-                                        options={itemsForCombobox}
-                                        value={newItem.id}
-                                        onValueChange={(value) => setNewItem({ ...newItem, id: value })}
-                                        placeholder="ابحث عن صنف..."
-                                        emptyMessage="لم يتم العثور على الصنف."
-                                    />
+                                     <Select value={newItem.id} onValueChange={handleItemSelect}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="اختر صنفًا" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                        {availableItems.map(item => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
                                 </TableCell>
-                                <TableCell></TableCell>
+                                <TableCell className="text-center text-muted-foreground p-2">{newItem.unit}</TableCell>
                                 <TableCell className="p-2">
                                     <Input type="number" placeholder="الكمية" value={newItem.qty} onChange={e => setNewItem({...newItem, qty: parseInt(e.target.value) || 1})} />
                                 </TableCell>
+                                <TableCell className="p-2">
+                                     <Input type="number" placeholder="السعر" value={newItem.price} onChange={e => setNewItem({...newItem, price: parseFloat(e.target.value) || 0})} />
+                                </TableCell>
+                                <TableCell/>
                                 <TableCell className="text-center">
                                     <Button onClick={handleAddItem} size="sm">
                                         <PlusCircle className="ml-2 h-4 w-4" />
@@ -197,6 +236,15 @@ export default function IssueToRepPage() {
                                 </TableCell>
                             </TableRow>
                             </TableBody>
+                            <TableFooter>
+                                <TableRow>
+                                    <TableCell colSpan={2} className="font-bold">الإجمالي</TableCell>
+                                    <TableCell className="text-center font-bold">{totalQty}</TableCell>
+                                    <TableCell/>
+                                    <TableCell className="text-center font-bold">{totalValue.toLocaleString()}</TableCell>
+                                    <TableCell/>
+                                </TableRow>
+                            </TableFooter>
                         </Table>
                       </div>
                     </div>
@@ -218,3 +266,4 @@ export default function IssueToRepPage() {
     </>
   );
 }
+
