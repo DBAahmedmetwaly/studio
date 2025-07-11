@@ -48,10 +48,15 @@ interface User {
   loginName: string;
   password?: string; // Optional for security reasons when fetching/displaying
   role: string;
-  warehouse: string;
+  warehouse: string; // Can be an ID or "all"
 }
 
-const UserForm = ({ user, onSave, onClose }: { user?: User, onSave: (data: Omit<User, 'id'> & { id?: string }) => void, onClose: () => void }) => {
+interface Warehouse {
+  id: string;
+  name: string;
+}
+
+const UserForm = ({ user, onSave, onClose, warehouses }: { user?: User, onSave: (data: Omit<User, 'id'> & { id?: string }) => void, onClose: () => void, warehouses: Warehouse[] }) => {
   const [formData, setFormData] = useState(user || { name: "", loginName: "", password: "", role: "محاسب", warehouse: "" });
 
   const handleSubmit = () => {
@@ -108,8 +113,10 @@ const UserForm = ({ user, onSave, onClose }: { user?: User, onSave: (data: Omit<
               <SelectValue placeholder="اختر مخزنًا" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="المخزن الرئيسي - القاهرة">المخزن الرئيسي - القاهرة</SelectItem>
-              <SelectItem value="مخزن الإسكندرية">مخزن الإسكندرية</SelectItem>
+              <SelectItem value="all">كل المخازن</SelectItem>
+              {warehouses.map((w) => (
+                <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -123,6 +130,7 @@ const UserForm = ({ user, onSave, onClose }: { user?: User, onSave: (data: Omit<
 
 export default function UsersPage() {
   const { data: users, loading, add, update, remove } = useFirebase<User>('users');
+  const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
   const { toast } = useToast();
 
   const handleSave = async (user: Omit<User, 'id'> & { id?: string }) => {
@@ -150,6 +158,11 @@ export default function UsersPage() {
     }
   }
 
+  const getWarehouseName = (warehouseId: string) => {
+    if (warehouseId === 'all') return 'كل المخازن';
+    return warehouses.find(w => w.id === warehouseId)?.name || 'غير معروف';
+  }
+
   return (
     <>
       <PageHeader title="إدارة المستخدمين">
@@ -163,7 +176,7 @@ export default function UsersPage() {
             </Button>
           }
         >
-          <UserForm onSave={handleSave} onClose={()=>{}} />
+          <UserForm onSave={handleSave} onClose={()=>{}} warehouses={warehouses} />
         </AddEntityDialog>
       </PageHeader>
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
@@ -175,7 +188,7 @@ export default function UsersPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {loading ? (
+            {loading || loadingWarehouses ? (
                  <div className="flex justify-center items-center py-10">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
@@ -207,7 +220,7 @@ export default function UsersPage() {
                         <TableCell className="text-center">
                         <Badge variant="outline">{user.role}</Badge>
                         </TableCell>
-                        <TableCell>{user.warehouse}</TableCell>
+                        <TableCell>{getWarehouseName(user.warehouse)}</TableCell>
                         <TableCell className="text-center">
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -228,7 +241,7 @@ export default function UsersPage() {
                                 </DropdownMenuItem>
                                 }
                             >
-                            <UserForm user={user} onSave={handleSave} onClose={()=>{}}/>
+                            <UserForm user={user} onSave={handleSave} onClose={()=>{}} warehouses={warehouses} />
                             </AddEntityDialog>
                             <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(user.id!)}>
                                 <Trash2 className="ml-2 h-4 w-4" />
