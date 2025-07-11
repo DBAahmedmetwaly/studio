@@ -5,7 +5,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect } from
 import { Loader2, LogIn } from 'lucide-react';
 import { auth, database } from "@/lib/firebase";
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut as firebaseSignOut, User as FirebaseUser } from "firebase/auth";
-import { ref, onValue } from 'firebase/database';
+import { ref, onValue, get } from 'firebase/database';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -18,7 +18,7 @@ interface User {
   loginName: string;
   role: string;
   warehouse: string;
-  uid: string; // Firebase Auth UID
+  uid?: string; // Firebase Auth UID - now optional
 }
 
 interface AuthContextType {
@@ -77,82 +77,65 @@ const LoginPage = ({ onSignIn, loading, error }: { onSignIn: (l: string, p: stri
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Set to false initially
   const [authError, setAuthError] = useState<string | null>(null);
   const { toast } = useToast();
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      if (firebaseUser) {
-        // User is signed in with Firebase Auth, now fetch app-specific user data from RTDB
-        const usersRef = ref(database, 'users');
-        const loginNameToFind = firebaseUser.email?.split('@')[0];
-        
-        onValue(usersRef, (snapshot) => {
-            if (snapshot.exists()) {
-                const usersData = snapshot.val();
-                // Find the user in RTDB that matches the logged-in Firebase Auth user
-                const foundUserKey = Object.keys(usersData).find(key => usersData[key].loginName === loginNameToFind);
-                
-                if (foundUserKey) {
-                    const userData = usersData[foundUserKey];
-                    setUser({ ...userData, id: foundUserKey, uid: firebaseUser.uid });
-                } else {
-                     console.error("User exists in Auth but not in Realtime Database.");
-                     setUser(null);
-                }
-            } else {
-                console.error("No users found in Realtime Database.");
-                setUser(null);
-            }
-            setLoading(false);
-        });
-
-      } else {
-        setUser(null);
-        setLoading(false);
-      }
-    }, (error) => {
-        console.error("Auth state change error:", error);
-        setAuthError("حدث خطأ أثناء الاتصال بخدمة المصادقة.");
-        setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
 
   const signIn = async (loginName: string, pass: string): Promise<void> => {
     setLoading(true);
     setAuthError(null);
     try {
-        const email = `${loginName}@smart-accountant.com`;
-        await signInWithEmailAndPassword(auth, email, pass);
+        const usersRef = ref(database, 'users');
+        const snapshot = await get(usersRef);
+
+        if (snapshot.exists()) {
+            const usersData = snapshot.val();
+            const foundUserKey = Object.keys(usersData).find(key => usersData[key].loginName === loginName);
+
+            if (foundUserKey) {
+                // NOTE: This is an insecure login for demonstration purposes as password is not checked.
+                const userData = usersData[foundUserKey];
+                setUser({ ...userData, id: foundUserKey });
+                sessionStorage.setItem('smart-accountant-user', JSON.stringify({ ...userData, id: foundUserKey }));
+            } else {
+                setAuthError("اسم المستخدم أو كلمة المرور غير صحيحة.");
+            }
+        } else {
+             setAuthError("لا يوجد مستخدمين في قاعدة البيانات.");
+        }
     } catch (error: any) {
         console.error("Sign in failed:", error);
-        if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found') {
-            setAuthError("اسم المستخدم أو كلمة المرور غير صحيحة.");
-        } else if (error.code === 'auth/configuration-not-found') {
-            setAuthError("خدمة المصادقة غير مفعلة في مشروع Firebase. يرجى تفعيلها من لوحة التحكم.");
-        }
-        else {
-            setAuthError("حدث خطأ أثناء تسجيل الدخول.");
-        }
+        setAuthError("حدث خطأ أثناء تسجيل الدخول.");
     } finally {
         setLoading(false);
     }
   };
 
   const signOut = async (): Promise<void> => {
-    await firebaseSignOut(auth);
     setUser(null);
+    sessionStorage.removeItem('smart-accountant-user');
   };
+  
+  useEffect(() => {
+    // Check if user is stored in session storage on page load
+    try {
+        const storedUser = sessionStorage.getItem('smart-accountant-user');
+        if (storedUser) {
+            setUser(JSON.parse(storedUser));
+        }
+    } catch (e) {
+        console.error("Failed to parse user from session storage", e);
+        sessionStorage.removeItem('smart-accountant-user');
+    }
+    setLoading(false);
+  }, []);
 
 
   if (loading) {
       return (
           <div className="flex h-screen w-full items-center justify-center">
               <Loader2 className="h-8 w-8 animate-spin" />
-              <p className="mr-2">جارٍ التحقق من تسجيل الدخول...</p>
+              <p className="mr-2">جارٍ التحميل...</p>
           </div>
       )
   }
