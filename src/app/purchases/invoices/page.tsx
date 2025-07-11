@@ -45,6 +45,11 @@ interface Warehouse {
     name: string;
 }
 
+interface CashAccount {
+    id: string;
+    name: string;
+}
+
 export default function PurchaseInvoicePage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -54,11 +59,13 @@ export default function PurchaseInvoicePage() {
   const [discount, setDiscount] = useState(0);
   const [tax, setTax] = useState(0);
   const [total, setTotal] = useState(0);
+  const [paidAmount, setPaidAmount] = useState(0);
   const [applyTax, setApplyTax] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
   const [supplierId, setSupplierId] = useState("");
   const [warehouseId, setWarehouseId] = useState("");
+  const [paidFromAccountId, setPaidFromAccountId] = useState("");
   const [notes, setNotes] = useState("");
   
   const [invoiceDate, setInvoiceDate] = useState<string>('');
@@ -67,14 +74,18 @@ export default function PurchaseInvoicePage() {
   const { data: availableItems, loading: loadingItems } = useFirebase<Item>('items');
   const { data: suppliers, loading: loadingSuppliers } = useFirebase<Supplier>('suppliers');
   const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
+  const { data: cashAccounts, loading: loadingCashAccounts } = useFirebase<CashAccount>('cashAccounts');
   const { add: addPurchaseInvoice, getNextId } = useFirebase('purchaseInvoices');
+  const { add: addSupplierPayment } = useFirebase('supplierPayments');
 
   useEffect(() => {
     const newSubtotal = items.reduce((acc, item) => acc + item.total, 0);
     const newTax = applyTax ? (newSubtotal - discount) * 0.14 : 0;
+    const newTotal = newSubtotal - discount + newTax;
     setSubtotal(newSubtotal);
     setTax(newTax);
-    setTotal(newSubtotal - discount + newTax);
+    setTotal(newTotal);
+    setPaidAmount(newTotal); // Default paid amount to total
   }, [items, discount, applyTax]);
 
   useEffect(() => {
@@ -132,6 +143,10 @@ export default function PurchaseInvoicePage() {
             });
             return;
         }
+       if (paidAmount > 0 && !paidFromAccountId) {
+            toast({ variant: "destructive", title: "بيانات غير كاملة", description: "يرجى تحديد الحساب الذي تم الدفع منه." });
+            return;
+        }
         setIsSaving(true);
         try {
             const invoiceNumber = `PUR-${await getNextId('purchaseInvoice')}`;
@@ -157,10 +172,23 @@ export default function PurchaseInvoicePage() {
                 discount,
                 tax,
                 total,
+                paidAmount,
                 notes,
             };
 
             await addPurchaseInvoice(invoiceData);
+            
+            if (paidAmount > 0) {
+                await addSupplierPayment({
+                    date: new Date().toISOString(),
+                    amount: paidAmount,
+                    supplierId: supplierId,
+                    paidFromAccountId: paidFromAccountId,
+                    notes: `دفعة لفاتورة شراء رقم ${invoiceNumber}`,
+                    receiptNumber: `PAY-${await getNextId('supplierPayment')}`
+                });
+            }
+
             toast({
                 title: 'تم الحفظ بنجاح',
                 description: `تم حفظ فاتورة الشراء رقم ${invoiceNumber}`
@@ -178,7 +206,7 @@ export default function PurchaseInvoicePage() {
         }
   }
 
-  const loading = loadingItems || loadingSuppliers || loadingWarehouses;
+  const loading = loadingItems || loadingSuppliers || loadingWarehouses || loadingCashAccounts;
   const getUnitForItem = (itemId: string) => {
     if (!itemId) return '';
     const originalId = itemId.split('-')[0];
@@ -315,30 +343,60 @@ export default function PurchaseInvoicePage() {
                                     <li>من ح/ المخزون (مدين بقيمة البضاعة قبل الخصم)</li>
                                     <li>إلى ح/ حسابات الموردين (دائن بقيمة الفاتورة الإجمالية)</li>
                                     <li>إلى ح/ خصم مكتسب (دائن بقيمة الخصم إن وجد)</li>
+                                    {paidAmount > 0 && 
+                                    <>
+                                        <hr className="my-1" />
+                                        <li>من ح/ حسابات الموردين (مدين بقيمة الدفعة)</li>
+                                        <li>إلى ح/ الخزينة/البنك (دائن بقيمة الدفعة)</li>
+                                    </>
+                                    }
                                 </ul>
                             </AlertDescription>
                         </Alert>
                     </div>
-                    <div className="w-full max-w-sm space-y-2 text-sm">
-                        <div className="flex justify-between">
-                            <span>الإجمالي الفرعي</span>
-                            <span>ج.م {subtotal.toFixed(2)}</span>
+                    <div className="w-full max-w-sm space-y-4">
+                        <div className="space-y-2">
+                            <div className="flex justify-between">
+                                <span>الإجمالي الفرعي</span>
+                                <span>ج.م {subtotal.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <span>الخصم</span>
+                                <Input type="number" value={discount} onChange={e => setDiscount(parseFloat(e.target.value) || 0)} className="h-8 max-w-[120px] text-left" placeholder="0.00"/>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <span>تطبيق ضريبة القيمة المضافة (14%)</span>
+                                <Switch checked={applyTax} onCheckedChange={setApplyTax} />
+                            </div>
+                            <div className="flex justify-between">
+                                <span>ضريبة القيمة المضافة (14%)</span>
+                                <span>ج.م {tax.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between font-bold text-base border-t pt-2">
+                                <span>الإجمالي الكلي</span>
+                                <span>ج.م {total.toFixed(2)}</span>
+                            </div>
                         </div>
-                        <div className="flex justify-between items-center">
-                            <span>الخصم</span>
-                            <Input type="number" value={discount} onChange={e => setDiscount(parseFloat(e.target.value) || 0)} className="h-8 max-w-[120px] text-left" placeholder="0.00"/>
-                        </div>
-                         <div className="flex justify-between items-center">
-                            <span>تطبيق ضريبة القيمة المضافة (14%)</span>
-                            <Switch checked={applyTax} onCheckedChange={setApplyTax} />
-                        </div>
-                        <div className="flex justify-between">
-                            <span>ضريبة القيمة المضافة (14%)</span>
-                            <span>ج.م {tax.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between font-bold text-base">
-                            <span>الإجمالي الكلي</span>
-                            <span>ج.م {total.toFixed(2)}</span>
+                        <div className="space-y-2 border-t pt-4">
+                            <div className="flex justify-between items-center">
+                                <Label htmlFor="paidAmount" className="font-semibold">المبلغ المدفوع</Label>
+                                <Input id="paidAmount" type="number" value={paidAmount} onChange={e => setPaidAmount(parseFloat(e.target.value) || 0)} className="h-8 max-w-[120px] text-left" placeholder="0.00"/>
+                            </div>
+                             {paidAmount > 0 && <div className="space-y-2">
+                                <Label htmlFor="paidFromAccount">الدفع من</Label>
+                                <Select value={paidFromAccountId} onValueChange={setPaidFromAccountId}>
+                                    <SelectTrigger id="paidFromAccount">
+                                        <SelectValue placeholder="اختر حساب الدفع" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                    {cashAccounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>}
+                            <div className="flex justify-between font-bold text-base text-destructive">
+                                <span>المبلغ المتبقي</span>
+                                <span>ج.م {(total - paidAmount).toFixed(2)}</span>
+                            </div>
                         </div>
                     </div>
                 </div>

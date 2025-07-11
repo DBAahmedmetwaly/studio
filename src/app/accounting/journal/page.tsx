@@ -484,8 +484,8 @@ export default function JournalPage() {
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <h4 className="font-semibold mb-1">من ح/</h4>
-                                            <ul className="space-y-1 text-sm">
+                                            <h4 className="font-semibold mb-1">{entry.debits.length > 1 ? "من مذكورين:" : "من ح/"}</h4>
+                                            <ul className="space-y-1 text-sm pr-2">
                                                 {entry.debits.map((d, i) => (
                                                     <li key={i} className="flex justify-between">
                                                         <span>{d.account}</span>
@@ -495,8 +495,8 @@ export default function JournalPage() {
                                             </ul>
                                         </div>
                                         <div>
-                                            <h4 className="font-semibold mb-1">إلى ح/</h4>
-                                            <ul className="space-y-1 text-sm">
+                                            <h4 className="font-semibold mb-1">{entry.credits.length > 1 ? "إلى مذكورين:" : "إلى ح/"}</h4>
+                                            <ul className="space-y-1 text-sm pr-2">
                                                 {entry.credits.map((c, i) => (
                                                     <li key={i} className="flex justify-between">
                                                         <span>{c.account}</span>
