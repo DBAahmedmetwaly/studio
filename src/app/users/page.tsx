@@ -163,11 +163,13 @@ export default function UsersPage() {
   const handleSave = async (user: Omit<User, 'id'> & { id?: string }) => {
     try {
         if (user.id) {
+            // This is an update
             if (!can('edit', moduleName)) return toast({variant: 'destructive', title: 'غير مصرح به'});
             const { id, ...dataToUpdate } = user;
             await update(id, dataToUpdate);
             toast({ title: "تم تحديث المستخدم بنجاح" });
         } else {
+            // This is a new user
             if (!can('add', moduleName)) return toast({variant: 'destructive', title: 'غير مصرح به'});
             if (!user.password || !user.loginName) {
                  toast({ variant: "destructive", title: "خطأ", description: "اسم الدخول وكلمة المرور مطلوبان للمستخدم الجديد." });
@@ -175,13 +177,24 @@ export default function UsersPage() {
             }
             
             const email = `${user.loginName}@admin.com`;
+            
+            // Step 1: Save user data to Realtime Database first, but without the password.
+            const userDataForDb = { ...user };
+            delete userDataForDb.password;
+            
+            // The `add` function returns the key of the new user record.
+            const newUserKey = await add(userDataForDb);
+
+            if (!newUserKey) {
+                throw new Error("Failed to get new user key from database.");
+            }
+
+            // Step 2: Create the user in Firebase Auth.
             const userCredential = await createUserWithEmailAndPassword(auth, email, user.password);
             const authUser = userCredential.user;
             
-            const userDataForDb = { ...user, uid: authUser.uid };
-            delete userDataForDb.password;
-
-            await add(userDataForDb);
+            // Step 3: Update the newly created database record with the auth UID.
+            await update(newUserKey, { uid: authUser.uid });
 
             toast({ title: "تمت إضافة المستخدم بنجاح" });
         }
