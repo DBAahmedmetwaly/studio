@@ -10,9 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { PlusCircle, Trash2, Printer, Save, Loader2 } from "lucide-react";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import useFirebase from "@/hooks/use-firebase";
 import { useToast } from "@/hooks/use-toast";
+import { Combobox } from "@/components/ui/combobox";
 
 interface StockItem {
   id: string; // The database ID of the item
@@ -33,6 +34,14 @@ interface Warehouse {
     name: string;
 }
 
+interface PurchaseInvoice {
+    id: string;
+    invoiceNumber: string;
+    supplierName: string;
+    items: { id: string; name: string; qty: number; }[];
+}
+
+
 export default function StockInPage() {
     const { toast } = useToast();
     const [items, setItems] = useState<StockItem[]>([]);
@@ -40,10 +49,38 @@ export default function StockInPage() {
     const [selectedWarehouse, setSelectedWarehouse] = useState<string>("");
     const [notes, setNotes] = useState<string>("");
     const [reason, setReason] = useState<string>("");
+    const [selectedPurchaseInvoice, setSelectedPurchaseInvoice] = useState<string>("");
     
     const { data: availableItems, loading: loadingItems } = useFirebase<Item>('items');
     const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
+    const { data: purchaseInvoices, loading: loadingInvoices } = useFirebase<PurchaseInvoice>('purchaseInvoices');
     const { add: addStockInRecord, getNextId } = useFirebase("stockInRecords");
+
+    const purchaseInvoiceOptions = purchaseInvoices.map(inv => ({
+        value: inv.id,
+        label: `${inv.invoiceNumber} - ${inv.supplierName}`
+    }));
+    
+    useEffect(() => {
+        if(reason === 'purchase' && selectedPurchaseInvoice) {
+            const invoice = purchaseInvoices.find(inv => inv.id === selectedPurchaseInvoice);
+            if(invoice) {
+                const invoiceItems: StockItem[] = invoice.items.map(item => {
+                    const availableItem = availableItems.find(i => i.id === item.id);
+                    return {
+                        id: item.id,
+                        name: item.name,
+                        qty: item.qty,
+                        unit: availableItem?.unit || 'قطعة',
+                        uniqueId: `${item.id}-${Date.now()}`
+                    }
+                })
+                setItems(invoiceItems);
+            }
+        } else {
+            setItems([]);
+        }
+    }, [reason, selectedPurchaseInvoice, purchaseInvoices, availableItems]);
 
 
     const handleAddItem = () => {
@@ -97,6 +134,7 @@ export default function StockInPage() {
         setSelectedWarehouse("");
         setReason("");
         setNotes("");
+        setSelectedPurchaseInvoice("");
     }
 
     const handleConfirm = async () => {
@@ -145,7 +183,7 @@ export default function StockInPage() {
         }
     };
 
-    const loading = loadingItems || loadingWarehouses;
+    const loading = loadingItems || loadingWarehouses || loadingInvoices;
     const getUnitLabel = (unit: string) => {
         const units = { piece: "قطعة", weight: "وزن", meter: "متر", kilo: "كيلو", gram: "جرام" };
         return units[unit as keyof typeof units] || unit;
@@ -205,6 +243,18 @@ export default function StockInPage() {
                             </Select>
                         </div>
                     </div>
+                     {reason === 'purchase' && (
+                        <div className="space-y-2">
+                            <Label htmlFor="purchase-invoice">فاتورة الشراء</Label>
+                            <Combobox
+                                options={purchaseInvoiceOptions}
+                                value={selectedPurchaseInvoice}
+                                onValueChange={setSelectedPurchaseInvoice}
+                                placeholder="اختر فاتورة الشراء..."
+                                emptyMessage="لا توجد فواتير."
+                            />
+                        </div>
+                    )}
                     
                     <div>
                       <Label>الأصناف المستلمة</Label>
@@ -225,34 +275,36 @@ export default function StockInPage() {
                                 <TableCell className="text-center">{getUnitLabel(item.unit)}</TableCell>
                                 <TableCell className="text-center">{item.qty}</TableCell>
                                 <TableCell className="text-center no-print">
-                                    <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.uniqueId)}>
+                                    <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.uniqueId)} disabled={reason === 'purchase'}>
                                     <Trash2 className="h-4 w-4 text-destructive" />
                                     </Button>
                                 </TableCell>
                                 </TableRow>
                             ))}
-                            <TableRow className="no-print bg-muted/30">
-                                <TableCell className='p-2'>
-                                    <Select value={newItem.id} onValueChange={handleItemSelect}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="اختر صنفًا" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                        {availableItems.map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
-                                </TableCell>
-                                <TableCell></TableCell>
-                                <TableCell className='p-2'>
-                                    <Input type="number" placeholder="الكمية" value={newItem.qty} onChange={e => setNewItem({...newItem, qty: parseInt(e.target.value) || 1})} />
-                                </TableCell>
-                                <TableCell className="text-center p-2">
-                                    <Button onClick={handleAddItem} size="sm">
-                                        <PlusCircle className="ml-2 h-4 w-4" />
-                                        إضافة
-                                    </Button>
-                                </TableCell>
-                            </TableRow>
+                            {reason !== 'purchase' && (
+                                <TableRow className="no-print bg-muted/30">
+                                    <TableCell className='p-2'>
+                                        <Select value={newItem.id} onValueChange={handleItemSelect}>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="اختر صنفًا" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                            {availableItems.map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                    </TableCell>
+                                    <TableCell></TableCell>
+                                    <TableCell className='p-2'>
+                                        <Input type="number" placeholder="الكمية" value={newItem.qty} onChange={e => setNewItem({...newItem, qty: parseInt(e.target.value) || 1})} />
+                                    </TableCell>
+                                    <TableCell className="text-center p-2">
+                                        <Button onClick={handleAddItem} size="sm">
+                                            <PlusCircle className="ml-2 h-4 w-4" />
+                                            إضافة
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            )}
                             </TableBody>
                         </Table>
                        </div>

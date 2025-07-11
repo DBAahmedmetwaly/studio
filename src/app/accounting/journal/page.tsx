@@ -34,7 +34,7 @@ interface SaleInvoice {
 interface PurchaseInvoice { id: string; date: string; supplierName: string; total: number; warehouseId: string; discount: number; invoiceNumber?: string; }
 interface Expense { id: string; date: string; description: string; amount: number; warehouseId?: string; expenseType: string; paidFromAccountId: string; receiptNumber?: string;}
 interface ExceptionalIncome { id: string; date: string; description: string; amount: number; warehouseId?: string; receiptNumber?: string; }
-interface Warehouse { id: string; name: string; }
+interface Warehouse { id: string; name: string; autoStockUpdate?: boolean; }
 interface CashAccount { id: string; name: string; }
 interface StockTransferRecord {
     id: string; date: string; fromSourceId: string; toSourceId: string; receiptNumber?: string;
@@ -176,7 +176,7 @@ export default function JournalPage() {
 
     const journalEntries = useMemo(() => {
         const entries: JournalEntry[] = [];
-        const getWarehouseName = (id?: string) => warehouses.find(w => w.id === id)?.name || 'عام';
+        const getWarehouse = (id?: string) => warehouses.find(w => w.id === id);
         const getCashAccountName = (id?: string) => cashAccounts.find(c => c.id === id)?.name || 'النقدية/البنك';
         const getEmployeeName = (id?: string) => employees.find(e => e.id === id)?.name || 'موظف غير معروف';
         const getCustomerName = (id?: string) => customers.find(c => c.id === id)?.name || 'عميل غير معروف';
@@ -187,6 +187,7 @@ export default function JournalPage() {
             const costOfGoodsSold = sale.items.reduce((acc, item) => acc + (item.qty * (item.cost || item.price * 0.8)), 0);
             const totalBeforeDiscount = sale.total + (sale.discount || 0);
             const number = sale.invoiceNumber || `ف-ب-${sale.id.slice(-4)}`;
+            const warehouse = getWarehouse(sale.warehouseId);
             // Accounts Receivable (Debit) for the final amount owed
             entries.push({ id: `sale-ar-${sale.id}`, date: sale.date, warehouseId: sale.warehouseId, number: number, description: `فاتورة بيع للعميل ${sale.customerName}`, debit: sale.total, credit: 0, account: 'حسابات العملاء' });
             // Sales Discount (Debit) if a discount was given
@@ -195,17 +196,25 @@ export default function JournalPage() {
             }
             // Sales Revenue (Credit) for the full amount before discount
             entries.push({ id: `sale-rev-${sale.id}`, date: sale.date, warehouseId: sale.warehouseId, number: number, description: `إيرادات من فاتورة بيع`, debit: 0, credit: totalBeforeDiscount, account: 'إيرادات المبيعات' });
-            // COGS entry
-            entries.push({ id: `sale-cogs-${sale.id}`, date: sale.date, warehouseId: sale.warehouseId, number: number, description: `تكلفة بضاعة مباعة`, debit: costOfGoodsSold, credit: 0, account: 'تكلفة البضاعة المباعة' });
-            entries.push({ id: `sale-inv-${sale.id}`, date: sale.date, warehouseId: sale.warehouseId, number: number, description: `تخفيض المخزون من ${getWarehouseName(sale.warehouseId)}`, debit: 0, credit: costOfGoodsSold, account: `مخزون - ${getWarehouseName(sale.warehouseId)}` });
+            
+            // COGS entry only if warehouse is set to auto-update
+            if (warehouse?.autoStockUpdate) {
+                entries.push({ id: `sale-cogs-${sale.id}`, date: sale.date, warehouseId: sale.warehouseId, number: number, description: `تكلفة بضاعة مباعة`, debit: costOfGoodsSold, credit: 0, account: 'تكلفة البضاعة المباعة' });
+                entries.push({ id: `sale-inv-${sale.id}`, date: sale.date, warehouseId: sale.warehouseId, number: number, description: `تخفيض المخزون من ${warehouse.name}`, debit: 0, credit: costOfGoodsSold, account: `مخزون - ${warehouse.name}` });
+            }
         });
 
         // Purchase Invoices
         purchases.forEach(p => {
              const totalBeforeDiscount = p.total + (p.discount || 0);
              const number = p.invoiceNumber || `ف-ش-${p.id.slice(-4)}`;
-            // Inventory (Debit) for the full value of goods
-            entries.push({ id: `pur-inv-${p.id}`, date: p.date, warehouseId: p.warehouseId, number: number, description: `فاتورة شراء من ${p.supplierName}`, debit: totalBeforeDiscount, credit: 0, account: `مخزون - ${getWarehouseName(p.warehouseId)}` });
+             const warehouse = getWarehouse(p.warehouseId);
+
+             // Inventory entry only if warehouse is set to auto-update
+             if(warehouse?.autoStockUpdate) {
+                entries.push({ id: `pur-inv-${p.id}`, date: p.date, warehouseId: p.warehouseId, number: number, description: `فاتورة شراء من ${p.supplierName}`, debit: totalBeforeDiscount, credit: 0, account: `مخزون - ${warehouse.name}` });
+             }
+
             // Accounts Payable (Credit) for the final amount owed
             entries.push({ id: `pur-ap-${p.id}`, date: p.date, warehouseId: p.warehouseId, number: number, description: `مستحقات للمورد ${p.supplierName}`, debit: 0, credit: p.total, account: 'حسابات الموردين' });
              // Purchase Discount (Credit) if a discount was received
@@ -217,6 +226,7 @@ export default function JournalPage() {
         // Sales Returns
         salesReturns.forEach(sr => {
             const number = sr.receiptNumber || `م-ب-${sr.id.slice(-4)}`;
+            const warehouse = getWarehouse(sr.warehouseId);
             const costOfGoodsReturned = sr.items.reduce((acc, item) => {
                  const itemMaster = itemsMap.get(item.id);
                  const itemCost = itemMaster?.cost || item.price * 0.8; // Fallback
@@ -224,24 +234,33 @@ export default function JournalPage() {
             }, 0);
             entries.push({ id: `sal-ret-debit-${sr.id}`, date: sr.date, warehouseId: sr.warehouseId, number: number, description: `مرتجع مبيعات من ${getCustomerName(sr.customerId)}`, debit: sr.total, credit: 0, account: 'مرتجعات ومسموحات المبيعات' });
             entries.push({ id: `sal-ret-credit-${sr.id}`, date: sr.date, warehouseId: sr.warehouseId, number: number, description: `تخفيض مديونية العميل ${getCustomerName(sr.customerId)}`, debit: 0, credit: sr.total, account: 'حسابات العملاء' });
-            // Return goods to inventory
-            entries.push({ id: `sal-ret-inv-debit-${sr.id}`, date: sr.date, warehouseId: sr.warehouseId, number: number, description: `إعادة بضاعة إلى مخزن ${getWarehouseName(sr.warehouseId)}`, debit: costOfGoodsReturned, credit: 0, account: `مخزون - ${getWarehouseName(sr.warehouseId)}` });
-            entries.push({ id: `sal-ret-inv-credit-${sr.id}`, date: sr.date, warehouseId: sr.warehouseId, number: number, description: `عكس تكلفة البضاعة المباعة`, debit: 0, credit: costOfGoodsReturned, account: 'تكلفة البضاعة المباعة' });
+            
+            // Return goods to inventory only if warehouse is set to auto-update
+            if (warehouse?.autoStockUpdate) {
+                entries.push({ id: `sal-ret-inv-debit-${sr.id}`, date: sr.date, warehouseId: sr.warehouseId, number: number, description: `إعادة بضاعة إلى مخزن ${warehouse.name}`, debit: costOfGoodsReturned, credit: 0, account: `مخزون - ${warehouse.name}` });
+                entries.push({ id: `sal-ret-inv-credit-${sr.id}`, date: sr.date, warehouseId: sr.warehouseId, number: number, description: `عكس تكلفة البضاعة المباعة`, debit: 0, credit: costOfGoodsReturned, account: 'تكلفة البضاعة المباعة' });
+            }
         });
 
         // Purchase Returns
         purchaseReturns.forEach(pr => {
              const number = pr.receiptNumber || `م-ش-${pr.id.slice(-4)}`;
+             const warehouse = getWarehouse(pr.warehouseId);
              entries.push({ id: `pur-ret-debit-${pr.id}`, date: pr.date, warehouseId: pr.warehouseId, number: number, description: `تخفيض مستحقات المورد ${getSupplierName(pr.supplierId)}`, debit: pr.total, credit: 0, account: 'حسابات الموردين' });
-             entries.push({ id: `pur-ret-credit-${pr.id}`, date: pr.date, warehouseId: pr.warehouseId, number: number, description: `مرتجع مشتريات إلى ${getSupplierName(pr.supplierId)}`, debit: 0, credit: pr.total, account: `مخزون - ${getWarehouseName(pr.warehouseId)}` });
+             
+             // Credit inventory only if warehouse is set to auto-update
+             if (warehouse?.autoStockUpdate) {
+                 entries.push({ id: `pur-ret-credit-${pr.id}`, date: pr.date, warehouseId: pr.warehouseId, number: number, description: `مرتجع مشتريات إلى ${getSupplierName(pr.supplierId)}`, debit: 0, credit: pr.total, account: `مخزون - ${warehouse.name}` });
+             }
         });
 
 
         // Expenses
         expenses.forEach(e => {
             const number = e.receiptNumber || `م-${e.id.slice(-4)}`;
+            const warehouse = getWarehouse(e.warehouseId);
             const expenseAccount = e.warehouseId && e.warehouseId !== 'none'
-                ? `${e.expenseType} - ${getWarehouseName(e.warehouseId)}`
+                ? `${e.expenseType} - ${warehouse?.name}`
                 : `${e.expenseType} (عام)`;
             const cashAccountName = getCashAccountName(e.paidFromAccountId)
             entries.push({ id: `exp-debit-${e.id}`, date: e.date, warehouseId: e.warehouseId, number: number, description: e.description, debit: e.amount, credit: 0, account: expenseAccount });
@@ -251,8 +270,9 @@ export default function JournalPage() {
         // Exceptional Incomes
         exceptionalIncomes.forEach(i => {
             const number = i.receiptNumber || `إ-س-${i.id.slice(-4)}`;
+            const warehouse = getWarehouse(i.warehouseId);
             entries.push({ id: `ex-inc-debit-${i.id}`, date: i.date, warehouseId: i.warehouseId, number: number, description: i.description, debit: i.amount, credit: 0, account: 'النقدية/البنك' });
-            entries.push({ id: `ex-inc-credit-${i.id}`, date: i.date, warehouseId: i.warehouseId, number: number, description: i.description, debit: 0, credit: i.amount, account: i.warehouseId ? `دخل استثنائي - ${getWarehouseName(i.warehouseId)}` : 'دخل استثنائي' });
+            entries.push({ id: `ex-inc-credit-${i.id}`, date: i.date, warehouseId: i.warehouseId, number: number, description: i.description, debit: 0, credit: i.amount, account: i.warehouseId ? `دخل استثنائي - ${warehouse?.name}` : 'دخل استثنائي' });
         });
 
         // Stock Transfers
@@ -264,8 +284,8 @@ export default function JournalPage() {
                 const itemCost = transferItem.cost || itemMaster?.cost || itemMaster?.price || 0;
                 return acc + (transferItem.qty * itemCost);
             }, 0);
-            const fromWarehouseName = getWarehouseName(t.fromSourceId);
-            const toWarehouseName = getWarehouseName(t.toSourceId);
+            const fromWarehouseName = getWarehouse(t.fromSourceId)?.name || 'مخزن غير معروف';
+            const toWarehouseName = getWarehouse(t.toSourceId)?.name || 'مخزن غير معروف';
 
             // Debit the receiving warehouse (asset increase)
             entries.push({ id: `trn-debit-${t.id}`, date: t.date, warehouseId: t.toSourceId, number: number, description: `تحويل من ${fromWarehouseName}`, debit: transferCost, credit: 0, account: `مخزون - ${toWarehouseName}` });
