@@ -19,6 +19,7 @@ import { usePermissions } from "@/contexts/permissions-context";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { SalesReturn } from "@/app/sales/returns/page";
 import { PurchaseReturn } from "@/app/purchases/returns/page";
+import { useAuth } from "@/contexts/auth-context";
 
 
 interface InvoiceItem {
@@ -68,6 +69,7 @@ export default function SalesInvoicePage() {
     const { toast } = useToast();
     const router = useRouter();
     const { can } = usePermissions();
+    const { user } = useAuth();
 
     const [items, setItems] = useState<InvoiceItem[]>([]);
     const [newItem, setNewItem] = useState({ id: "", name: "", qty: 1, price: 0, cost: 0, unit: "" });
@@ -219,6 +221,7 @@ export default function SalesInvoicePage() {
         try {
             const invoiceNumber = `ف-ب-${await getNextId('salesInvoice')}`;
             const customerName = customers.find(c => c.id === customerId)?.name || '';
+            const isRep = !!user?.isSalesRep;
 
             const invoiceData = {
                 invoiceNumber,
@@ -226,6 +229,8 @@ export default function SalesInvoicePage() {
                 customerId,
                 customerName,
                 warehouseId,
+                salesRepId: isRep ? user?.id : null,
+                status: isRep ? 'pending' : 'approved',
                 items: items.map(item => {
                     const originalItemId = item.id.split('-')[0];
                     return {
@@ -247,7 +252,8 @@ export default function SalesInvoicePage() {
             
             await addSaleInvoice(invoiceData);
 
-            if (paidAmount > 0) {
+            // Only create payment record if the invoice is approved right away
+            if (invoiceData.status === 'approved' && paidAmount > 0) {
                 await addCustomerPayment({
                     date: new Date().toISOString(),
                     amount: paidAmount,

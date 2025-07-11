@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { createContext, useContext, useMemo, useState, useEffect } from 'react';
@@ -9,7 +10,7 @@ import { useAuth } from '@/contexts/auth-context';
 
 type RoleName = 'مسؤول' | 'محاسب' | 'أمين مخزن' | 'أمين صندوق';
 
-export type PermissionAction = "view" | "add" | "edit" | "delete" | "print" | "generate";
+export type PermissionAction = "view" | "add" | "edit" | "delete" | "print" | "generate" | "approve";
 
 export type PermissionModule = {
     label: string;
@@ -34,7 +35,8 @@ export const permissionsConfig = {
     inventory_adjustment: { label: "تسوية المخزون", group: "inventory", actions: ["view", "add", "delete", "print"] },
     inventory_movements: { label: "حركة المخزون", group: "inventory", actions: ["view"] },
 
-    sales_invoices: { label: "فواتير البيع", group: "sales", actions: ["view", "add", "edit", "delete", "print"] },
+    sales_invoices: { label: "فواتير البيع", group: "sales", actions: ["view", "add", "edit", "delete", "print", "approve"] },
+    sales_repInvoices: { label: "فواتير المناديب", group: "sales", actions: ["view", "approve", "delete"] },
     sales_returns: { label: "مرتجعات البيع", group: "sales", actions: ["view", "add", "edit", "delete", "print"] },
     sales_issueToRep: { label: "صرف بضاعة لمندوب", group: "sales", actions: ["view", "add", "delete"] },
     sales_returnFromRep: { label: "مرتجع بضاعة من مندوب", group: "sales", actions: ["view", "add", "delete"] },
@@ -101,7 +103,8 @@ export const initialRoles = {
   "محاسب": {
     dashboard: { view: true },
     masterData_items: { view: true, add: true, edit: true, delete: false },
-    sales_invoices: { view: true, add: true, edit: true, delete: false, print: true },
+    sales_invoices: { view: true, add: true, edit: true, delete: false, print: true, approve: true },
+    sales_repInvoices: { view: true, approve: true, delete: true },
     purchases_invoices: { view: true, add: true, edit: true, delete: false, print: true },
     accounting_journal: { view: true },
     accounting_expenses: { view: true, add: true, edit: false, delete: false },

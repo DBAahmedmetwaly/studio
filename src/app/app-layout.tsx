@@ -46,6 +46,7 @@ import {
   FileDown,
   Coins,
   LogOut,
+  FileCheck,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -176,8 +177,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <NavSubLink href="/inventory/movements" module="inventory_movements">حركة المخزون</NavSubLink>
             </NavCollapsible>
 
-            <NavCollapsible title="المبيعات" icon={<ShoppingCart />} modules={['sales_invoices', 'sales_returns', 'sales_issueToRep', 'sales_returnFromRep', 'sales_remitFromRep']}>
+            <NavCollapsible title="المبيعات" icon={<ShoppingCart />} modules={['sales_invoices', 'sales_returns', 'sales_repInvoices', 'sales_issueToRep', 'sales_returnFromRep', 'sales_remitFromRep']}>
                 <NavSubLink href="/sales/invoices/list" module="sales_invoices">فواتير البيع</NavSubLink>
+                <NavSubLink href="/sales/rep-invoices" module="sales_repInvoices"><FileCheck className="h-4 w-4" />اعتماد فواتير المناديب</NavSubLink>
                 <NavSubLink href="/sales/returns" module="sales_returns">مرتجعات البيع</NavSubLink>
                  <SidebarMenuSubItem>
                     <hr className="my-2" />

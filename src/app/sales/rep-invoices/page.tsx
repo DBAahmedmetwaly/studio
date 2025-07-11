@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -20,9 +19,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { PlusCircle, Loader2, MoreHorizontal, FileText, Undo2 } from "lucide-react";
+import { Loader2, MoreHorizontal, FileText, CheckCircle, Trash2 } from "lucide-react";
 import useFirebase from "@/hooks/use-firebase";
-import { useRouter } from 'next/navigation';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,6 +31,9 @@ import {
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { usePermissions } from '@/contexts/permissions-context';
+import { useToast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
 
 interface SaleInvoice {
   id: string;
@@ -40,28 +41,31 @@ interface SaleInvoice {
   date: string;
   customerId: string;
   customerName: string;
-  warehouseId: string;
+  salesRepId: string;
   total: number;
   items: any[];
   status?: 'pending' | 'approved';
 }
-interface Customer { id: string; name: string; }
-interface Warehouse { id: string; name: string; }
 
-export default function SalesInvoicesListPage() {
-  const { data: invoices, loading: loadingInvoices } = useFirebase<SaleInvoice>("salesInvoices");
-  const { data: customers, loading: loadingCustomers } = useFirebase<Customer>("customers");
-  const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>("warehouses");
-  const router = useRouter();
-  
+interface User {
+  id: string;
+  name: string;
+  isSalesRep?: boolean;
+}
+
+export default function RepInvoicesPage() {
+  const { data: invoices, loading: loadingInvoices, update, remove } = useFirebase<SaleInvoice>("salesInvoices");
+  const { data: users, loading: loadingUsers } = useFirebase<User>("users");
   const [filters, setFilters] = useState({
-    customerId: "all",
-    warehouseId: "all",
+    salesRepId: "all",
     fromDate: "",
     toDate: "",
   });
 
-  const loading = loadingInvoices || loadingCustomers || loadingWarehouses;
+  const { can } = usePermissions();
+  const { toast } = useToast();
+  const loading = loadingInvoices || loadingUsers;
+  const salesReps = users.filter(u => u.isSalesRep);
 
   const handleFilterChange = (key: keyof typeof filters, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -69,7 +73,7 @@ export default function SalesInvoicesListPage() {
 
   const filteredInvoices = useMemo(() => {
     return invoices
-      .filter(invoice => invoice.status === 'approved') // Only show approved invoices
+      .filter(invoice => invoice.status === 'pending') // Only show pending invoices
       .filter(invoice => {
         const invoiceDate = new Date(invoice.date);
         const from = filters.fromDate ? new Date(filters.fromDate) : null;
@@ -77,49 +81,61 @@ export default function SalesInvoicesListPage() {
 
         if (from && invoiceDate < from) return false;
         if (to && invoiceDate > to) return false;
-        if (filters.customerId !== 'all' && invoice.customerId !== filters.customerId) return false;
-        if (filters.warehouseId !== 'all' && invoice.warehouseId !== filters.warehouseId) return false;
+        if (filters.salesRepId !== 'all' && invoice.salesRepId !== filters.salesRepId) return false;
         
         return true;
       }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [invoices, filters]);
 
+  const handleApprove = async (invoiceId: string) => {
+    if (!can('approve', 'sales_repInvoices')) {
+      toast({ variant: 'destructive', title: 'غير مصرح به' });
+      return;
+    }
+    try {
+      await update(invoiceId, { status: 'approved' });
+      toast({ title: 'تم الاعتماد بنجاح', description: 'تم اعتماد الفاتورة وستظهر في الحسابات.' });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'خطأ', description: 'فشل اعتماد الفاتورة.' });
+    }
+  };
+
+  const handleDelete = async (invoiceId: string) => {
+     if (!can('delete', 'sales_repInvoices')) {
+      toast({ variant: 'destructive', title: 'غير مصرح به' });
+      return;
+    }
+    if (confirm('هل أنت متأكد من حذف هذه الفاتورة المعلقة؟')) {
+       try {
+        await remove(invoiceId);
+        toast({ title: 'تم الحذف بنجاح' });
+      } catch (error) {
+        toast({ variant: 'destructive', title: 'خطأ', description: 'فشل حذف الفاتورة.' });
+      }
+    }
+  }
+
+  const getRepName = (repId: string) => users.find(u => u.id === repId)?.name || 'غير معروف';
+
   return (
     <>
-      <PageHeader title="فواتير المبيعات المعتمدة">
-        <Button size="sm" className="gap-1" onClick={() => router.push('/sales/invoices')}>
-          <PlusCircle className="h-4 w-4" />
-          إضافة فاتورة جديدة
-        </Button>
-      </PageHeader>
+      <PageHeader title="اعتماد فواتير المناديب" />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
         <Card>
             <CardHeader>
                 <CardTitle>فلاتر البحث</CardTitle>
             </CardHeader>
             <CardContent>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                      <div className="space-y-2">
-                        <Label>العميل</Label>
-                        <Select value={filters.customerId} onValueChange={(v) => handleFilterChange("customerId", v)}>
+                        <Label>مندوب المبيعات</Label>
+                        <Select value={filters.salesRepId} onValueChange={(v) => handleFilterChange("salesRepId", v)}>
                             <SelectTrigger>
-                                <SelectValue placeholder="اختر العميل" />
+                                <SelectValue placeholder="اختر المندوب" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="all">كل العملاء</SelectItem>
-                                {customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                     <div className="space-y-2">
-                        <Label>المخزن</Label>
-                        <Select value={filters.warehouseId} onValueChange={(v) => handleFilterChange("warehouseId", v)}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="اختر المخزن" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">كل المخازن</SelectItem>
-                                {warehouses.map(w => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
+                                <SelectItem value="all">كل المناديب</SelectItem>
+                                {salesReps.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
@@ -137,9 +153,9 @@ export default function SalesInvoicesListPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>قائمة فواتير المبيعات</CardTitle>
+            <CardTitle>الفواتير المعلقة</CardTitle>
             <CardDescription>
-              عرض وتعديل جميع فواتير المبيعات الصادرة.
+              عرض واعتماد الفواتير التي قام المناديب بإنشائها ولم يتم اعتمادها بعد.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -154,8 +170,9 @@ export default function SalesInvoicesListPage() {
                     <TableRow>
                       <TableHead>رقم الفاتورة</TableHead>
                       <TableHead>العميل</TableHead>
+                      <TableHead>المندوب</TableHead>
                       <TableHead>التاريخ</TableHead>
-                      <TableHead>ملاحظات</TableHead>
+                      <TableHead>الحالة</TableHead>
                       <TableHead className="text-center">الإجمالي</TableHead>
                       <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
                     </TableRow>
@@ -166,12 +183,10 @@ export default function SalesInvoicesListPage() {
                         <TableRow key={invoice.id}>
                           <TableCell className="font-mono">{invoice.invoiceNumber}</TableCell>
                           <TableCell>{invoice.customerName}</TableCell>
+                          <TableCell>{getRepName(invoice.salesRepId)}</TableCell>
                           <TableCell>{new Date(invoice.date).toLocaleDateString('ar-EG')}</TableCell>
                           <TableCell>
-                            <span className="flex items-center gap-2 text-muted-foreground">
-                              <FileText className="h-4 w-4" />
-                              <span>{`تحتوي على ${invoice.items.length} أصناف`}</span>
-                            </span>
+                            <Badge variant="outline" className="border-amber-500 text-amber-500">معلقة</Badge>
                           </TableCell>
                           <TableCell className="text-center">{invoice.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
                           <TableCell className="text-center">
@@ -184,16 +199,18 @@ export default function SalesInvoicesListPage() {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                     <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                                    <DropdownMenuItem>
-                                        عرض التفاصيل
-                                    </DropdownMenuItem>
-                                     <DropdownMenuItem>
-                                        طباعة
-                                    </DropdownMenuItem>
-                                     <DropdownMenuItem onClick={() => router.push(`/sales/returns/new?invoiceId=${invoice.id}`)}>
-                                        <Undo2 className="ml-2 h-4 w-4" />
-                                        مرتجع
-                                    </DropdownMenuItem>
+                                    {can('approve', 'sales_repInvoices') && (
+                                        <DropdownMenuItem onClick={() => handleApprove(invoice.id)}>
+                                            <CheckCircle className="ml-2 h-4 w-4 text-green-500" />
+                                            اعتماد الفاتورة
+                                        </DropdownMenuItem>
+                                    )}
+                                     {can('delete', 'sales_repInvoices') && (
+                                        <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(invoice.id)}>
+                                            <Trash2 className="ml-2 h-4 w-4" />
+                                            حذف
+                                        </DropdownMenuItem>
+                                     )}
                                 </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>
@@ -201,8 +218,8 @@ export default function SalesInvoicesListPage() {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
-                          لا توجد فواتير معتمدة تطابق الفلاتر المحددة.
+                        <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
+                          لا توجد فواتير معلقة حاليًا.
                         </TableCell>
                       </TableRow>
                     )}

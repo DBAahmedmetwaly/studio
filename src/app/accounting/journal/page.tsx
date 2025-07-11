@@ -31,6 +31,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 interface SaleInvoice {
   id: string; date: string; customerName: string; total: number; warehouseId: string; discount: number; invoiceNumber?: string;
   items: { qty: number; cost?: number; price: number }[];
+  status?: 'pending' | 'approved';
 }
 interface PurchaseInvoice { id: string; date: string; supplierName: string; total: number; warehouseId: string; discount: number; invoiceNumber?: string; }
 interface Expense { id: string; date: string; description: string; amount: number; warehouseId?: string; expenseType: string; paidFromAccountId: string; receiptNumber?: string;}
@@ -183,8 +184,8 @@ export default function JournalPage() {
         const getCustomerName = (id?: string) => customers.find(c => c.id === id)?.name || 'عميل غير معروف';
         const getSupplierName = (id?: string) => suppliers.find(s => s.id === id)?.name || 'مورد غير معروف';
         
-        // Sales Invoices
-        sales.forEach(sale => {
+        // Sales Invoices (Only approved ones)
+        sales.filter(s => s.status === 'approved').forEach(sale => {
             const costOfGoodsSold = sale.items.reduce((acc, item) => acc + (item.qty * (item.cost || item.price * 0.8)), 0);
             const totalBeforeDiscount = sale.total + (sale.discount || 0);
             const number = sale.invoiceNumber || `ف-ب-${sale.id.slice(-4)}`;
