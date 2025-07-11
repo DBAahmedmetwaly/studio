@@ -178,18 +178,31 @@ export default function UsersPage() {
     }
   }
 
-  const handleDelete = async (id: string) => {
-    if (!can('delete', moduleName)) return toast({ variant: 'destructive', title: 'غير مصرح به' });
-    if (confirm('هل أنت متأكد من حذف هذا المستخدم؟ سيتم حذفه من قاعدة البيانات فقط.')) {
+  const handleDelete = async (userToDelete: User) => {
+    if (!can('delete', moduleName)) {
+      toast({ variant: 'destructive', title: 'غير مصرح به' });
+      return;
+    }
+    
+    if (!userToDelete.id) {
+      toast({ variant: 'destructive', title: 'خطأ', description: 'معرف المستخدم غير موجود.' });
+      return;
+    }
+
+    if (confirm(`هل أنت متأكد من حذف المستخدم "${userToDelete.name}"؟`)) {
       try {
-        await remove(id);
-        toast({ title: "تم حذف المستخدم من قاعدة البيانات" });
+        await remove(userToDelete.id);
+        toast({ title: "تم حذف المستخدم بنجاح" });
+        // Note: This only removes the user from the Realtime Database.
+        // For full deletion, you would also need to delete the user from Firebase Authentication,
+        // which requires elevated admin privileges, typically handled via a backend function.
       } catch (error) {
         console.error("Failed to delete user:", error);
         toast({ variant: "destructive", title: "خطأ", description: "فشل حذف المستخدم." });
       }
     }
   };
+
 
   const getWarehouseName = (warehouseId: string) => {
     if (warehouseId === 'all') return 'كل المخازن';
@@ -281,7 +294,7 @@ export default function UsersPage() {
                               </AddEntityDialog>
                             )}
                             {can('delete', moduleName) && (
-                              <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(user.id!)}>
+                              <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(user)}>
                                   <Trash2 className="ml-2 h-4 w-4" />
                                   حذف
                               </DropdownMenuItem>
