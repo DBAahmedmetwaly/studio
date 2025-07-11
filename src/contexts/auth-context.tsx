@@ -20,6 +20,7 @@ interface User {
   role: string;
   warehouse: string;
   uid?: string;
+  isSalesRep?: boolean;
 }
 
 interface AuthContextType {
@@ -45,10 +46,10 @@ const LoginForm = () => {
         try {
             await signIn(loginName, password);
         } catch (err: any) {
-            toast({
+             toast({
                 variant: 'destructive',
                 title: 'فشل تسجيل الدخول',
-                description: err.message || 'بيانات الاعتماد غير صحيحة.'
+                description: 'بيانات الاعتماد غير صحيحة أو أن المستخدم غير موجود.'
             });
         }
         setIsLoading(false);
@@ -138,7 +139,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             await signInWithEmailAndPassword(auth, email, pass);
             // onAuthStateChanged will handle setting the user
         } catch (error: any) {
-            console.error(error);
+            console.error("Login Error:", error.code);
             if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
                  setAuthError('اسم الدخول أو كلمة المرور غير صحيحة.');
             } else {

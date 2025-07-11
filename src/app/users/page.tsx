@@ -44,7 +44,7 @@ import useFirebase from "@/hooks/use-firebase";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/contexts/permissions-context";
 import { auth } from "@/lib/firebase";
-import { createUserWithEmailAndPassword, signInWithCredential } from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithCredential, EmailAuthProvider } from "firebase/auth";
 import { Checkbox } from "@/components/ui/checkbox";
 
 
@@ -208,6 +208,9 @@ export default function UsersPage() {
                     basicSalary: user.basicSalary,
                     hireDate: user.hireDate
                 });
+            } else {
+                // If isEmployee is unchecked, remove them from employees collection
+                await removeEmployee(id);
             }
             toast({ title: "تم تحديث المستخدم بنجاح" });
         } else {
@@ -222,7 +225,7 @@ export default function UsersPage() {
             
             // Keep current user's session to re-login after creating new user
             const currentUser = auth.currentUser;
-            if (!currentUser) {
+            if (!currentUser || !currentUser.email) {
                  toast({ variant: "destructive", title: "خطأ", description: "لا يوجد مستخدم حالي مسجل. يرجى إعادة تسجيل الدخول." });
                  return;
             }
@@ -232,7 +235,15 @@ export default function UsersPage() {
             const newAuthUser = userCredential.user;
 
             // Step 2: Re-login the original admin user to restore session.
-            await signInWithCredential(auth, currentUser.providerData[0]);
+            const adminPassword = prompt("لأسباب أمنية، يرجى إعادة إدخال كلمة مرور المدير للمتابعة:");
+            if (!adminPassword) {
+                toast({ variant: "destructive", title: "تم الإلغاء", description: "تم إلغاء عملية إنشاء المستخدم." });
+                await newAuthUser.delete(); // Clean up the newly created auth user
+                return;
+            }
+            const credential = EmailAuthProvider.credential(currentUser.email, adminPassword);
+            await signInWithCredential(auth, credential);
+
 
              const userDataForDb = { 
                 name: user.name,
@@ -270,7 +281,10 @@ export default function UsersPage() {
             toast({ variant: "destructive", title: "خطأ", description: "اسم الدخول هذا مستخدم بالفعل." });
         } else if (error.code === 'auth/weak-password') {
             toast({ variant: "destructive", title: "خطأ", description: "كلمة المرور ضعيفة جداً. يجب أن تكون 6 أحرف على الأقل." });
-        } else {
+        } else if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+            toast({ variant: "destructive", title: "خطأ", description: "كلمة مرور المدير غير صحيحة. فشلت عملية إنشاء المستخدم." });
+        }
+        else {
             toast({ variant: "destructive", title: "خطأ", description: "فشل حفظ المستخدم." });
         }
         console.error("User save failed:", error);
