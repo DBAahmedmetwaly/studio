@@ -86,11 +86,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (firebaseUser) {
         // User is signed in with Firebase Auth, now fetch app-specific user data from RTDB
         const usersRef = ref(database, 'users');
-        // onValue listener will handle setting the user data
+        const loginNameToFind = firebaseUser.email?.split('@')[0];
+        
         onValue(usersRef, (snapshot) => {
             if (snapshot.exists()) {
                 const usersData = snapshot.val();
-                const loginNameToFind = firebaseUser.email?.split('@')[0];
+                // Find the user in RTDB that matches the logged-in Firebase Auth user
                 const foundUserKey = Object.keys(usersData).find(key => usersData[key].loginName === loginNameToFind);
                 
                 if (foundUserKey) {
@@ -104,19 +105,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 console.error("No users found in Realtime Database.");
                 setUser(null);
             }
-        }, { onlyOnce: true }); // Fetch user data once after auth state change
+            setLoading(false);
+        });
 
       } else {
         setUser(null);
+        setLoading(false);
       }
-      setLoading(false);
     }, (error) => {
         console.error("Auth state change error:", error);
-         if (error.code === 'auth/configuration-not-found') {
-            setAuthError("خدمة المصادقة غير مفعلة في مشروع Firebase. يرجى تفعيلها من لوحة التحكم.");
-        } else {
-            setAuthError("حدث خطأ أثناء الاتصال بخدمة المصادقة.");
-        }
+        setAuthError("حدث خطأ أثناء الاتصال بخدمة المصادقة.");
         setLoading(false);
     });
 
@@ -139,11 +137,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         else {
             setAuthError("حدث خطأ أثناء تسجيل الدخول.");
         }
-        toast({
-            variant: "destructive",
-            title: "فشل تسجيل الدخول",
-            description: "يرجى المحاولة مرة أخرى.",
-        });
     } finally {
         setLoading(false);
     }

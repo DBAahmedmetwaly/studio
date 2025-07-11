@@ -42,6 +42,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import useFirebase from "@/hooks/use-firebase";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/contexts/permissions-context";
+import { auth } from "@/lib/firebase";
+import { createUserWithEmailAndPassword } from "firebase/auth";
 
 
 interface User {
@@ -140,22 +142,46 @@ export default function UsersPage() {
   const handleSave = async (user: Omit<User, 'id'> & { id?: string }) => {
     try {
         if (user.id) {
+            // Updating user logic (password change etc.) should be handled here
+            // For now, we just update the RTDB data.
             if (!can('edit', moduleName)) return toast({variant: 'destructive', title: 'غير مصرح به'});
             await update(user.id, user);
             toast({ title: "تم تحديث المستخدم بنجاح" });
         } else {
-             if (!can('add', moduleName)) return toast({variant: 'destructive', title: 'غير مصرح به'});
-            await add(user);
+            if (!can('add', moduleName)) return toast({variant: 'destructive', title: 'غير مصرح به'});
+            if (!user.password) {
+                 toast({ variant: "destructive", title: "خطأ", description: "كلمة المرور مطلوبة للمستخدم الجديد." });
+                 return;
+            }
+            
+            // 1. Create user in Firebase Auth
+            const email = `${user.loginName}@smart-accountant.com`;
+            const userCredential = await createUserWithEmailAndPassword(auth, email, user.password);
+            
+            // 2. Add user to Realtime Database
+            const userDataForDb = { ...user, uid: userCredential.user.uid };
+            delete userDataForDb.password; // Do not store password in RTDB
+
+            await add(userDataForDb);
             toast({ title: "تمت إضافة المستخدم بنجاح" });
         }
-    } catch(error) {
-        toast({ variant: "destructive", title: "خطأ", description: "فشل حفظ المستخدم." });
+    } catch(error: any) {
+        if (error.code === 'auth/email-already-in-use') {
+            toast({ variant: "destructive", title: "خطأ", description: "اسم الدخول هذا مستخدم بالفعل." });
+        } else if (error.code === 'auth/weak-password') {
+            toast({ variant: "destructive", title: "خطأ", description: "كلمة المرور ضعيفة جداً. يجب أن تكون 6 أحرف على الأقل." });
+        } else {
+            toast({ variant: "destructive", title: "خطأ", description: "فشل حفظ المستخدم." });
+        }
+        console.error("User save failed:", error);
     }
   }
 
   const handleDelete = async (id: string) => {
+    // Note: This only deletes from RTDB, not from Firebase Auth.
+    // A complete solution would require a Cloud Function to delete the auth user.
     if(!can('delete', moduleName)) return toast({variant: 'destructive', title: 'غير مصرح به'});
-    if(confirm('هل أنت متأكد من حذف هذا المستخدم؟')) {
+    if(confirm('هل أنت متأكد من حذف هذا المستخدم؟ سيتم حذفه من قاعدة البيانات فقط.')) {
         try {
             await remove(id);
             toast({ title: "تم حذف المستخدم" });
