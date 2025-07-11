@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState } from "react";
@@ -139,20 +140,19 @@ const UserForm = ({ user, onSave, onClose, warehouses, roles }: { user?: User, o
 };
 
 export default function UsersPage() {
-  const { data: users, loading: loadingUsers, setData: setUsers } = useFirebase<User>('users');
+  const { data: users, loading: loadingUsers, add, update, remove } = useFirebase<User>('users');
   const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
   const { data: rolesData, loading: loadingRoles } = useFirebase<any>('roles');
   const { toast } = useToast();
   const { can } = usePermissions();
   const moduleName = 'settings_users';
-
+  
   const roleNames = rolesData ? Object.keys(rolesData) : [];
   const combinedLoading = loadingUsers || loadingWarehouses || loadingRoles;
 
 
   const handleSave = async (user: Omit<User, 'id'> & { id?: string }) => {
     try {
-        const { add, update } = useFirebase<User>('users');
         if (user.id) {
             if (!can('edit', moduleName)) return toast({variant: 'destructive', title: 'غير مصرح به'});
             await update(user.id, user);
@@ -200,7 +200,6 @@ export default function UsersPage() {
 
     if (confirm(`هل أنت متأكد من حذف المستخدم "${userToDelete.name}"؟`)) {
       try {
-        const { remove } = useFirebase<User>(`users`);
         await remove(userToDelete.id);
         toast({ title: "تم حذف المستخدم بنجاح" });
       } catch (error) {
