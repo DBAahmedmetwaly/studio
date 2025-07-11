@@ -118,7 +118,7 @@ const NavCollapsible = ({ title, icon, children, module, defaultOpen = false }: 
 const NavSubLink = ({ href, children }: { href: string; children: React.ReactNode }) => {
     const pathname = usePathname();
     const { setOpenMobile } = useSidebar();
-    const isActive = pathname === href || pathname.startsWith(href + '/');
+    const isActive = pathname === href || pathname.startsWith(`${href}/new`);
     return (
         <SidebarMenuSubItem>
             <SidebarMenuSubButton asChild isActive={isActive}>

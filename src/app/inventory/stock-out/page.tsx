@@ -1,32 +1,42 @@
 
 "use client";
 
+import React from 'react';
 import PageHeader from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle, Trash2, Printer, Save, Loader2 } from "lucide-react";
-import React, { useState, useEffect, useMemo } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { PlusCircle, Loader2, MoreHorizontal, FileText } from "lucide-react";
 import useFirebase from "@/hooks/use-firebase";
-import { useToast } from "@/hooks/use-toast";
-import { Combobox } from "@/components/ui/combobox";
+import { useRouter } from 'next/navigation';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
-interface StockItem {
-  id: string; // The database ID of the item
-  name: string;
-  qty: number;
-  unit: string;
-  uniqueId: string; // A unique ID for the list key
-}
-
-interface Item {
-    id: string;
-    name: string;
-    unit: string;
+interface StockOutRecord {
+  id: string;
+  receiptNumber: string;
+  date: string;
+  sourceId: string;
+  reason: string;
+  items: { name: string; qty: number }[];
 }
 
 interface Warehouse {
@@ -34,289 +44,105 @@ interface Warehouse {
     name: string;
 }
 
-interface PurchaseReturn {
-    id: string;
-    receiptNumber?: string;
-    supplierId: string;
-    warehouseId: string;
-    items: { id: string; name: string; qty: number; }[];
-}
+export default function StockOutListPage() {
+  const { data: stockOutRecords, loading: loadingStockOut } = useFirebase<StockOutRecord>("stockOutRecords");
+  const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>("warehouses");
+  const router = useRouter();
 
-interface Supplier {
-    id: string;
-    name: string;
-}
+  const loading = loadingStockOut || loadingWarehouses;
 
-export default function StockOutPage() {
-    const { toast } = useToast();
-    const [items, setItems] = useState<StockItem[]>([]);
-    const [newItem, setNewItem] = useState({ id: "", name: "", qty: 1, unit: "" });
-    const [source, setSource] = useState<string>("");
-    const [notes, setNotes] = useState<string>("");
-    const [reason, setReason] = useState<string>("");
-    const [selectedPurchaseReturn, setSelectedPurchaseReturn] = useState<string>("");
-
-    const { data: availableItems, loading: loadingItems } = useFirebase<Item>('items');
-    const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
-    const { data: purchaseReturns, loading: loadingReturns } = useFirebase<PurchaseReturn>('purchaseReturns');
-    const { data: suppliers, loading: loadingSuppliers } = useFirebase<Supplier>('suppliers');
-    const { add: addStockOutRecord, getNextId } = useFirebase("stockOutRecords");
-
-    const getSupplierName = (supplierId: string) => suppliers.find(s => s.id === supplierId)?.name || 'غير معروف';
-
-    const purchaseReturnOptions = useMemo(() => 
-        purchaseReturns.map(pr => ({
-            value: pr.id,
-            label: `${pr.receiptNumber || pr.id} - ${getSupplierName(pr.supplierId)}`
-        })), [purchaseReturns, suppliers]);
-
-    useEffect(() => {
-        if(reason === 'return' && selectedPurchaseReturn) {
-            const preturn = purchaseReturns.find(pr => pr.id === selectedPurchaseReturn);
-            if(preturn) {
-                setSource(preturn.warehouseId); // Automatically select warehouse from return document
-                const returnItems: StockItem[] = preturn.items.map(item => {
-                    const availableItem = availableItems.find(i => i.id === item.id);
-                    return {
-                        id: item.id,
-                        name: item.name,
-                        qty: item.qty,
-                        unit: availableItem?.unit || 'قطعة',
-                        uniqueId: `${item.id}-${Date.now()}`
-                    }
-                })
-                setItems(returnItems);
-            }
-        } else {
-            setItems([]);
-             if (reason !== 'return') {
-                setSource(""); // Reset warehouse if reason is not purchase return
-            }
-        }
-    }, [reason, selectedPurchaseReturn, purchaseReturns, availableItems]);
-
-
-    const handleAddItem = () => {
-        if (!newItem.id || newItem.qty <= 0) {
-            toast({ variant: "destructive", title: "خطأ", description: "يرجى اختيار صنف وكمية صالحة."});
-            return;
-        }
-        const selectedItem = availableItems.find(i => i.id === newItem.id);
-        if (!selectedItem) return;
-
-        setItems([
-        ...items,
-        { 
-            id: selectedItem.id,
-            name: selectedItem.name,
-            qty: newItem.qty,
-            unit: selectedItem.unit,
-            uniqueId: `${selectedItem.id}-${Date.now()}` // Create a unique ID for the key
-        },
-        ]);
-        setNewItem({ id: "", name: "", qty: 1, unit: "" });
-    };
-
-    const handleItemSelect = (itemId: string) => {
-        const selectedItem = availableItems.find(i => i.id === itemId);
-        if (selectedItem) {
-            setNewItem({
-                ...newItem,
-                id: itemId,
-                unit: selectedItem.unit,
-            });
-        }
-    }
-
-
-    const handleRemoveItem = (uniqueId: string) => {
-        setItems(items.filter((item) => item.uniqueId !== uniqueId));
-    };
-
-    const handlePrint = () => {
-        window.print();
-    };
-    
-    const resetForm = () => {
-        setItems([]);
-        setNewItem({ id: "", name: "", qty: 1, unit: "" });
-        setSource("");
-        setReason("");
-        setNotes("");
-        setSelectedPurchaseReturn("");
-    }
-
-    const handleConfirm = async () => {
-        if (!source || items.length === 0) {
-            toast({ variant: "destructive", title: "بيانات غير مكتملة", description: "يرجى اختيار المصدر وإضافة صنف واحد على الأقل."});
-            return;
-        }
-        
-        const nextId = await getNextId('stockOut');
-         if(!nextId) {
-            toast({
-                variant: "destructive",
-                title: "حدث خطأ",
-                description: "فشل في إنشاء رقم الإيصال. يرجى المحاولة مرة أخرى.",
-            });
-            return;
-        }
-
-        const record = {
-            sourceId: source,
-            date: new Date().toISOString(),
-            items: items.map(({id, name, qty}) => ({id, name, qty})), // Remove uniqueId before saving
-            reason,
-            notes,
-            receiptNumber: `إذ-خ-${nextId}`
-        }
-
-        try {
-            await addStockOutRecord(record);
-            toast({ title: "تم بنجاح", description: `تم تأكيد صرف المخزون بنجاح برقم إيصال: ${record.receiptNumber}`});
-            resetForm();
-        } catch(error) {
-            toast({ variant: "destructive", title: "حدث خطأ", description: "فشل في حفظ إيصال الصرف. يرجى المحاولة مرة أخرى."});
-            console.error("Failed to save stock out record:", error);
-        }
-    };
-
-    const loading = loadingItems || loadingWarehouses || loadingReturns || loadingSuppliers;
-    const getUnitLabel = (unit: string) => {
-        const units = { piece: "قطعة", weight: "وزن", meter: "متر", kilo: "كيلو", gram: "جرام" };
-        return units[unit as keyof typeof units] || unit;
-    }
-
+  const getWarehouseName = (warehouseId: string) => {
+    return warehouses.find(w => w.id === warehouseId)?.name || 'غير معروف';
+  };
+  
+  const getReasonLabel = (reason: string) => {
+      const reasons: { [key: string]: string } = {
+          damaged: 'تالف',
+          samples: 'عينات',
+          return: 'مرتجع لمورد',
+          other: 'أخرى'
+      };
+      return reasons[reason] || reason;
+  }
 
   return (
     <>
-      <PageHeader title="صرف مخزون">
-        <div className="flex gap-2 no-print">
-            <Button onClick={handlePrint} variant="outline">
-                <Printer className="ml-2 h-4 w-4" />
-                طباعة
-            </Button>
-        </div>
+      <PageHeader title="سجل صرف المخزون">
+        <Button size="sm" className="gap-1" onClick={() => router.push('/inventory/stock-out/new')}>
+          <PlusCircle className="h-4 w-4" />
+          إضافة إذن صرف
+        </Button>
       </PageHeader>
-      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6 printable-area">
+      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
         <Card>
           <CardHeader>
-            <CardTitle>إيصال صرف مخزني</CardTitle>
-            <div className="grid md:grid-cols-3 gap-4 text-sm text-muted-foreground">
-                <div>رقم الإيصال: (سيتم إنشاؤه عند الحفظ)</div>
-                <div>تاريخ الصرف: {new Date().toLocaleDateString('ar-EG')}</div>
-            </div>
+            <CardTitle>قائمة إيصالات الصرف</CardTitle>
+            <CardDescription>
+              عرض جميع عمليات صرف المخزون التي تمت.
+            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent>
             {loading ? (
-                <div className="flex justify-center items-center py-10">
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
+              <div className="flex justify-center items-center py-10">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
             ) : (
-                <>
-                    <div className="grid md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                            <Label htmlFor="warehouse">من مخزن</Label>
-                            <Select value={source} onValueChange={setSource} disabled={reason === 'return'}>
-                                <SelectTrigger id="warehouse">
-                                    <SelectValue placeholder="اختر المصدر" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                   {warehouses.map(w => <SelectItem key={`wh-${w.id}`} value={w.id}>{w.name}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="reason">سبب الصرف</Label>
-                            <Select value={reason} onValueChange={setReason}>
-                                <SelectTrigger id="reason">
-                                    <SelectValue placeholder="اختر سبب الصرف" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                   <SelectItem value="damaged">تالف</SelectItem>
-                                   <SelectItem value="samples">عينات</SelectItem>
-                                   <SelectItem value="return">مرتجع لمورد</SelectItem>
-                                   <SelectItem value="other">أخرى</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-                     {reason === 'return' && (
-                        <div className="space-y-2">
-                            <Label htmlFor="purchase-return">إذن مرتجع الشراء</Label>
-                            <Combobox
-                                options={purchaseReturnOptions}
-                                value={selectedPurchaseReturn}
-                                onValueChange={setSelectedPurchaseReturn}
-                                placeholder="اختر إذن مرتجع الشراء..."
-                                emptyMessage="لا توجد أذونات مرتجع."
-                            />
-                        </div>
-                    )}
-                    
-                    <div>
-                      <Label>الأصناف المصروفة</Label>
-                      <div className="w-full overflow-auto border rounded-lg">
-                        <Table>
-                            <TableHeader>
-                            <TableRow>
-                                <TableHead className="w-[50%]">الصنف</TableHead>
-                                <TableHead className="text-center">الوحدة</TableHead>
-                                <TableHead className="text-center">الكمية</TableHead>
-                                <TableHead className="text-center w-[100px] no-print">الإجراء</TableHead>
-                            </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                            {items.map((item) => (
-                                <TableRow key={item.uniqueId}>
-                                <TableCell>{item.name}</TableCell>
-                                <TableCell className="text-center">{getUnitLabel(item.unit)}</TableCell>
-                                <TableCell className="text-center">{item.qty}</TableCell>
-                                <TableCell className="text-center no-print">
-                                    <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.uniqueId)} disabled={reason === 'return'}>
-                                    <Trash2 className="h-4 w-4 text-destructive" />
+              <div className="w-full overflow-auto border rounded-lg">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>رقم الإيصال</TableHead>
+                      <TableHead>التاريخ</TableHead>
+                      <TableHead>المخزن</TableHead>
+                      <TableHead>السبب</TableHead>
+                      <TableHead>ملاحظات</TableHead>
+                      <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {stockOutRecords.length > 0 ? (
+                      stockOutRecords.map((record) => (
+                        <TableRow key={record.id}>
+                          <TableCell className="font-mono">{record.receiptNumber}</TableCell>
+                          <TableCell>{new Date(record.date).toLocaleDateString('ar-EG')}</TableCell>
+                          <TableCell>{getWarehouseName(record.sourceId)}</TableCell>
+                          <TableCell>{getReasonLabel(record.reason)}</TableCell>
+                          <TableCell>
+                            <span className="flex items-center gap-2 text-muted-foreground">
+                              <FileText className="h-4 w-4" />
+                              <span>{`تحتوي على ${record.items.length} أصناف`}</span>
+                            </span>
+                          </TableCell>
+                           <TableCell className="text-center">
+                             <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button aria-haspopup="true" size="icon" variant="ghost">
+                                        <MoreHorizontal className="h-4 w-4" />
+                                        <span className="sr-only">قائمة</span>
                                     </Button>
-                                </TableCell>
-                                </TableRow>
-                            ))}
-                             {reason !== 'return' && (
-                                <TableRow className="no-print bg-muted/30">
-                                    <TableCell className="p-2">
-                                        <Select value={newItem.id} onValueChange={handleItemSelect}>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="اختر صنفًا" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                            {availableItems.map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
-                                            </SelectContent>
-                                        </Select>
-                                    </TableCell>
-                                    <TableCell></TableCell>
-                                    <TableCell className="p-2">
-                                        <Input type="number" placeholder="الكمية" value={newItem.qty} onChange={e => setNewItem({...newItem, qty: parseInt(e.target.value) || 1})} />
-                                    </TableCell>
-                                    <TableCell className="text-center p-2">
-                                        <Button onClick={handleAddItem} size="sm">
-                                            <PlusCircle className="ml-2 h-4 w-4" />
-                                            إضافة
-                                        </Button>
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                            </TableBody>
-                        </Table>
-                      </div>
-                    </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="notes">ملاحظات</Label>
-                        <Textarea id="notes" placeholder="أضف أي ملاحظات هنا..." value={notes} onChange={e => setNotes(e.target.value)} />
-                    </div>
-                </>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+                                    <DropdownMenuItem onClick={() => router.push(`/inventory/stock-out/${record.id}`)}>
+                                        عرض / طباعة
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                          لا توجد إيصالات صرف مسجلة.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </CardContent>
-          <CardFooter className="flex justify-end no-print">
-            <Button size="lg" disabled={loading} onClick={handleConfirm}>تأكيد الصرف</Button>
-          </CardFooter>
         </Card>
       </main>
     </>
