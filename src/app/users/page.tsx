@@ -182,7 +182,7 @@ const UserForm = ({ user, onSave, onClose, warehouses, roles }: { user?: User, o
 
 export default function UsersPage() {
   const { data: usersData, loading: loadingUsers, add, update, remove } = useFirebase<User>('users');
-  const { add: addEmployee, update: updateEmployee } = useFirebase<any>('employees');
+  const { add: addEmployee, update: updateEmployee, remove: removeEmployee } = useFirebase<any>('employees');
   const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
   const { data: rolesData, loading: loadingRoles } = useFirebase<any>('roles');
   const { toast } = useToast();
@@ -225,6 +225,7 @@ export default function UsersPage() {
                 role: user.role,
                 warehouse: user.warehouse,
                 isSalesRep: user.isSalesRep,
+                isEmployee: user.isEmployee,
              };
             
             const newUserKey = await add(userDataForDb);
@@ -235,13 +236,14 @@ export default function UsersPage() {
             
              // Create employee record if applicable
             if (user.isEmployee) {
-                await addEmployee({
-                    id: newUserKey, // Use the same key for employee record
+                const employeeRecord = {
                     name: user.name,
                     jobTitle: user.jobTitle,
                     basicSalary: user.basicSalary,
-                    hireDate: user.hireDate
-                });
+                    hireDate: user.hireDate,
+                };
+                // Use `update` here to set the employee data with the same key as the user
+                await updateEmployee(newUserKey, employeeRecord);
             }
 
             // Step 2: Create the user in Firebase Auth.
@@ -278,8 +280,18 @@ export default function UsersPage() {
 
     if (confirm(`هل أنت متأكد من حذف المستخدم "${userToDelete.name}"؟`)) {
       try {
+        // Delete from /users
         await remove(userToDelete.id);
-        toast({ title: "تم حذف المستخدم بنجاح" });
+        
+        // Delete from /employees if they exist
+        if (userToDelete.isEmployee) {
+            await removeEmployee(userToDelete.id);
+        }
+
+        // Note: Deleting from Firebase Auth from the client is complex and requires re-authentication.
+        // This is typically handled by a backend function with Admin SDK privileges.
+        // For now, we will only delete from the database. The auth user will become an orphan.
+        toast({ title: "تم حذف المستخدم بنجاح من قاعدة البيانات", description: "ملاحظة: حساب المصادقة لا يتم حذفه من هنا." });
       } catch (error) {
         console.error("Failed to delete user:", error);
         toast({ variant: "destructive", title: "خطأ", description: "فشل حذف المستخدم." });
@@ -401,3 +413,5 @@ export default function UsersPage() {
     </>
   );
 }
+
+    
