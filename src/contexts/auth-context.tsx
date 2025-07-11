@@ -9,7 +9,6 @@ import { ref, get, query, equalTo, orderByChild } from 'firebase/database';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 
 interface User {
@@ -94,8 +93,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               const [userKey, userData] = userEntry;
               setUser({ ...(userData as User), id: userKey });
           } else {
+            // Temporary fix to allow admin to log in and fix their account
+            if (firebaseUser.email === 'admin@admin.com') {
+                toast({
+                    variant: "destructive",
+                    title: "بيانات المستخدم غير مكتملة",
+                    description: "يرجى حذف المستخدم 'admin' وإعادة إضافته لتصحيح الربط.",
+                });
+                setUser({
+                    id: 'temp-admin',
+                    name: 'المسؤول المؤقت',
+                    loginName: 'admin',
+                    role: 'مسؤول',
+                    warehouse: 'all',
+                    uid: firebaseUser.uid
+                });
+            } else {
               console.error("No user data found in Realtime Database for this auth user.");
               setUser(null);
+            }
           }
       } else {
           console.error("No 'users' collection found in Realtime Database.");
