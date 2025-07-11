@@ -24,7 +24,7 @@ import { Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface SaleInvoice {
   id: string; date: string; customerName: string; total: number; warehouseId: string; discount: number; invoiceNumber?: string;
@@ -117,6 +117,26 @@ interface CustomerPayment {
     receiptNumber?: string;
 }
 
+interface JournalEntry {
+  id: string;
+  date: string;
+  warehouseId?: string;
+  number: string;
+  description: string;
+  debit: number;
+  credit: number;
+  account: string;
+}
+
+interface GroupedJournalEntry {
+    number: string;
+    date: string;
+    description: string;
+    debits: { account: string; amount: number }[];
+    credits: { account: string; amount: number }[];
+    total: number;
+}
+
 
 export default function JournalPage() {
     const [filters, setFilters] = useState({
@@ -154,7 +174,7 @@ export default function JournalPage() {
     }, [itemsData]);
 
     const journalEntries = useMemo(() => {
-        const entries: any[] = [];
+        const entries: JournalEntry[] = [];
         const getWarehouseName = (id?: string) => warehouses.find(w => w.id === id)?.name || 'عام';
         const getCashAccountName = (id?: string) => cashAccounts.find(c => c.id === id)?.name || 'النقدية/البنك';
         const getEmployeeName = (id?: string) => employees.find(e => e.id === id)?.name || 'موظف غير معروف';
@@ -258,9 +278,9 @@ export default function JournalPage() {
             const accountName = getCashAccountName(tx.accountId);
             if(tx.type === 'deposit') {
                 entries.push({ id: `trx-dep-debit-${tx.id}`, date: tx.date, warehouseId: undefined, number: number, description: `إيداع: ${tx.description}`, debit: tx.amount, credit: 0, account: accountName });
-                entries.push({ id: `trx-dep-credit-${tx.id}`, date: tx.date, warehouseId: undefined, number: number, description: `إيداع: ${tx.description}`, debit: 0, credit: tx.amount, account: 'حساب وسيط للإيداع' });
+                entries.push({ id: `trx-dep-credit-${tx.id}`, date: tx.date, warehouseId: undefined, number: number, description: `إيداع: ${tx.description}`, debit: 0, credit: tx.amount, account: 'رأس المال' }); // Assuming deposit increases equity
             } else { // withdrawal
-                 entries.push({ id: `trx-wit-debit-${tx.id}`, date: tx.date, warehouseId: undefined, number: number, description: `سحب: ${tx.description}`, debit: tx.amount, credit: 0, account: 'حساب وسيط للسحب' });
+                 entries.push({ id: `trx-wit-debit-${tx.id}`, date: tx.date, warehouseId: undefined, number: number, description: `سحب: ${tx.description}`, debit: tx.amount, credit: 0, account: 'مسحوبات الشركاء' }); // Assuming withdrawal is for partners
                  entries.push({ id: `trx-wit-credit-${tx.id}`, date: tx.date, warehouseId: undefined, number: number, description: `سحب: ${tx.description}`, debit: 0, credit: tx.amount, account: accountName });
             }
         });
@@ -316,6 +336,32 @@ export default function JournalPage() {
 
         return true;
     });
+
+    const groupedEntries = useMemo((): GroupedJournalEntry[] => {
+        const groups: { [key: string]: GroupedJournalEntry } = {};
+
+        filteredEntries.forEach(entry => {
+            if (!groups[entry.number]) {
+                groups[entry.number] = {
+                    number: entry.number,
+                    date: entry.date,
+                    description: entry.description,
+                    debits: [],
+                    credits: [],
+                    total: 0
+                };
+            }
+            if (entry.debit > 0) {
+                groups[entry.number].debits.push({ account: entry.account, amount: entry.debit });
+                groups[entry.number].total += entry.debit;
+            }
+            if (entry.credit > 0) {
+                groups[entry.number].credits.push({ account: entry.account, amount: entry.credit });
+            }
+        });
+        
+        return Object.values(groups).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }, [filteredEntries]);
     
      const handleFilterChange = (key: keyof typeof filters, value: string) => {
         setFilters(prev => ({...prev, [key]: value}));
@@ -354,58 +400,129 @@ export default function JournalPage() {
                 </div>
             </CardContent>
         </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>سجل قيود اليومية</CardTitle>
-            <CardDescription>
-              عرض لجميع قيود اليومية التي تم إنشاؤها تلقائيًا.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-             {loading ? (
-                <div className="flex justify-center items-center py-10">
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
-            ) : (
-                <div className="w-full overflow-auto border rounded-lg">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="w-[120px]">التاريخ</TableHead>
-                                <TableHead className="w-[120px]">رقم القيد</TableHead>
-                                <TableHead>البيان</TableHead>
-                                <TableHead>الحساب</TableHead>
-                                <TableHead className="text-center w-[150px]">مدين</TableHead>
-                                <TableHead className="text-center w-[150px]">دائن</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {filteredEntries.map((entry) => (
-                                 <TableRow key={entry.id}>
-                                    <TableCell>{new Date(entry.date).toLocaleDateString('ar-EG')}</TableCell>
-                                    <TableCell className="font-mono">{entry.number}</TableCell>
-                                    <TableCell>{entry.description}</TableCell>
-                                    <TableCell>{entry.account}</TableCell>
-                                    <TableCell className="text-center font-mono">{entry.debit > 0 ? entry.debit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</TableCell>
-                                    <TableCell className="text-center font-mono">{entry.credit > 0 ? entry.credit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</TableCell>
-                                </TableRow>
+        <Tabs defaultValue="detailed-view">
+            <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="detailed-view">عرض تفصيلي</TabsTrigger>
+                <TabsTrigger value="journal-view">عرض القيد المزدوج</TabsTrigger>
+            </TabsList>
+            <TabsContent value="detailed-view">
+                <Card>
+                <CardHeader>
+                    <CardTitle>سجل قيود اليومية</CardTitle>
+                    <CardDescription>
+                    عرض لجميع قيود اليومية التي تم إنشاؤها تلقائيًا.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {loading ? (
+                        <div className="flex justify-center items-center py-10">
+                            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                        </div>
+                    ) : (
+                        <div className="w-full overflow-auto border rounded-lg">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="w-[120px]">التاريخ</TableHead>
+                                        <TableHead className="w-[120px]">رقم القيد</TableHead>
+                                        <TableHead>البيان</TableHead>
+                                        <TableHead>الحساب</TableHead>
+                                        <TableHead className="text-center w-[150px]">مدين</TableHead>
+                                        <TableHead className="text-center w-[150px]">دائن</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {filteredEntries.map((entry) => (
+                                        <TableRow key={entry.id}>
+                                            <TableCell>{new Date(entry.date).toLocaleDateString('ar-EG')}</TableCell>
+                                            <TableCell className="font-mono">{entry.number}</TableCell>
+                                            <TableCell>{entry.description}</TableCell>
+                                            <TableCell>{entry.account}</TableCell>
+                                            <TableCell className="text-center font-mono">{entry.debit > 0 ? entry.debit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</TableCell>
+                                            <TableCell className="text-center font-mono">{entry.credit > 0 ? entry.credit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                    {filteredEntries.length === 0 && (
+                                        <TableRow>
+                                            <TableCell colSpan={6} className="text-center text-muted-foreground py-10">
+                                                لا توجد قيود يومية تطابق الفلاتر المحددة.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    )}
+                </CardContent>
+                </Card>
+            </TabsContent>
+            <TabsContent value="journal-view">
+                 <Card>
+                <CardHeader>
+                    <CardTitle>عرض القيد المزدوج</CardTitle>
+                    <CardDescription>
+                    عرض تقليدي لقيود اليومية (من ح/ ... إلى ح/ ...).
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {loading ? (
+                        <div className="flex justify-center items-center py-10">
+                            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                        </div>
+                    ) : (
+                         <div className="space-y-4">
+                            {groupedEntries.map(entry => (
+                                <div key={entry.number} className="border rounded-lg p-4">
+                                    <div className="flex justify-between items-center border-b pb-2 mb-2">
+                                        <div className="flex gap-4">
+                                            <span className="font-mono text-sm">#{entry.number}</span>
+                                            <span className="text-sm text-muted-foreground">{new Date(entry.date).toLocaleDateString('ar-EG')}</span>
+                                        </div>
+                                        <div className="font-bold">
+                                            {entry.total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} ج.م
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <h4 className="font-semibold mb-1">من ح/</h4>
+                                            <ul className="space-y-1 text-sm">
+                                                {entry.debits.map((d, i) => (
+                                                    <li key={i} className="flex justify-between">
+                                                        <span>{d.account}</span>
+                                                        <span className="font-mono">{d.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                        <div>
+                                            <h4 className="font-semibold mb-1">إلى ح/</h4>
+                                            <ul className="space-y-1 text-sm">
+                                                {entry.credits.map((c, i) => (
+                                                    <li key={i} className="flex justify-between">
+                                                        <span>{c.account}</span>
+                                                        <span className="font-mono">{c.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <div className="text-xs text-muted-foreground mt-2 pt-2 border-t">
+                                        البيان: {entry.description}
+                                    </div>
+                                </div>
                             ))}
-                            {filteredEntries.length === 0 && (
-                                <TableRow>
-                                    <TableCell colSpan={6} className="text-center text-muted-foreground py-10">
-                                        لا توجد قيود يومية تطابق الفلاتر المحددة.
-                                    </TableCell>
-                                </TableRow>
+                             {groupedEntries.length === 0 && (
+                                <div className="text-center text-muted-foreground py-10">
+                                    لا توجد قيود يومية تطابق الفلاتر المحددة.
+                                </div>
                             )}
-                        </TableBody>
-                    </Table>
-                </div>
-            )}
-          </CardContent>
-        </Card>
+                         </div>
+                    )}
+                </CardContent>
+                </Card>
+            </TabsContent>
+        </Tabs>
       </main>
     </>
   );
 }
-
-    
