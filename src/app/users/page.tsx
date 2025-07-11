@@ -62,7 +62,14 @@ interface Warehouse {
 }
 
 const UserForm = ({ user, onSave, onClose, warehouses, roles }: { user?: User, onSave: (data: Omit<User, 'id'> & { id?: string }) => void, onClose: () => void, warehouses: Warehouse[], roles: string[] }) => {
-  const [formData, setFormData] = useState(user || { name: "", loginName: "", password: "", role: "محاسب", warehouse: "" });
+  const [formData, setFormData] = useState({
+    name: user?.name || "",
+    loginName: user?.loginName || "",
+    password: "", // Always initialize password to an empty string
+    role: user?.role || "محاسب",
+    warehouse: user?.warehouse || ""
+  });
+
 
   const handleSubmit = () => {
     onSave({
