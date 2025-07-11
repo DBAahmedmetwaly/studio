@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import PageHeader from "@/components/page-header";
@@ -10,8 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import React, { useState, useMemo } from "react";
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 interface StockInRecord {
   id: string;
@@ -101,8 +102,18 @@ export default function InventoryMovementsPage() {
       </div>
     );
   }
+  
+  const getReceiptTooltip = (receiptNumber?: string): string => {
+    if (!receiptNumber) return "رقم مرجعي";
+    if (receiptNumber.startsWith('إذ-د-')) return "إذن دخول مخزني";
+    if (receiptNumber.startsWith('إذ-خ-')) return "إذن صرف مخزني";
+    if (receiptNumber.startsWith('إذ-ت-')) return "إذن تحويل مخزني";
+    return "رقم مرجعي";
+  }
+
 
   return (
+    <TooltipProvider>
     <>
       <PageHeader title="حركة المخزون" />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
@@ -189,7 +200,16 @@ export default function InventoryMovementsPage() {
                                     <span className="mr-1">{move.typeLabel}</span>
                                 </Badge>
                                 </TableCell>
-                                <TableCell className="font-mono">{move.receiptNumber}</TableCell>
+                                <TableCell className="font-mono">
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <span>{move.receiptNumber}</span>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>{getReceiptTooltip(move.receiptNumber)}</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TableCell>
                                 <TableCell>{new Date(move.date).toLocaleDateString('ar-EG')}</TableCell>
                                 <TableCell>
                                 {move.type === 'in' && `إلى: ${getSourceName(move.warehouseId)}`}
@@ -219,5 +239,6 @@ export default function InventoryMovementsPage() {
         </Card>
       </main>
     </>
+    </TooltipProvider>
   );
 }

@@ -17,6 +17,8 @@ import { useRouter } from 'next/navigation';
 import { Switch } from "@/components/ui/switch";
 import { usePermissions } from "@/contexts/permissions-context";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { SalesReturn } from "@/app/sales/returns/page";
+import { PurchaseReturn } from "@/app/purchases/returns/page";
 
 
 interface InvoiceItem {
@@ -56,8 +58,8 @@ interface CashAccount {
 
 interface SaleInvoice { id: string; warehouseId: string; items: { id: string; qty: number; }[]; }
 interface PurchaseInvoice { id: string; warehouseId: string; items: { id: string; qty: number; }[]; }
-interface StockInRecord { id: string; warehouseId: string; items: { id: string; qty: number; }[]; }
-interface StockOutRecord { id: string; sourceId: string; items: { id: string; qty: number; }[]; }
+interface StockInRecord { id: string; warehouseId: string; items: { id: string; name: string; qty: number; }[]; }
+interface StockOutRecord { id: string; sourceId: string; items: { id: string; name: string; qty: number; }[]; }
 interface StockTransferRecord { id: string; fromSourceId: string; toSourceId: string; items: { id: string; qty: number; }[]; }
 interface StockAdjustmentRecord { id: string; warehouseId: string; items: { itemId: string; difference: number; }[]; }
 
@@ -94,11 +96,13 @@ export default function SalesInvoicePage() {
     const { data: stockOuts, loading: l6 } = useFirebase<StockOutRecord>('stockOutRecords');
     const { data: transfers, loading: l7 } = useFirebase<StockTransferRecord>('stockTransferRecords');
     const { data: adjustments, loading: l8 } = useFirebase<StockAdjustmentRecord>('stockAdjustmentRecords');
+    const { data: salesReturns, loading: l9 } = useFirebase<SalesReturn>('salesReturns');
+    const { data: purchaseReturns, loading: l10 } = useFirebase<PurchaseReturn>('purchaseReturns');
     const { add: addSaleInvoice, getNextId } = useFirebase('salesInvoices');
     const { add: addCustomerPayment } = useFirebase('customerPayments');
 
     
-    const loading = loadingItems || loadingCustomers || loadingWarehouses || l3 || l4 || l5 || l6 || l7 || l8 || loadingCashAccounts;
+    const loading = loadingItems || loadingCustomers || loadingWarehouses || l3 || l4 || l5 || l6 || l7 || l8 || loadingCashAccounts || l9 || l10;
 
     const availableItemsForWarehouse = useMemo(() => {
         if (!warehouseId || warehouseId === "all" || !allItems.length) {
@@ -113,17 +117,20 @@ export default function SalesInvoicePage() {
             stockIns.filter(si => si.warehouseId === warehouseId).forEach(si => si.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
             transfers.filter(t => t.toSourceId === warehouseId).forEach(t => t.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
             adjustments.filter(adj => adj.warehouseId === warehouseId).forEach(adj => adj.items.filter(i => i.itemId === item.id && i.difference > 0).forEach(i => stock += i.difference));
+            salesReturns.filter(sr => sr.warehouseId === warehouseId).forEach(sr => sr.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
 
             // Decreases
             sales.filter(s => s.warehouseId === warehouseId).forEach(s => s.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
             stockOuts.filter(so => so.sourceId === warehouseId).forEach(so => so.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
             transfers.filter(t => t.fromSourceId === warehouseId).forEach(t => t.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
             adjustments.filter(adj => adj.warehouseId === warehouseId).forEach(adj => adj.items.filter(i => i.itemId === item.id && i.difference < 0).forEach(i => stock += i.difference));
+            purchaseReturns.filter(pr => pr.warehouseId === warehouseId).forEach(pr => pr.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
+
 
             return { ...item, stock };
-        }).filter(item => item.stock > 0);
+        }).filter(item => item.stock > 0 || (settings as any)?.financial?.allowNegativeStock);
 
-    }, [warehouseId, allItems, purchases, sales, stockIns, stockOuts, transfers, adjustments]);
+    }, [warehouseId, allItems, purchases, sales, stockIns, stockOuts, transfers, adjustments, salesReturns, purchaseReturns]);
 
 
     useEffect(() => {

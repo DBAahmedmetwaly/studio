@@ -26,6 +26,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from '@/components/ui/separator';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface SaleInvoice {
   id: string; date: string; customerName: string; total: number; warehouseId: string; discount: number; invoiceNumber?: string;
@@ -213,6 +214,8 @@ export default function JournalPage() {
              // Inventory entry only if warehouse is set to auto-update
              if(warehouse?.autoStockUpdate) {
                 entries.push({ id: `pur-inv-${p.id}`, date: p.date, warehouseId: p.warehouseId, number: number, description: `فاتورة شراء من ${p.supplierName}`, debit: totalBeforeDiscount, credit: 0, account: `مخزون - ${warehouse.name}` });
+             } else {
+                 entries.push({ id: `pur-inv-generic-${p.id}`, date: p.date, warehouseId: p.warehouseId, number: number, description: `مشتريات لصالح مخزن ${warehouse?.name}`, debit: totalBeforeDiscount, credit: 0, account: 'المشتريات' });
              }
 
             // Accounts Payable (Credit) for the final amount owed
@@ -251,6 +254,8 @@ export default function JournalPage() {
              // Credit inventory only if warehouse is set to auto-update
              if (warehouse?.autoStockUpdate) {
                  entries.push({ id: `pur-ret-credit-${pr.id}`, date: pr.date, warehouseId: pr.warehouseId, number: number, description: `مرتجع مشتريات إلى ${getSupplierName(pr.supplierId)}`, debit: 0, credit: pr.total, account: `مخزون - ${warehouse.name}` });
+             } else {
+                 entries.push({ id: `pur-ret-credit-generic-${pr.id}`, date: pr.date, warehouseId: pr.warehouseId, number: number, description: `مرتجع مشتريات إلى ${getSupplierName(pr.supplierId)}`, debit: 0, credit: pr.total, account: 'مرتجعات ومسموحات المشتريات' });
              }
         });
 
@@ -388,7 +393,34 @@ export default function JournalPage() {
         setFilters(prev => ({...prev, [key]: value}));
     }
 
+    const getReceiptTooltip = (receiptNumber?: string): string => {
+        if (!receiptNumber) return "رقم مرجعي";
+        const prefixes: Record<string, string> = {
+            'ف-ب-': "فاتورة بيع",
+            'ف-ش-': "فاتورة شراء",
+            'م-ب-': "مرتجع بيع",
+            'م-ش-': "مرتجع شراء",
+            'إذ-د-': "إذن دخول مخزني",
+            'إذ-خ-': "إذن صرف مخزني",
+            'إذ-ت-': "إذن تحويل مخزني",
+            'ت-م-': "تسوية مخزون / تسوية موظف",
+            'م-': "مصروف",
+            'إ-س-': "إيراد استثنائي",
+            'س-ع-': "سند قبض عميل",
+            'س-م-': "سند صرف مورد / سلفة موظف",
+            'ح-خ-': "حركة خزينة",
+        };
+
+        for (const prefix in prefixes) {
+            if (receiptNumber.startsWith(prefix)) {
+                return prefixes[prefix];
+            }
+        }
+        return "رقم مرجعي";
+    }
+
   return (
+    <TooltipProvider>
     <>
       <PageHeader title="قيود اليومية" />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
@@ -456,7 +488,16 @@ export default function JournalPage() {
                                     {filteredEntries.map((entry) => (
                                         <TableRow key={entry.id}>
                                             <TableCell>{new Date(entry.date).toLocaleDateString('ar-EG')}</TableCell>
-                                            <TableCell className="font-mono">{entry.number}</TableCell>
+                                            <TableCell className="font-mono">
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <span>{entry.number}</span>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                        <p>{getReceiptTooltip(entry.number)}</p>
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </TableCell>
                                             <TableCell>{entry.description}</TableCell>
                                             <TableCell>{entry.account}</TableCell>
                                             <TableCell className="text-center font-mono">{entry.debit > 0 ? entry.debit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</TableCell>
@@ -495,13 +536,22 @@ export default function JournalPage() {
                             {groupedEntries.map(entry => (
                                 <div key={entry.number} className="border rounded-lg p-4 space-y-2">
                                     <div className="flex justify-between items-center text-sm text-muted-foreground">
-                                        <span className="font-mono">قيد رقم: #{entry.number}</span>
+                                        <span className="font-mono">
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <span>قيد رقم: #{entry.number}</span>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    <p>{getReceiptTooltip(entry.number)}</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </span>
                                         <span>التاريخ: {new Date(entry.date).toLocaleDateString('ar-EG')}</span>
                                     </div>
                                     <Separator />
                                     <div className="space-y-2">
                                         <h4 className="font-semibold">{entry.debits.length > 1 ? "من مذكورين:" : "من ح/"}</h4>
-                                        <ul className="space-y-1 text-sm">
+                                        <ul className="space-y-1 text-sm pr-4">
                                             {entry.debits.map((d, i) => (
                                                 <li key={i} className="flex justify-between">
                                                     <span>{d.account}</span>
@@ -512,7 +562,7 @@ export default function JournalPage() {
                                     </div>
                                     <div className="space-y-2">
                                          <h4 className="font-semibold">{entry.credits.length > 1 ? "إلى مذكورين:" : "إلى ح/"}</h4>
-                                        <ul className="space-y-1 text-sm">
+                                        <ul className="space-y-1 text-sm pr-4">
                                             {entry.credits.map((c, i) => (
                                                 <li key={i} className="flex justify-between">
                                                     <span>{c.account}</span>
@@ -540,5 +590,6 @@ export default function JournalPage() {
         </Tabs>
       </main>
     </>
+    </TooltipProvider>
   );
 }
