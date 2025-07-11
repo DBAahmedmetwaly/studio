@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from 'next/navigation';
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useAuth } from "@/contexts/auth-context";
 
 
 interface InvoiceItem {
@@ -62,6 +63,7 @@ export default function PurchaseInvoicePage() {
   const [paidAmount, setPaidAmount] = useState(0);
   const [applyTax, setApplyTax] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const { user } = useAuth();
 
   const [supplierId, setSupplierId] = useState("");
   const [warehouseId, setWarehouseId] = useState("");
@@ -174,6 +176,8 @@ export default function PurchaseInvoicePage() {
                 total,
                 paidAmount,
                 notes,
+                createdById: user?.id,
+                createdByName: user?.name,
             };
 
             await addPurchaseInvoice(invoiceData);

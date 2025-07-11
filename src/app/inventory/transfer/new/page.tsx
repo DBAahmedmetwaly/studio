@@ -13,6 +13,7 @@ import React, { useState } from "react";
 import useFirebase from "@/hooks/use-firebase";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from 'next/navigation';
+import { useAuth } from "@/contexts/auth-context";
 
 interface StockItem {
   id: string; // The database ID of the item
@@ -40,6 +41,7 @@ export default function NewStockTransferPage() {
     const [newItem, setNewItem] = useState({ id: "", name: "", qty: 1, unit: "" });
     const [fromSource, setFromSource] = useState<string>("");
     const [toSource, setToSource] = useState<string>("");
+    const { user } = useAuth();
 
     const { data: availableItems, loading: loadingItems } = useFirebase<Item>('items');
     const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
@@ -113,7 +115,9 @@ export default function NewStockTransferPage() {
             toSourceId: toSource,
             date: new Date().toISOString(),
             items: items.map(({id, name, qty}) => ({id, name, qty})), // Remove uniqueId before saving
-            receiptNumber: `إذ-ت-${nextId}`
+            receiptNumber: `إذ-ت-${nextId}`,
+            createdById: user?.id,
+            createdByName: user?.name,
         }
 
         try {

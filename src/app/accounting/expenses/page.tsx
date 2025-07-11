@@ -23,6 +23,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLab
 import { AddEntityDialog } from '@/components/add-entity-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useAuth } from '@/contexts/auth-context';
 
 const EXPENSE_TYPES = [
     "إيجار", "رواتب", "كهرباء ومياه", "مواصلات", "تسويق وإعلان", "صيانة", "مستلزمات مكتبية", "مصروفات حكومية", "أخرى"
@@ -38,6 +39,8 @@ interface Expense {
     expenseType: string;
     paidFromAccountId: string;
     receiptNumber?: string;
+    createdById?: string;
+    createdByName?: string;
 }
 
 interface Warehouse {
@@ -137,6 +140,7 @@ export default function ExpensesPage() {
     const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
     const { data: cashAccounts, loading: loadingCashAccounts } = useFirebase<CashAccount>('cashAccounts');
     const { toast } = useToast();
+    const { user } = useAuth();
     
     const loading = loadingExpenses || loadingWarehouses || loadingCashAccounts;
 
@@ -153,7 +157,12 @@ export default function ExpensesPage() {
     const handleSave = async (data: Omit<Expense, 'id' | 'receiptNumber'>) => {
         try {
             const receiptNumber = `م-${await getNextId('expense')}`;
-            const newExpense = { ...data, receiptNumber };
+            const newExpense: Expense = {
+                ...data,
+                receiptNumber,
+                createdById: user?.id,
+                createdByName: user?.name,
+            };
             await add(newExpense);
             toast({ title: "تمت الإضافة بنجاح", description: `تم تسجيل المصروف برقم إيصال: ${receiptNumber}` });
         } catch (error) {

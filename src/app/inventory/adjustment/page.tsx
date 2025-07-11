@@ -14,6 +14,7 @@ import React, { useState, useMemo, useCallback } from "react";
 import useFirebase from "@/hooks/use-firebase";
 import { useToast } from "@/hooks/use-toast";
 import { Combobox } from "@/components/ui/combobox";
+import { useAuth } from "@/contexts/auth-context";
 
 interface AdjustmentItem {
   itemId: string;
@@ -35,7 +36,13 @@ interface PurchaseInvoice { id: string; warehouseId: string; items: { id: string
 interface StockInRecord { id: string; warehouseId: string; items: { id: string; qty: number; }[]; }
 interface StockOutRecord { id: string; sourceId: string; items: { id: string; qty: number; }[]; }
 interface StockTransferRecord { id: string; fromSourceId: string; toSourceId: string; items: { id: string; qty: number; }[]; }
-interface StockAdjustmentRecord { id: string; warehouseId: string; items: { itemId: string; difference: number; }[]; }
+interface StockAdjustmentRecord {
+    id: string;
+    warehouseId: string;
+    items: { itemId: string; difference: number; }[];
+    createdById?: string;
+    createdByName?: string;
+}
 
 
 export default function StockAdjustmentPage() {
@@ -44,6 +51,7 @@ export default function StockAdjustmentPage() {
     const [newItem, setNewItem] = useState({ itemId: "", actualQty: 0, systemQty: 0 });
     const [selectedWarehouse, setSelectedWarehouse] = useState<string>("");
     const [notes, setNotes] = useState<string>("");
+    const { user } = useAuth();
     
     const { data: availableItems, loading: l1 } = useFirebase<Item>('items');
     const { data: warehouses, loading: l2 } = useFirebase<Warehouse>('warehouses');
@@ -144,7 +152,9 @@ export default function StockAdjustmentPage() {
             date: new Date().toISOString(),
             items: items.map(({ uniqueId, itemName, ...rest}) => rest), // Remove client-side fields
             notes,
-            receiptNumber: `ت-م-${nextId}`
+            receiptNumber: `ت-م-${nextId}`,
+            createdById: user?.id,
+            createdByName: user?.name,
         };
 
         try {

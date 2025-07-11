@@ -23,6 +23,7 @@ import { AddEntityDialog } from '@/components/add-entity-dialog';
 import { usePermissions } from '@/contexts/permissions-context';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/contexts/auth-context';
 
 interface EmployeeAdjustment {
     id?: string;
@@ -32,6 +33,8 @@ interface EmployeeAdjustment {
     type: 'reward' | 'penalty';
     description: string;
     receiptNumber?: string;
+    createdById?: string;
+    createdByName?: string;
 }
 
 interface Employee {
@@ -107,6 +110,7 @@ export default function EmployeeAdjustmentsPage() {
     const { data: employees, loading: loadingEmployees } = useFirebase<Employee>('employees');
     const { toast } = useToast();
     const { can } = usePermissions();
+    const { user } = useAuth();
     
     const loading = loadingAdjustments || loadingEmployees;
 
@@ -118,7 +122,12 @@ export default function EmployeeAdjustmentsPage() {
         try {
             if (!can('add', 'hr')) return toast({ variant: "destructive", title: "غير مصرح به" });
             const receiptNumber = `ت-م-${await getNextId('employeeAdjustment')}`;
-            const newAdjustment = { ...data, receiptNumber };
+            const newAdjustment: EmployeeAdjustment = {
+                ...data,
+                receiptNumber,
+                createdById: user?.id,
+                createdByName: user?.name,
+            };
             await add(newAdjustment);
             toast({ title: "تمت الإضافة بنجاح", description: `تم حفظ الإجراء برقم: ${receiptNumber}` });
         } catch (error) {

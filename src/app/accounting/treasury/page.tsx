@@ -21,6 +21,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth } from '@/contexts/auth-context';
 
 
 interface CashAccount {
@@ -38,6 +39,8 @@ interface TreasuryTransaction {
     accountId: string;
     type: 'deposit' | 'withdrawal';
     receiptNumber?: string;
+    createdById?: string;
+    createdByName?: string;
 }
 
 interface Expense {
@@ -118,6 +121,7 @@ export default function TreasuryPage() {
     const { data: cashAccounts, loading: loadingAccounts } = useFirebase<CashAccount>('cashAccounts');
     const { data: expenses, loading: loadingExpenses } = useFirebase<Expense>('expenses');
     const { toast } = useToast();
+    const { user } = useAuth();
     
     const loading = loadingTxs || loadingAccounts || loadingExpenses;
     
@@ -134,7 +138,12 @@ export default function TreasuryPage() {
                 ? `إيداع-${await getNextId('deposit')}` 
                 : `سحب-${await getNextId('withdrawal')}`;
             
-            const newTransaction = { ...data, receiptNumber };
+            const newTransaction: TreasuryTransaction = {
+                ...data,
+                receiptNumber,
+                createdById: user?.id,
+                createdByName: user?.name,
+            };
             await add(newTransaction);
 
             // Optimistically update local state

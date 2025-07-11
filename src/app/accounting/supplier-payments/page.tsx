@@ -23,6 +23,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLab
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AddEntityDialog } from '@/components/add-entity-dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useAuth } from '@/contexts/auth-context';
 
 interface SupplierPayment {
     id?: string;
@@ -32,6 +33,8 @@ interface SupplierPayment {
     paidFromAccountId: string;
     notes?: string;
     receiptNumber?: string;
+    createdById?: string;
+    createdByName?: string;
 }
 
 interface Supplier {
@@ -119,6 +122,7 @@ export default function SupplierPaymentsPage() {
     const { data: suppliers, loading: loadingSuppliers } = useFirebase<Supplier>('suppliers');
     const { data: cashAccounts, loading: loadingCashAccounts } = useFirebase<CashAccount>('cashAccounts');
     const { toast } = useToast();
+    const { user } = useAuth();
     
     const loading = loadingPayments || loadingSuppliers || loadingCashAccounts;
 
@@ -133,7 +137,12 @@ export default function SupplierPaymentsPage() {
     const handleSave = async (data: Omit<SupplierPayment, 'id' | 'receiptNumber'>) => {
         try {
             const receiptNumber = `س-م-${await getNextId('supplierPayment')}`;
-            const newPayment = { ...data, receiptNumber };
+            const newPayment: SupplierPayment = {
+                ...data,
+                receiptNumber,
+                createdById: user?.id,
+                createdByName: user?.name,
+            };
             await add(newPayment);
             toast({ title: "تمت الإضافة بنجاح", description: `تم حفظ الدفعة برقم إيصال: ${receiptNumber}` });
         } catch (error) {

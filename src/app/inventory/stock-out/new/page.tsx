@@ -15,6 +15,7 @@ import useFirebase from "@/hooks/use-firebase";
 import { useToast } from "@/hooks/use-toast";
 import { Combobox } from "@/components/ui/combobox";
 import { useRouter } from 'next/navigation';
+import { useAuth } from "@/contexts/auth-context";
 
 interface StockItem {
   id: string; // The database ID of the item
@@ -57,6 +58,7 @@ export default function NewStockOutPage() {
     const [notes, setNotes] = useState<string>("");
     const [reason, setReason] = useState<string>("");
     const [selectedPurchaseReturn, setSelectedPurchaseReturn] = useState<string>("");
+    const { user } = useAuth();
 
     const { data: availableItems, loading: loadingItems } = useFirebase<Item>('items');
     const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
@@ -161,7 +163,9 @@ export default function NewStockOutPage() {
             items: items.map(({id, name, qty}) => ({id, name, qty})), // Remove uniqueId before saving
             reason,
             notes,
-            receiptNumber: `إذ-خ-${nextId}`
+            receiptNumber: `إذ-خ-${nextId}`,
+            createdById: user?.id,
+            createdByName: user?.name,
         }
 
         try {

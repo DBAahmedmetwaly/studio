@@ -22,6 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AddEntityDialog } from '@/components/add-entity-dialog';
 import { usePermissions } from '@/contexts/permissions-context';
 import { Textarea } from '@/components/ui/textarea';
+import { useAuth } from '@/contexts/auth-context';
 
 interface EmployeeAdvance {
     id?: string;
@@ -31,6 +32,8 @@ interface EmployeeAdvance {
     paidFromAccountId: string;
     notes?: string;
     receiptNumber?: string;
+    createdById?: string;
+    createdByName?: string;
 }
 
 interface Employee {
@@ -111,6 +114,7 @@ export default function EmployeeAdvancesPage() {
     const { data: cashAccounts, loading: loadingCashAccounts } = useFirebase<CashAccount>('cashAccounts');
     const { toast } = useToast();
     const { can } = usePermissions();
+    const { user } = useAuth();
     
     const loading = loadingAdvances || loadingEmployees || loadingCashAccounts;
 
@@ -127,7 +131,12 @@ export default function EmployeeAdvancesPage() {
         try {
             if (!can('add', 'hr')) return toast({ variant: "destructive", title: "غير مصرح به" });
             const receiptNumber = `س-م-${await getNextId('employeeAdvance')}`;
-            const newAdvance = { ...data, receiptNumber };
+            const newAdvance: EmployeeAdvance = {
+                ...data,
+                receiptNumber,
+                createdById: user?.id,
+                createdByName: user?.name,
+            };
             await add(newAdvance);
             toast({ title: "تمت الإضافة بنجاح", description: `تم حفظ السلفة برقم إيصال: ${receiptNumber}` });
         } catch (error) {

@@ -23,6 +23,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { AddEntityDialog } from '@/components/add-entity-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useAuth } from '@/contexts/auth-context';
 
 interface ExceptionalIncome {
     id?: string;
@@ -31,6 +32,8 @@ interface ExceptionalIncome {
     description: string;
     warehouseId?: string;
     receiptNumber?: string;
+    createdById?: string;
+    createdByName?: string;
 }
 
 interface Warehouse {
@@ -88,6 +91,7 @@ export default function ExceptionalIncomePage() {
     const { data: incomes, loading: loadingIncomes, add, update, remove, getNextId } = useFirebase<ExceptionalIncome>('exceptionalIncomes');
     const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
     const { toast } = useToast();
+    const { user } = useAuth();
     
     const loading = loadingIncomes || loadingWarehouses;
 
@@ -99,7 +103,12 @@ export default function ExceptionalIncomePage() {
     const handleSave = async (data: Omit<ExceptionalIncome, 'id' | 'receiptNumber'>) => {
         try {
             const receiptNumber = `إ-س-${await getNextId('exceptionalIncome')}`;
-            const newIncome = { ...data, receiptNumber };
+            const newIncome: ExceptionalIncome = {
+                ...data,
+                receiptNumber,
+                createdById: user?.id,
+                createdByName: user?.name,
+            };
             await add(newIncome);
             toast({ title: "تمت الإضافة بنجاح", description: `تم تسجيل الدخل برقم إيصال: ${receiptNumber}` });
         } catch (error) {

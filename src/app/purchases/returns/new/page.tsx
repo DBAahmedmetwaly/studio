@@ -15,6 +15,7 @@ import useFirebase from "@/hooks/use-firebase";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Combobox } from "@/components/ui/combobox";
+import { useAuth } from "@/contexts/auth-context";
 
 interface ReturnItem {
   id: string; // original item id
@@ -35,6 +36,7 @@ export default function NewPurchaseReturnPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
+  const { user } = useAuth();
   
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(searchParams.get('invoiceId'));
   const [items, setItems] = useState<ReturnItem[]>([]);
@@ -135,6 +137,8 @@ export default function NewPurchaseReturnPage() {
             })),
             total,
             notes,
+            createdById: user?.id,
+            createdByName: user?.name,
         };
         await addPurchaseReturn(returnData);
         toast({ title: 'تم الحفظ بنجاح', description: `تم حفظ مرتجع الشراء.` });
