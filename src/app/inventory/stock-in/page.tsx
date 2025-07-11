@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { PlusCircle, Trash2, Printer, Save, Loader2 } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import useFirebase from "@/hooks/use-firebase";
 import { useToast } from "@/hooks/use-toast";
 import { Combobox } from "@/components/ui/combobox";
@@ -42,6 +42,12 @@ interface PurchaseInvoice {
     items: { id: string; name: string; qty: number; }[];
 }
 
+interface StockInRecord {
+    id: string;
+    purchaseInvoiceId?: string;
+    reason?: string;
+}
+
 
 export default function StockInPage() {
     const { toast } = useToast();
@@ -55,12 +61,18 @@ export default function StockInPage() {
     const { data: availableItems, loading: loadingItems } = useFirebase<Item>('items');
     const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
     const { data: purchaseInvoices, loading: loadingInvoices } = useFirebase<PurchaseInvoice>('purchaseInvoices');
+    const { data: stockInRecords, loading: loadingStockInRecords } = useFirebase<StockInRecord>('stockInRecords');
     const { add: addStockInRecord, getNextId } = useFirebase("stockInRecords");
 
-    const purchaseInvoiceOptions = purchaseInvoices.map(inv => ({
-        value: inv.id,
-        label: `${inv.invoiceNumber} - ${inv.supplierName}`
-    }));
+    const purchaseInvoiceOptions = useMemo(() => {
+        const receivedInvoiceIds = new Set(stockInRecords.filter(r => r.purchaseInvoiceId).map(r => r.purchaseInvoiceId));
+        return purchaseInvoices
+            .filter(inv => !receivedInvoiceIds.has(inv.id))
+            .map(inv => ({
+                value: inv.id,
+                label: `${inv.invoiceNumber} - ${inv.supplierName}`
+            }));
+    }, [purchaseInvoices, stockInRecords]);
     
     useEffect(() => {
         if(reason === 'purchase' && selectedPurchaseInvoice) {
@@ -83,7 +95,7 @@ export default function StockInPage() {
             setItems([]);
              if (reason !== 'purchase') {
                 setSelectedWarehouse(""); // Reset warehouse if reason is not purchase
-            }
+             }
         }
     }, [reason, selectedPurchaseInvoice, purchaseInvoices, availableItems]);
 
@@ -162,7 +174,7 @@ export default function StockInPage() {
             return;
         }
 
-        const record = {
+        const record: any = {
             warehouseId: selectedWarehouse,
             date: new Date().toISOString(),
             items: items.map(({id, name, qty}) => ({id, name, qty})), // Remove uniqueId before saving
@@ -170,6 +182,10 @@ export default function StockInPage() {
             notes,
             receiptNumber: `إذ-د-${nextId}`
         };
+
+        if (reason === 'purchase' && selectedPurchaseInvoice) {
+            record.purchaseInvoiceId = selectedPurchaseInvoice;
+        }
 
         try {
             await addStockInRecord(record);
@@ -188,7 +204,7 @@ export default function StockInPage() {
         }
     };
 
-    const loading = loadingItems || loadingWarehouses || loadingInvoices;
+    const loading = loadingItems || loadingWarehouses || loadingInvoices || loadingStockInRecords;
     const getUnitLabel = (unit: string) => {
         const units = { piece: "قطعة", weight: "وزن", meter: "متر", kilo: "كيلو", gram: "جرام" };
         return units[unit as keyof typeof units] || unit;
@@ -256,7 +272,7 @@ export default function StockInPage() {
                                 value={selectedPurchaseInvoice}
                                 onValueChange={setSelectedPurchaseInvoice}
                                 placeholder="اختر فاتورة الشراء..."
-                                emptyMessage="لا توجد فواتير."
+                                emptyMessage="لا توجد فواتير غير مستلمة."
                             />
                         </div>
                     )}
