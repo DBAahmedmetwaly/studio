@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState } from "react";
@@ -49,6 +48,7 @@ import { createUserWithEmailAndPassword } from "firebase/auth";
 
 interface User {
   id?: string;
+  uid?: string; // Add uid to the interface
   name: string;
   loginName: string;
   password?: string; // Optional for security reasons when fetching/displaying
@@ -85,7 +85,7 @@ const UserForm = ({ user, onSave, onClose, warehouses, roles }: { user?: User, o
           <Label htmlFor="user-loginName" className="text-right">
             اسم الدخول
           </Label>
-          <Input id="user-loginName" type="text" value={formData.loginName} onChange={e => setFormData({...formData, loginName: e.target.value})} className="col-span-3" />
+          <Input id="user-loginName" type="text" value={formData.loginName} onChange={e => setFormData({...formData, loginName: e.target.value})} className="col-span-3" disabled={!!user?.id} />
         </div>
          <div className="grid grid-cols-4 items-center gap-4">
           <Label htmlFor="user-password" className="text-right">
@@ -158,12 +158,16 @@ export default function UsersPage() {
             const email = `${user.loginName}@admin.com`;
             // 1. Create user in Firebase Auth
             const userCredential = await createUserWithEmailAndPassword(auth, email, user.password);
+            const authUser = userCredential.user;
             
             // 2. Add user to Realtime Database
-            const userDataForDb = { ...user, uid: userCredential.user.uid };
+            const userDataForDb = { ...user, uid: authUser.uid };
             delete userDataForDb.password; // Do not store password in RTDB
 
+            // Use set with the user's UID as the key for easier lookup later
+            // but our useFirebase hook uses push. Let's use the 'add' from our hook which pushes.
             await add(userDataForDb);
+
             toast({ title: "تمت إضافة المستخدم بنجاح" });
         }
     } catch(error: any) {
