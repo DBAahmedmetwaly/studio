@@ -18,23 +18,26 @@ interface SaleInvoice {
   date: string;
   customerId: string;
   total: number;
+  paidAmount?: number;
+  status?: 'pending' | 'approved';
 }
 interface SalesReturn {
     id: string;
+    receiptNumber?: string;
     date: string;
     customerId: string;
     total: number;
 }
 
 interface Customer {
-  id: string;
+  id:string;
   name: string;
   openingBalance: number;
 }
 
-// Assuming you will create this collection and hook
 interface CustomerPayment {
     id: string;
+    receiptNumber?: string;
     date: string;
     customerId: string;
     amount: number;
@@ -76,8 +79,9 @@ export default function CustomerStatementPage() {
     
     // Add Sales Invoices (Debit)
     sales
-      .filter(s => s.customerId === selectedCustomerId)
+      .filter(s => s.customerId === selectedCustomerId && s.status === 'approved')
       .forEach(sale => {
+        // Add the invoice total as a debit
         allTransactions.push({
             date: new Date(sale.date),
             sortDate: new Date(sale.date),
@@ -85,6 +89,17 @@ export default function CustomerStatementPage() {
             debit: sale.total,
             credit: 0,
         });
+        
+        // Add the initial payment on the invoice as a credit
+        if (sale.paidAmount && sale.paidAmount > 0) {
+           allTransactions.push({
+                date: new Date(sale.date),
+                sortDate: new Date(sale.date), // Use same date for sorting
+                description: `دفعة مقدمة على فاتورة ${sale.invoiceNumber || sale.id.slice(-6).toUpperCase()}`,
+                debit: 0,
+                credit: sale.paidAmount,
+            });
+        }
     });
     
     // Add Sales Returns (Credit)
@@ -94,20 +109,20 @@ export default function CustomerStatementPage() {
             allTransactions.push({
                 date: new Date(sr.date),
                 sortDate: new Date(sr.date),
-                description: `مرتجع مبيعات رقم ${sr.id.slice(-6).toUpperCase()}`,
+                description: `مرتجع مبيعات رقم ${sr.receiptNumber || sr.id.slice(-6).toUpperCase()}`,
                 debit: 0,
                 credit: sr.total,
             });
         });
 
-    // Add Customer Payments (Credit)
+    // Add separate Customer Payments (Credit)
     payments
       .filter(p => p.customerId === selectedCustomerId)
       .forEach(payment => {
           allTransactions.push({
               date: new Date(payment.date),
               sortDate: new Date(payment.date),
-              description: `دفعة مستلمة ${payment.notes ? `(${payment.notes})` : ''}`,
+              description: `سند قبض رقم ${payment.receiptNumber || payment.id.slice(-6).toUpperCase()} ${payment.notes ? `(${payment.notes})` : ''}`,
               debit: 0,
               credit: payment.amount,
           });
