@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState } from "react";
@@ -82,9 +83,9 @@ const UserForm = ({ user, onSave, onClose, warehouses, roles }: { user?: User, o
         </div>
         <div className="grid grid-cols-4 items-center gap-4">
           <Label htmlFor="user-loginName" className="text-right">
-            اسم الدخول
+            البريد الإلكتروني
           </Label>
-          <Input id="user-loginName" value={formData.loginName} onChange={e => setFormData({...formData, loginName: e.target.value})} className="col-span-3" />
+          <Input id="user-loginName" type="email" value={formData.loginName} onChange={e => setFormData({...formData, loginName: e.target.value})} className="col-span-3" />
         </div>
          <div className="grid grid-cols-4 items-center gap-4">
           <Label htmlFor="user-password" className="text-right">
@@ -94,11 +95,11 @@ const UserForm = ({ user, onSave, onClose, warehouses, roles }: { user?: User, o
         </div>
         <div className="grid grid-cols-4 items-center gap-4">
           <Label htmlFor="user-role" className="text-right">
-            الدور
+            الوظيفة
           </Label>
           <Select value={formData.role} onValueChange={(value) => setFormData({...formData, role: value})}>
             <SelectTrigger className="col-span-3">
-              <SelectValue placeholder="اختر دورًا" />
+              <SelectValue placeholder="اختر وظيفة" />
             </SelectTrigger>
             <SelectContent>
               {Object.keys(roles).map(role => (
@@ -155,8 +156,7 @@ export default function UsersPage() {
             }
             
             // 1. Create user in Firebase Auth
-            const email = `${user.loginName}@smart-accountant.com`;
-            const userCredential = await createUserWithEmailAndPassword(auth, email, user.password);
+            const userCredential = await createUserWithEmailAndPassword(auth, user.loginName, user.password);
             
             // 2. Add user to Realtime Database
             const userDataForDb = { ...user, uid: userCredential.user.uid };
@@ -167,7 +167,7 @@ export default function UsersPage() {
         }
     } catch(error: any) {
         if (error.code === 'auth/email-already-in-use') {
-            toast({ variant: "destructive", title: "خطأ", description: "اسم الدخول هذا مستخدم بالفعل." });
+            toast({ variant: "destructive", title: "خطأ", description: "البريد الإلكتروني هذا مستخدم بالفعل." });
         } else if (error.code === 'auth/weak-password') {
             toast({ variant: "destructive", title: "خطأ", description: "كلمة المرور ضعيفة جداً. يجب أن تكون 6 أحرف على الأقل." });
         } else {
@@ -219,7 +219,7 @@ export default function UsersPage() {
           <CardHeader>
             <CardTitle>المستخدمون</CardTitle>
             <CardDescription>
-              إدارة المستخدمين وأدوارهم في النظام.
+              إدارة المستخدمين ووظائفهم في النظام.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -232,8 +232,8 @@ export default function UsersPage() {
                 <TableHeader>
                     <TableRow>
                     <TableHead>المستخدم</TableHead>
-                    <TableHead>اسم الدخول</TableHead>
-                    <TableHead className="text-center">الدور</TableHead>
+                    <TableHead>البريد الإلكتروني</TableHead>
+                    <TableHead className="text-center">الوظيفة</TableHead>
                     <TableHead>المخزن</TableHead>
                     <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
                     </TableRow>

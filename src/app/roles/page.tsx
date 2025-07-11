@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -10,6 +11,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
 import {
   Table,
@@ -27,9 +29,9 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, History } from "lucide-react";
+import { Loader2, History, PlusCircle, Trash2 } from "lucide-react";
 import { database } from "@/lib/firebase";
-import { ref, set, onValue } from "firebase/database";
+import { ref, set, onValue, remove } from "firebase/database";
 import { permissionsConfig, PermissionModule, PermissionAction, getModuleGroupLabel, initialRoles } from "@/contexts/permissions-context";
 import {
   AlertDialog,
@@ -42,27 +44,68 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { AddEntityDialog } from '@/components/add-entity-dialog';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
-type Role = string;
+type Job = string;
 type ModuleKey = keyof typeof permissionsConfig;
+
+const AddJobForm = ({ onSave, onClose, existingJobs }: { onSave: (name: string, copyFrom: string) => void, onClose: () => void, existingJobs: string[] }) => {
+    const [jobName, setJobName] = useState("");
+    const [copyFrom, setCopyFrom] = useState("");
+
+    const handleSubmit = () => {
+        if (!jobName || !copyFrom) {
+            alert("يرجى إدخال اسم الوظيفة واختيار وظيفة لنسخ الصلاحيات منها.");
+            return;
+        }
+        onSave(jobName, copyFrom);
+        onClose();
+    };
+
+    return (
+        <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="job-name" className="text-right">اسم الوظيفة</Label>
+                <Input id="job-name" value={jobName} onChange={e => setJobName(e.target.value)} className="col-span-3" required />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="copy-from" className="text-right">نسخ الصلاحيات من</Label>
+                <Select value={copyFrom} onValueChange={setCopyFrom} required>
+                    <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="اختر وظيفة" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {existingJobs.map(job => <SelectItem key={job} value={job}>{job}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+            </div>
+             <div className="flex justify-end mt-4">
+                <Button onClick={handleSubmit}>إنشاء وظيفة</Button>
+            </div>
+        </div>
+    )
+}
 
 
 export default function RolesPage() {
-  const [roles, setRoles] = useState<any>(null);
+  const [jobs, setJobs] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    const rolesRef = ref(database, 'roles');
-    const unsubscribe = onValue(rolesRef, (snapshot) => {
+    const jobsRef = ref(database, 'roles');
+    const unsubscribe = onValue(jobsRef, (snapshot) => {
         if (snapshot.exists()) {
-            setRoles(snapshot.val());
+            setJobs(snapshot.val());
         } else {
             // If roles don't exist in DB, set them from initialRoles
-            set(rolesRef, initialRoles);
-            setRoles(initialRoles);
+            set(jobsRef, initialRoles);
+            setJobs(initialRoles);
         }
         setLoading(false);
     });
@@ -71,17 +114,17 @@ export default function RolesPage() {
   }, []);
 
   const handlePermissionChange = (
-    role: Role,
+    job: Job,
     module: ModuleKey,
     action: PermissionAction,
     checked: boolean
   ) => {
-    setRoles((prevRoles: any) => ({
-      ...prevRoles,
-      [role]: {
-        ...prevRoles[role],
+    setJobs((prevJobs: any) => ({
+      ...prevJobs,
+      [job]: {
+        ...prevJobs[job],
         [module]: {
-          ...prevRoles[role]?.[module],
+          ...prevJobs[job]?.[module],
           [action]: checked,
         },
       },
@@ -91,30 +134,63 @@ export default function RolesPage() {
   const handleSaveChanges = async () => {
     setIsSaving(true);
     try {
-        const rolesRef = ref(database, 'roles');
-        await set(rolesRef, roles);
-        toast({ title: "تم الحفظ بنجاح", description: "تم تحديث صلاحيات الأدوار." });
+        const jobsRef = ref(database, 'roles');
+        await set(jobsRef, jobs);
+        toast({ title: "تم الحفظ بنجاح", description: "تم تحديث صلاحيات الوظائف." });
     } catch (error) {
         toast({ variant: "destructive", title: "خطأ", description: "فشل حفظ الصلاحيات." });
-        console.error("Failed to save roles:", error);
+        console.error("Failed to save jobs:", error);
     } finally {
         setIsSaving(false);
     }
   }
+  
+  const handleAddJob = (name: string, copyFrom: string) => {
+    if (jobs && jobs[name]) {
+        toast({variant: 'destructive', title: 'خطأ', description: 'اسم الوظيفة موجود بالفعل.'});
+        return;
+    }
+    const permissionsToCopy = jobs[copyFrom];
+    setJobs((prevJobs: any) => ({
+        ...prevJobs,
+        [name]: JSON.parse(JSON.stringify(permissionsToCopy)) // Deep copy
+    }));
+    toast({title: 'تمت إضافة الوظيفة', description: 'لا تنس حفظ التغييرات.'});
+  }
+  
+   const handleDeleteJob = async (jobName: string) => {
+    if (initialRoles[jobName as keyof typeof initialRoles]) {
+      toast({ variant: "destructive", title: "غير مسموح", description: "لا يمكن حذف الوظائف الأساسية." });
+      return;
+    }
 
-  const handleRestoreDefaults = (roleToRestore: Role) => {
-    const defaultPermissionsForRole = initialRoles[roleToRestore as keyof typeof initialRoles];
-    if (!defaultPermissionsForRole) {
-      toast({ variant: "destructive", title: "خطأ", description: "لم يتم العثور على الدور الافتراضي." });
+    if (confirm(`هل أنت متأكد من حذف وظيفة "${jobName}"؟ هذا الإجراء سيحذفها نهائياً.`)) {
+      const newJobs = { ...jobs };
+      delete newJobs[jobName];
+      setJobs(newJobs); // Update state locally
+      
+      // Also update in Firebase directly
+      const jobRef = ref(database, `roles/${jobName}`);
+      await remove(jobRef);
+
+      toast({ title: "تم الحذف", description: `تم حذف وظيفة "${jobName}".` });
+    }
+  };
+
+
+  const handleRestoreDefaults = (jobToRestore: Job) => {
+    const defaultPermissionsForJob = initialRoles[jobToRestore as keyof typeof initialRoles];
+    if (!defaultPermissionsForJob) {
+      toast({ variant: "destructive", title: "خطأ", description: "لم يتم العثور على الوظيفة الافتراضية." });
       return;
     }
     
-    setRoles((prevRoles: any) => ({
-      ...prevRoles,
-      [roleToRestore]: defaultPermissionsForRole
+    setJobs((prevJobs: any) => ({
+      ...prevJobs,
+      [jobToRestore]: defaultPermissionsForJob
     }));
 
-    toast({ title: "تم استعادة الافتراضيات", description: `تم استعادة صلاحيات دور "${roleToRestore}". اضغط على حفظ لتطبيق التغييرات.` });
+    toast({ title: "تم استعادة الافتراضيات", description: `تم استعادة صلاحيات وظيفة "${jobToRestore}". اضغط على حفظ لتطبيق التغييرات.` });
   };
 
 
@@ -138,7 +214,7 @@ export default function RolesPage() {
   }, {} as Record<string, (PermissionModule & { key: ModuleKey })[]>);
 
 
-  if (loading || !roles) {
+  if (loading || !jobs) {
       return (
         <div className="flex h-screen w-full items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin" />
@@ -148,48 +224,67 @@ export default function RolesPage() {
 
   return (
     <>
-      <PageHeader title="الأدوار والصلاحيات">
-        <Button onClick={handleSaveChanges} disabled={isSaving}>
-            {isSaving ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : null}
-            {isSaving ? "جارٍ الحفظ..." : "حفظ التغييرات"}
-        </Button>
+      <PageHeader title="الوظائف والصلاحيات">
+        <div className='flex gap-2'>
+            <AddEntityDialog
+                title="إضافة وظيفة جديدة"
+                description="أدخل اسم الوظيفة الجديدة وانسخ الصلاحيات من وظيفة موجودة."
+                triggerButton={
+                    <Button variant="outline">
+                        <PlusCircle className="ml-2 h-4 w-4" />
+                        إضافة وظيفة
+                    </Button>
+                }
+            >
+                <AddJobForm onSave={handleAddJob} onClose={() => {}} existingJobs={Object.keys(jobs)} />
+            </AddEntityDialog>
+            <Button onClick={handleSaveChanges} disabled={isSaving}>
+                {isSaving ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : null}
+                {isSaving ? "جارٍ الحفظ..." : "حفظ التغييرات"}
+            </Button>
+        </div>
       </PageHeader>
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
         <Card>
           <CardHeader>
-            <CardTitle>إدارة صلاحيات الأدوار</CardTitle>
+            <CardTitle>إدارة صلاحيات الوظائف</CardTitle>
             <CardDescription>
-              قم بتحديد الصلاحيات لكل دور في النظام على مستوى كل شاشة.
+              قم بتحديد الصلاحيات لكل وظيفة في النظام على مستوى كل شاشة.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Accordion type="single" collapsible className="w-full">
-              {Object.keys(roles).map((role) => (
-                <AccordionItem value={role} key={role}>
+              {Object.keys(jobs).map((job) => (
+                <AccordionItem value={job} key={job}>
                     <div className="flex w-full items-center justify-between pl-4 hover:bg-muted/50 rounded-t-md">
-                        <AccordionTrigger className="flex-1 py-0 text-lg font-bold">
-                            {role}
+                        <AccordionTrigger className="flex-1 py-0 text-lg font-bold hover:no-underline">
+                            {job}
                         </AccordionTrigger>
-                        <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                    <History className="ml-2 h-4 w-4" />
-                                    استعادة الافتراضي
-                                </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                                <AlertDialogHeader>
-                                    <AlertDialogTitle>هل أنت متأكد من استعادة الافتراضيات؟</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                    سيؤدي هذا إلى إعادة تعيين جميع صلاحيات دور "{role}" إلى الإعدادات الافتراضية الموصى بها. سيتم تطبيق التغييرات بعد الضغط على زر "حفظ التغييرات" الرئيسي.
-                                    </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                    <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleRestoreDefaults(role)}>نعم، قم بالاستعادة</AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
+                        <div className='flex items-center gap-2'>
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="sm" disabled={!initialRoles[job as keyof typeof initialRoles]}>
+                                        <History className="ml-2 h-4 w-4" />
+                                        استعادة الافتراضي
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>هل أنت متأكد من استعادة الافتراضيات؟</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                        سيؤدي هذا إلى إعادة تعيين جميع صلاحيات وظيفة "{job}" إلى الإعدادات الافتراضية الموصى بها. سيتم تطبيق التغييرات بعد الضغط على زر "حفظ التغييرات" الرئيسي.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleRestoreDefaults(job)}>نعم، قم بالاستعادة</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" disabled={!!initialRoles[job as keyof typeof initialRoles]} onClick={() => handleDeleteJob(job)}>
+                                <Trash2 className="h-4 w-4"/>
+                            </Button>
+                        </div>
                     </div>
 
                   <AccordionContent>
@@ -213,7 +308,7 @@ export default function RolesPage() {
                                     </TableRow>
                                     {modules.map((module) => {
                                         const moduleActions = module.actions;
-                                        const rolePermissions = roles[role]?.[module.key];
+                                        const jobPermissions = jobs[job]?.[module.key];
 
                                         return (
                                           <TableRow key={module.key}>
@@ -223,8 +318,8 @@ export default function RolesPage() {
                                                 <TableCell key={actionKey} className="text-center">
                                                   {moduleActions.includes(actionKey) ? (
                                                     <Checkbox
-                                                      checked={rolePermissions?.[actionKey] || false}
-                                                      onCheckedChange={(checked) => handlePermissionChange(role, module.key, actionKey, !!checked)}
+                                                      checked={jobPermissions?.[actionKey] || false}
+                                                      onCheckedChange={(checked) => handlePermissionChange(job, module.key, actionKey, !!checked)}
                                                     />
                                                   ) : (
                                                     <span className="text-muted-foreground">-</span>
