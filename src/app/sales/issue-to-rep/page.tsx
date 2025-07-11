@@ -30,10 +30,10 @@ interface Item {
     unit: string;
 }
 
-interface SalesRep {
+interface User {
     id: string;
     name: string;
-    linkedWarehouseId: string;
+    warehouse: string;
     isSalesRep?: boolean;
 }
 
@@ -93,7 +93,7 @@ export default function IssueToRepPage() {
         const rep = reps.find(r => r.id === selectedRepId);
         if (!rep) return;
         
-        const warehouse = warehouses.find(w => w.id === rep.linkedWarehouseId);
+        const warehouse = warehouses.find(w => w.id === rep.warehouse);
         if (!warehouse) {
              toast({ variant: "destructive", title: "خطأ", description: "المخزن المرتبط بالمندوب غير موجود." });
             return;
@@ -102,7 +102,7 @@ export default function IssueToRepPage() {
         const nextId = await getNextId('issueToRep');
         const record = {
             salesRepId: selectedRepId,
-            warehouseId: rep.linkedWarehouseId,
+            warehouseId: rep.warehouse,
             date: new Date().toISOString(),
             items: items.map(({id, name, qty}) => ({id, name, qty})),
             notes,
@@ -146,7 +146,7 @@ export default function IssueToRepPage() {
                         </div>
                          <div className="space-y-2">
                             <Label>من مخزن</Label>
-                            <Input value={warehouses.find(w => w.id === reps.find(r => r.id === selectedRepId)?.linkedWarehouseId)?.name || 'اختر مندوبًا أولاً'} readOnly disabled />
+                            <Input value={warehouses.find(w => w.id === reps.find(r => r.id === selectedRepId)?.warehouse)?.name || 'اختر مندوبًا أولاً'} readOnly disabled />
                          </div>
                     </div>
                     

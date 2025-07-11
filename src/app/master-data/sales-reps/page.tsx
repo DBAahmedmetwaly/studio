@@ -28,7 +28,7 @@ interface User {
   id?: string;
   name: string;
   phone: string;
-  linkedWarehouseId: string;
+  warehouse: string;
   isSalesRep?: boolean;
 }
 
@@ -83,7 +83,7 @@ export default function SalesRepsPage() {
                                 <TableRow key={rep.id}>
                                     <TableCell className="font-medium">{rep.name}</TableCell>
                                     <TableCell>{rep.phone}</TableCell>
-                                    <TableCell>{getWarehouseName(rep.linkedWarehouseId)}</TableCell>
+                                    <TableCell>{getWarehouseName(rep.warehouse)}</TableCell>
                                 </TableRow>
                             ))}
                              {salesReps.length === 0 && (

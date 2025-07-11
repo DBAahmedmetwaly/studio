@@ -30,10 +30,11 @@ interface Item {
     unit: string;
 }
 
-interface SalesRep {
+interface User {
     id: string;
     name: string;
-    linkedWarehouseId: string;
+    warehouse: string;
+    isSalesRep?: boolean;
 }
 
 export default function ReturnFromRepPage() {
@@ -45,10 +46,11 @@ export default function ReturnFromRepPage() {
     const [notes, setNotes] = useState<string>("");
     
     const { data: availableItems, loading: loadingItems } = useFirebase<Item>('items');
-    const { data: reps, loading: loadingReps } = useFirebase<SalesRep>('salesReps');
+    const { data: users, loading: loadingUsers } = useFirebase<User>('users');
     const { add: addReturn } = useFirebase("stockReturnsFromReps");
 
-    const loading = loadingItems || loadingReps;
+    const reps = users.filter(u => u.isSalesRep);
+    const loading = loadingItems || loadingUsers;
 
     const itemsForCombobox = useMemo(() => {
         return availableItems.map(item => ({ value: item.id, label: item.name }));
@@ -87,7 +89,7 @@ export default function ReturnFromRepPage() {
 
         const record = {
             salesRepId: selectedRep,
-            warehouseId: rep.linkedWarehouseId, // From rep's master data
+            warehouseId: rep.warehouse, // From rep's master data
             date: new Date().toISOString(),
             items: items.map(({id, name, qty}) => ({id, name, qty})),
             notes,
@@ -130,7 +132,7 @@ export default function ReturnFromRepPage() {
                         </div>
                          <div className="space-y-2">
                             <Label>إلى مخزن</Label>
-                            <Input value={reps.find(r => r.id === selectedRep)?.name || 'اختر مندوبًا أولاً'} readOnly disabled />
+                            <Input value={users.find(u => u.id === selectedRep)?.name || 'اختر مندوبًا أولاً'} readOnly disabled />
                          </div>
                     </div>
                     

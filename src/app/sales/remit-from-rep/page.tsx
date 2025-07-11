@@ -13,9 +13,10 @@ import useFirebase from "@/hooks/use-firebase";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from 'next/navigation';
 
-interface SalesRep {
+interface User {
     id: string;
     name: string;
+    isSalesRep?: boolean;
 }
 
 interface CashAccount {
@@ -31,11 +32,12 @@ export default function RemitFromRepPage() {
     const [toAccountId, setToAccountId] = useState<string>("");
     const [notes, setNotes] = useState("");
     
-    const { data: reps, loading: loadingReps } = useFirebase<SalesRep>('salesReps');
+    const { data: users, loading: loadingUsers } = useFirebase<User>('users');
     const { data: cashAccounts, loading: loadingAccounts } = useFirebase<CashAccount>('cashAccounts');
     const { add: addRemittance } = useFirebase("repRemittances");
 
-    const loading = loadingReps || loadingAccounts;
+    const reps = users.filter(u => u.isSalesRep);
+    const loading = loadingUsers || loadingAccounts;
 
     const handleConfirm = async () => {
         if (!selectedRep || amount <= 0 || !toAccountId) {
