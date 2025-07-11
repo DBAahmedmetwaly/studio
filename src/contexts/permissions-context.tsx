@@ -153,10 +153,6 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
             set(rolesRef, initialRoles);
             rolesData = initialRoles;
         }
-        
-        // Always ensure the 'مسؤول' role has full permissions from the code definition.
-        rolesData['مسؤول'] = generateAdminPermissions();
-        
         setAllRoles(rolesData);
         setLoading(false);
     });
@@ -170,8 +166,16 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const can = useMemo(() => (action: Action, module: Module | string): boolean => {
     if (!permissions) return false;
     
-    // The 'مسؤول' role can do everything, always.
-    if (role === 'مسؤول') return true;
+    // The 'مسؤول' role can do everything if their permissions are somehow corrupted.
+    // However, we now allow them to be modified from the UI.
+    // The main check is just for existence of permissions.
+    if (role === 'مسؤول') {
+        const m = module as Module;
+        if (!permissions[m] || !(action in permissions[m])) {
+            return true; // Failsafe for admin if a new module is added but not in their DB record
+        }
+        return permissions[m][action as keyof typeof permissions[m]];
+    }
     
     const m = module as Module;
     if (!permissions[m] || !(action in permissions[m])) {

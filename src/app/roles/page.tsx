@@ -169,28 +169,26 @@ export default function RolesPage() {
                   <AccordionTrigger>
                     <div className="flex w-full items-center justify-between">
                       <span className="font-bold text-lg">{role}</span>
-                       {role !== "مسؤول" && (
-                         <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
-                                <History className="ml-2 h-4 w-4" />
-                                استعادة الافتراضي
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>هل أنت متأكد من استعادة الافتراضيات؟</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  سيؤدي هذا إلى إعادة تعيين جميع صلاحيات دور "{role}" إلى الإعدادات الافتراضية الموصى بها. سيتم تطبيق التغييرات بعد الضغط على زر "حفظ التغييرات" الرئيسي.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleRestoreDefaults(role)}>نعم، قم بالاستعادة</AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                       )}
+                       <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
+                              <History className="ml-2 h-4 w-4" />
+                              استعادة الافتراضي
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>هل أنت متأكد من استعادة الافتراضيات؟</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                سيؤدي هذا إلى إعادة تعيين جميع صلاحيات دور "{role}" إلى الإعدادات الافتراضية الموصى بها. سيتم تطبيق التغييرات بعد الضغط على زر "حفظ التغييرات" الرئيسي.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleRestoreDefaults(role)}>نعم، قم بالاستعادة</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                     </div>
                   </AccordionTrigger>
                   <AccordionContent>
@@ -226,7 +224,6 @@ export default function RolesPage() {
                                                     <Checkbox
                                                       checked={rolePermissions?.[actionKey] || false}
                                                       onCheckedChange={(checked) => handlePermissionChange(role, module.key, actionKey, !!checked)}
-                                                      disabled={role === "مسؤول"}
                                                     />
                                                   ) : (
                                                     <span className="text-muted-foreground">-</span>
