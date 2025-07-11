@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -257,7 +255,7 @@ export default function RolesPage() {
               {Object.keys(jobs).map((job) => (
                 <AccordionItem value={job} key={job}>
                     <div className="flex w-full items-center justify-between pl-4 hover:bg-muted/50 rounded-t-md">
-                        <AccordionTrigger className="flex-1 py-0 text-lg font-bold hover:no-underline">
+                        <AccordionTrigger className="flex-1 py-4 text-lg font-bold hover:no-underline">
                             {job}
                         </AccordionTrigger>
                         <div className='flex items-center gap-2'>

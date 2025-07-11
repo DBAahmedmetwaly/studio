@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { createContext, useContext, useMemo, useState, useEffect } from 'react';
@@ -27,7 +26,7 @@ export const permissionsConfig = {
     masterData_suppliers: { label: "الموردون", group: "masterData", actions: ["view", "add", "edit", "delete"] },
     masterData_partners: { label: "الشركاء", group: "masterData", actions: ["view", "add", "edit", "delete"] },
     masterData_cashAccounts: { label: "الخزائن والبنوك", group: "masterData", actions: ["view", "add", "edit", "delete"] },
-    masterData_salesReps: { label: "مناديب المبيعات", group: "masterData", actions: ["view", "add", "edit", "delete"] },
+    masterData_salesReps: { label: "مناديب المبيعات", group: "masterData", actions: ["view"] },
 
     inventory_stockIn: { label: "استلام مخزون", group: "inventory", actions: ["view", "add", "delete", "print"] },
     inventory_stockOut: { label: "صرف مخزون", group: "inventory", actions: ["view", "add", "delete", "print"] },
@@ -130,7 +129,7 @@ type Module = keyof typeof permissionsConfig;
 type Action = PermissionAction;
 
 interface PermissionsContextType {
-  role: Role;
+  role: Role | null;
   permissions: any;
   can: (action: Action, module: Module | string) => boolean;
 }
@@ -160,21 +159,15 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
     return () => unsubscribe();
   }, []);
 
-  const role = user?.role as Role || "محاسب"; // Fallback role
-  const permissions = allRoles ? allRoles[role] : null;
+  const role = user?.role as Role | null;
+  const permissions = allRoles && role ? allRoles[role] : null;
 
   const can = useMemo(() => (action: Action, module: Module | string): boolean => {
     if (!permissions) return false;
     
     // The 'مسؤول' role can do everything if their permissions are somehow corrupted.
-    // However, we now allow them to be modified from the UI.
-    // The main check is just for existence of permissions.
     if (role === 'مسؤول') {
-        const m = module as Module;
-        if (!permissions[m] || !(action in permissions[m])) {
-            return true; // Failsafe for admin if a new module is added but not in their DB record
-        }
-        return permissions[m][action as keyof typeof permissions[m]];
+        return true; 
     }
     
     const m = module as Module;
