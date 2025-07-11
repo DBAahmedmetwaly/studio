@@ -147,7 +147,8 @@ export default function UsersPage() {
   const { can } = usePermissions();
   const moduleName = 'settings_users';
 
-  const roleNames = rolesData && typeof rolesData === 'object' ? Object.keys(rolesData) : [];
+  // Ensure roles are always read from the object keys if it's an object from Firebase
+  const roleNames = rolesData && typeof rolesData === 'object' && !Array.isArray(rolesData) ? Object.keys(rolesData) : [];
   const combinedLoading = loadingUsers || loadingWarehouses || loadingRoles;
 
 
@@ -285,7 +286,7 @@ export default function UsersPage() {
                         <TableCell className="text-center">
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                            <Button aria-haspopup="true" size="icon" variant="ghost">
+                            <Button aria-haspopup="true" size="icon" variant="ghost" disabled={combinedLoading}>
                                 <MoreHorizontal className="h-4 w-4" />
                                 <span className="sr-only">تبديل القائمة</span>
                             </Button>
