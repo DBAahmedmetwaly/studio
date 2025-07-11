@@ -26,66 +26,13 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import useFirebase from "@/hooks/use-firebase";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2 } from "lucide-react";
+import { database } from "@/lib/firebase";
+import { ref, set } from "firebase/database";
 
-const initialRoles = {
-  مسؤول: {
-    dashboard: { view: true },
-    masterData: { view: true, add: true, edit: true, delete: true },
-    inventory: { view: true, add: true, edit: true, delete: true },
-    sales: { view: true, add: true, edit: true, delete: true, print: true },
-    purchases: { view: true, add: true, edit: true, delete: true, print: true },
-    accounting: { view: true, add: true, edit: true, delete: true },
-    hr: { view: true, add: true, edit: true, delete: true },
-    reports: { view: true, generate: true },
-    analytics: { view: true },
-    users: { view: true, add: true, edit: true, delete: true },
-    roles: { view: true, edit: true },
-    settings: { view: true, edit: true },
-  },
-  محاسب: {
-    dashboard: { view: true },
-    masterData: { view: true, add: true, edit: true, delete: false },
-    inventory: { view: true, add: false, edit: false, delete: false },
-    sales: { view: true, add: true, edit: true, delete: false, print: true },
-    purchases: { view: true, add: true, edit: true, delete: false, print: true },
-    accounting: { view: true, add: true, edit: true, delete: true },
-    hr: { view: false, add: false, edit: false, delete: false },
-    reports: { view: true, generate: true },
-    analytics: { view: true },
-    users: { view: false, add: false, edit: false, delete: false },
-    roles: { view: false, edit: false },
-    settings: { view: false, edit: false },
-  },
-  "أمين مخزن": {
-    dashboard: { view: true },
-    masterData: { view: true, add: false, edit: false, delete: false },
-    inventory: { view: true, add: true, edit: true, delete: true },
-    sales: { view: false, add: false, edit: false, delete: false, print: false },
-    purchases: { view: false, add: false, edit: false, delete: false, print: false },
-    accounting: { view: false, add: false, edit: false, delete: false },
-    hr: { view: false, add: false, edit: false, delete: false },
-    reports: { view: true, generate: false },
-    analytics: { view: false },
-    users: { view: false, add: false, edit: false, delete: false },
-    roles: { view: false, edit: false },
-    settings: { view: false, edit: false },
-  },
-  "أمين صندوق": {
-    dashboard: { view: true },
-    masterData: { view: true, add: false, edit: false, delete: false },
-    inventory: { view: false, add: false, edit: false, delete: false },
-    sales: { view: true, add: true, edit: false, delete: false, print: true },
-    purchases: { view: true, add: true, edit: false, delete: false, print: true },
-    accounting: { view: true, add: true, edit: false, delete: false },
-    hr: { view: false, add: false, edit: false, delete: false },
-    reports: { view: true, generate: false },
-    analytics: { view: true },
-    users: { view: false, add: false, edit: false, delete: false },
-    roles: { view: false, edit: false },
-    settings: { view: false, edit: false },
-  },
-};
 
 const permissionsMap = {
   dashboard: { label: "لوحة التحكم", actions: { view: "عرض" } },
@@ -96,18 +43,33 @@ const permissionsMap = {
   accounting: { label: "المحاسبة", actions: { view: "عرض", add: "إضافة", edit: "تعديل", delete: "حذف" } },
   hr: { label: "الموارد البشرية", actions: { view: "عرض", add: "إضافة", edit: "تعديل", delete: "حذف" } },
   reports: { label: "التقارير", actions: { view: "عرض", generate: "إنشاء" } },
-  analytics: { label: "التقارير الرسومية", actions: { view: "عرض" } },
+  analytics: { label: "التحليلات", actions: { view: "عرض" } },
   users: { label: "المستخدمون", actions: { view: "عرض", add: "إضافة", edit: "تعديل", delete: "حذف" } },
   roles: { label: "الأدوار والصلاحيات", actions: { view: "عرض", edit: "تعديل" } },
   settings: { label: "الإعدادات", actions: { view: "عرض", edit: "تعديل" } },
 };
 
-type Role = keyof typeof initialRoles;
-type Module = keyof (typeof initialRoles)[Role];
-type Action = keyof (typeof initialRoles)[Role][Module];
+type Role = string;
+type Module = keyof typeof permissionsMap;
+type Action = "view" | "add" | "edit" | "delete" | "print" | "generate";
 
 export default function RolesPage() {
-  const [roles, setRoles] = useState(initialRoles);
+  const { data: rolesData, loading } = useFirebase<any>('roles');
+  const [roles, setRoles] = useState<any>(null);
+  const { toast } = useToast();
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    // Convert array from useFirebase to object for easier manipulation
+    if (rolesData.length > 0) {
+        const rolesObject = rolesData.reduce((acc, role) => {
+            acc[role.id] = role;
+            delete acc[role.id].id;
+            return acc;
+        }, {});
+        setRoles(rolesObject);
+    }
+  }, [rolesData]);
 
   const handlePermissionChange = (
     role: Role,
@@ -115,7 +77,7 @@ export default function RolesPage() {
     action: Action,
     checked: boolean
   ) => {
-    setRoles((prevRoles) => ({
+    setRoles((prevRoles: any) => ({
       ...prevRoles,
       [role]: {
         ...prevRoles[role],
@@ -127,10 +89,38 @@ export default function RolesPage() {
     }));
   };
 
+  const handleSaveChanges = async () => {
+    setIsSaving(true);
+    try {
+        const rolesRef = ref(database, 'roles');
+        await set(rolesRef, roles);
+        toast({ title: "تم الحفظ بنجاح", description: "تم تحديث صلاحيات الأدوار." });
+    } catch (error) {
+        toast({ variant: "destructive", title: "خطأ", description: "فشل حفظ الصلاحيات." });
+        console.error("Failed to save roles:", error);
+    } finally {
+        setIsSaving(false);
+    }
+  }
+
+  const allPossibleActions: Action[] = ["view", "add", "edit", "delete", "print", "generate"];
+
+
+  if (loading || !roles) {
+      return (
+        <div className="flex h-screen w-full items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      )
+  }
+
   return (
     <>
       <PageHeader title="الأدوار والصلاحيات">
-        <Button>حفظ التغييرات</Button>
+        <Button onClick={handleSaveChanges} disabled={isSaving}>
+            {isSaving ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : null}
+            {isSaving ? "جارٍ الحفظ..." : "حفظ التغييرات"}
+        </Button>
       </PageHeader>
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
         <Card>
@@ -147,7 +137,6 @@ export default function RolesPage() {
                   <AccordionTrigger>
                     <div className="flex items-center gap-4">
                       <span className="font-bold text-lg">{role}</span>
-                      <Badge variant="secondary">{role === "مسؤول" ? "صلاحيات كاملة" : "صلاحيات مخصصة"}</Badge>
                     </div>
                   </AccordionTrigger>
                   <AccordionContent>
@@ -156,32 +145,34 @@ export default function RolesPage() {
                         <TableHeader>
                           <TableRow>
                             <TableHead>الوحدة</TableHead>
-                            {Object.keys(permissionsMap.masterData.actions).map(action => (
-                               <TableHead key={action} className="text-center">{(permissionsMap.masterData.actions as any)[action]}</TableHead>
+                            {allPossibleActions.map(action => (
+                               <TableHead key={action} className="text-center">{(permissionsMap.masterData.actions as any)[action] || action}</TableHead>
                             ))}
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {Object.keys(permissionsMap).map((moduleKey) => {
                             const module = moduleKey as Module;
-                            const moduleInfo = permissionsMap[module as keyof typeof permissionsMap];
+                            const moduleInfo = permissionsMap[module];
                             const moduleActions = moduleInfo.actions as Record<string, string>;
-                            const rolePermissions = roles[role as Role][module];
+                            const rolePermissions = roles[role][module];
 
                             return (
                               <TableRow key={module}>
                                 <TableCell className="font-medium">{moduleInfo.label}</TableCell>
-                                {Object.keys(permissionsMap.masterData.actions).map((actionKey) => {
+                                {allPossibleActions.map((actionKey) => {
                                   const action = actionKey as Action;
                                   return(
                                     <TableCell key={action} className="text-center">
-                                      {rolePermissions && action in moduleActions ? (
+                                      {action in moduleActions ? (
                                         <Checkbox
-                                          checked={rolePermissions[action]}
-                                          onCheckedChange={(checked) => handlePermissionChange(role as Role, module, action, !!checked)}
+                                          checked={rolePermissions?.[action] || false}
+                                          onCheckedChange={(checked) => handlePermissionChange(role, module, action, !!checked)}
                                           disabled={role === "مسؤول"}
                                         />
-                                      ) : null}
+                                      ) : (
+                                        <span className="text-muted-foreground">-</span>
+                                      )}
                                     </TableCell>
                                   )
                                 })}

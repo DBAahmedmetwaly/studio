@@ -1,12 +1,16 @@
 
 "use client";
 
-import React, { createContext, useContext, useMemo } from 'react';
+import React, { createContext, useContext, useMemo, useState, useEffect } from 'react';
+import useFirebase from '@/hooks/use-firebase';
+import { database } from '@/lib/firebase';
+import { ref, onValue, set } from 'firebase/database';
+import { Loader2 } from 'lucide-react';
 
 // This is a simplified version. In a real app, you'd fetch this from your auth provider/backend.
 const MOCK_CURRENT_USER_ROLE: Role = 'مسؤول'; 
 
-const allRoles = {
+const initialRoles = {
   مسؤول: {
     dashboard: { view: true },
     masterData: { view: true, add: true, edit: true, delete: true },
@@ -65,30 +69,58 @@ const allRoles = {
   },
 };
 
-type Role = keyof typeof allRoles;
-type Module = keyof (typeof allRoles)[Role];
-type Action = keyof (typeof allRoles)[Role][Module];
+type Role = keyof typeof initialRoles;
+type Module = keyof (typeof initialRoles)[Role];
+type Action = keyof (typeof initialRoles)[Role][Module];
 
 interface PermissionsContextType {
   role: Role;
-  permissions: (typeof allRoles)[Role];
+  permissions: (typeof initialRoles)[Role];
   can: (action: Action, module: Module | string) => boolean;
 }
 
 const PermissionsContext = createContext<PermissionsContextType | undefined>(undefined);
 
 export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [allRoles, setAllRoles] = useState<any | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const rolesRef = ref(database, 'roles');
+    const unsubscribe = onValue(rolesRef, (snapshot) => {
+        if (snapshot.exists()) {
+            setAllRoles(snapshot.val());
+        } else {
+            // If roles don't exist in DB, set them from initialRoles
+            set(rolesRef, initialRoles);
+            setAllRoles(initialRoles);
+        }
+        setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   const role = MOCK_CURRENT_USER_ROLE;
-  const permissions = allRoles[role];
+  const permissions = allRoles ? allRoles[role] : null;
 
   const can = useMemo(() => (action: Action, module: Module | string): boolean => {
+    if (!permissions) return false;
     const m = module as Module;
     if (!permissions[m] || !(action in permissions[m])) {
-        // Fallback for modules that might not be in the list for a specific role
         return false;
     }
     return permissions[m][action as keyof typeof permissions[m]] || false;
   }, [permissions]);
+
+  if (loading || !permissions) {
+    return (
+        <div className="flex h-screen w-full items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <p className="mr-2">جارٍ تحميل الصلاحيات...</p>
+        </div>
+    )
+  }
 
   const value = { role, permissions, can };
 
