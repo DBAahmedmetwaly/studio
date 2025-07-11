@@ -259,7 +259,7 @@ export default function ItemsPage() {
                                                 </AddEntityDialog>
                                             )}
                                             {can('delete', moduleName) && (
-                                                <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(item.id!)}>
+                                                <DropdownMenuItem className="text-destructive" onClick={async () => await handleDelete(item.id!)}>
                                                     <Trash2 className="ml-2 h-4 w-4" />
                                                     حذف
                                                 </DropdownMenuItem>
