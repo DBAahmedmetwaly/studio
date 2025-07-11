@@ -126,15 +126,16 @@ export default function ItemsPage() {
     const { data: items, loading, add, update, remove, getNextId } = useFirebase<Item>("items");
     const { toast } = useToast();
     const { can } = usePermissions();
+    const moduleName = 'masterData_items';
 
     const handleSave = async (item: Omit<Item, 'id' | 'code'> & { id?: string, code?: string }) => {
         try {
             if (item.id) {
-                if (!can('edit', 'masterData')) return toast({ variant: "destructive", title: "غير مصرح به" });
+                if (!can('edit', moduleName)) return toast({ variant: "destructive", title: "غير مصرح به" });
                 await update(item.id, item);
                 toast({ title: "تم التحديث بنجاح" });
             } else {
-                if (!can('add', 'masterData')) return toast({ variant: "destructive", title: "غير مصرح به" });
+                if (!can('add', moduleName)) return toast({ variant: "destructive", title: "غير مصرح به" });
                 const nextId = await getNextId('item', 100000);
                  if (!nextId) {
                     toast({ variant: "destructive", title: "خطأ", description: "فشل في إنشاء كود الصنف." });
@@ -150,7 +151,7 @@ export default function ItemsPage() {
     };
 
     const handleDelete = (id: string) => {
-        if (!can('delete', 'masterData')) return toast({ variant: "destructive", title: "غير مصرح به" });
+        if (!can('delete', moduleName)) return toast({ variant: "destructive", title: "غير مصرح به" });
         if (confirm("هل أنت متأكد من حذف هذا الصنف؟")) {
             remove(id);
         }
@@ -164,7 +165,7 @@ export default function ItemsPage() {
   return (
     <>
       <PageHeader title="إدارة الأصناف">
-        {can('add', 'masterData') && (
+        {can('add', moduleName) && (
             <AddEntityDialog
             title="إضافة صنف جديد"
             description="أدخل تفاصيل الصنف الجديد هنا."
@@ -225,7 +226,7 @@ export default function ItemsPage() {
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
                                             <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                                            {can('edit', 'masterData') && (
+                                            {can('edit', moduleName) && (
                                                 <AddEntityDialog
                                                     title="تعديل الصنف"
                                                     description="قم بتحديث تفاصيل الصنف هنا."
@@ -239,7 +240,7 @@ export default function ItemsPage() {
                                                 <ItemForm item={item} onSave={handleSave} onClose={()=>{}} />
                                                 </AddEntityDialog>
                                             )}
-                                            {can('delete', 'masterData') && (
+                                            {can('delete', moduleName) && (
                                                 <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(item.id!)}>
                                                     <Trash2 className="ml-2 h-4 w-4" />
                                                     حذف

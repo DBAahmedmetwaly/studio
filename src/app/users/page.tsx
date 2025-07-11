@@ -41,6 +41,8 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import useFirebase from "@/hooks/use-firebase";
 import { useToast } from "@/hooks/use-toast";
+import { usePermissions } from "@/contexts/permissions-context";
+
 
 interface User {
   id?: string;
@@ -56,7 +58,7 @@ interface Warehouse {
   name: string;
 }
 
-const UserForm = ({ user, onSave, onClose, warehouses }: { user?: User, onSave: (data: Omit<User, 'id'> & { id?: string }) => void, onClose: () => void, warehouses: Warehouse[] }) => {
+const UserForm = ({ user, onSave, onClose, warehouses, roles }: { user?: User, onSave: (data: Omit<User, 'id'> & { id?: string }) => void, onClose: () => void, warehouses: Warehouse[], roles: any }) => {
   const [formData, setFormData] = useState(user || { name: "", loginName: "", password: "", role: "محاسب", warehouse: "" });
 
   const handleSubmit = () => {
@@ -97,10 +99,9 @@ const UserForm = ({ user, onSave, onClose, warehouses }: { user?: User, onSave: 
               <SelectValue placeholder="اختر دورًا" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="مسؤول">مسؤول</SelectItem>
-              <SelectItem value="محاسب">محاسب</SelectItem>
-              <SelectItem value="أمين مخزن">أمين مخزن</SelectItem>
-              <SelectItem value="أمين صندوق">أمين صندوق</SelectItem>
+              {Object.keys(roles).map(role => (
+                <SelectItem key={role} value={role}>{role}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -131,14 +132,19 @@ const UserForm = ({ user, onSave, onClose, warehouses }: { user?: User, onSave: 
 export default function UsersPage() {
   const { data: users, loading, add, update, remove } = useFirebase<User>('users');
   const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
+  const { data: roles, loading: loadingRoles } = useFirebase<any>('roles');
   const { toast } = useToast();
+  const { can } = usePermissions();
+  const moduleName = 'settings_users';
 
   const handleSave = async (user: Omit<User, 'id'> & { id?: string }) => {
     try {
         if (user.id) {
+            if (!can('edit', moduleName)) return toast({variant: 'destructive', title: 'غير مصرح به'});
             await update(user.id, user);
             toast({ title: "تم تحديث المستخدم بنجاح" });
         } else {
+             if (!can('add', moduleName)) return toast({variant: 'destructive', title: 'غير مصرح به'});
             await add(user);
             toast({ title: "تمت إضافة المستخدم بنجاح" });
         }
@@ -148,6 +154,7 @@ export default function UsersPage() {
   }
 
   const handleDelete = async (id: string) => {
+    if(!can('delete', moduleName)) return toast({variant: 'destructive', title: 'غير مصرح به'});
     if(confirm('هل أنت متأكد من حذف هذا المستخدم؟')) {
         try {
             await remove(id);
@@ -166,18 +173,20 @@ export default function UsersPage() {
   return (
     <>
       <PageHeader title="إدارة المستخدمين">
-        <AddEntityDialog
-          title="إضافة مستخدم جديد"
-          description="أدخل تفاصيل المستخدم الجديد وصلاحياته."
-          triggerButton={
-            <Button size="sm" className="gap-1">
-              <PlusCircle className="h-4 w-4" />
-              إضافة مستخدم
-            </Button>
-          }
-        >
-          <UserForm onSave={handleSave} onClose={()=>{}} warehouses={warehouses} />
-        </AddEntityDialog>
+        {can('add', moduleName) && (
+          <AddEntityDialog
+            title="إضافة مستخدم جديد"
+            description="أدخل تفاصيل المستخدم الجديد وصلاحياته."
+            triggerButton={
+              <Button size="sm" className="gap-1">
+                <PlusCircle className="h-4 w-4" />
+                إضافة مستخدم
+              </Button>
+            }
+          >
+            <UserForm onSave={handleSave} onClose={()=>{}} warehouses={warehouses} roles={roles} />
+          </AddEntityDialog>
+        )}
       </PageHeader>
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
         <Card>
@@ -188,7 +197,7 @@ export default function UsersPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {loading || loadingWarehouses ? (
+            {loading || loadingWarehouses || loadingRoles ? (
                  <div className="flex justify-center items-center py-10">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
@@ -231,22 +240,26 @@ export default function UsersPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                             <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                            <AddEntityDialog
-                                title="تعديل المستخدم"
-                                description="قم بتحديث تفاصيل المستخدم هنا."
-                                triggerButton={
-                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                    <Edit className="ml-2 h-4 w-4" />
-                                    تعديل
-                                </DropdownMenuItem>
-                                }
-                            >
-                            <UserForm user={user} onSave={handleSave} onClose={()=>{}} warehouses={warehouses} />
-                            </AddEntityDialog>
-                            <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(user.id!)}>
-                                <Trash2 className="ml-2 h-4 w-4" />
-                                حذف
-                            </DropdownMenuItem>
+                            {can('edit', moduleName) && (
+                              <AddEntityDialog
+                                  title="تعديل المستخدم"
+                                  description="قم بتحديث تفاصيل المستخدم هنا."
+                                  triggerButton={
+                                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                      <Edit className="ml-2 h-4 w-4" />
+                                      تعديل
+                                  </DropdownMenuItem>
+                                  }
+                              >
+                              <UserForm user={user} onSave={handleSave} onClose={()=>{}} warehouses={warehouses} roles={roles} />
+                              </AddEntityDialog>
+                            )}
+                            {can('delete', moduleName) && (
+                              <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(user.id!)}>
+                                  <Trash2 className="ml-2 h-4 w-4" />
+                                  حذف
+                              </DropdownMenuItem>
+                            )}
                             </DropdownMenuContent>
                         </DropdownMenu>
                         </TableCell>

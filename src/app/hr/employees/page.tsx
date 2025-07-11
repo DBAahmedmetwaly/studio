@@ -96,15 +96,16 @@ export default function EmployeesPage() {
     const { data: employees, loading, add, update, remove } = useFirebase<Employee>("employees");
     const { toast } = useToast();
     const { can } = usePermissions();
+    const moduleName = 'hr_employees';
 
     const handleSave = async (employee: Omit<Employee, 'id'> & { id?: string }) => {
         try {
             if (employee.id) {
-                if (!can('edit', 'hr')) return toast({ variant: "destructive", title: "غير مصرح به" });
+                if (!can('edit', moduleName)) return toast({ variant: "destructive", title: "غير مصرح به" });
                 await update(employee.id, employee);
                 toast({ title: "تم التحديث بنجاح" });
             } else {
-                if (!can('add', 'hr')) return toast({ variant: "destructive", title: "غير مصرح به" });
+                if (!can('add', moduleName)) return toast({ variant: "destructive", title: "غير مصرح به" });
                 await add(employee);
                 toast({ title: "تمت الإضافة بنجاح" });
             }
@@ -114,7 +115,7 @@ export default function EmployeesPage() {
     };
 
     const handleDelete = (id: string) => {
-        if (!can('delete', 'hr')) return toast({ variant: "destructive", title: "غير مصرح به" });
+        if (!can('delete', moduleName)) return toast({ variant: "destructive", title: "غير مصرح به" });
         if (confirm("هل أنت متأكد من حذف هذا الموظف؟")) {
             remove(id);
         }
@@ -123,7 +124,7 @@ export default function EmployeesPage() {
   return (
     <>
       <PageHeader title="إدارة الموظفين">
-        {can('add', 'hr') && (
+        {can('add', moduleName) && (
             <AddEntityDialog
             title="إضافة موظف جديد"
             description="أدخل بيانات الموظف الأساسية."
@@ -180,7 +181,7 @@ export default function EmployeesPage() {
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
                                             <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                                            {can('edit', 'hr') && (
+                                            {can('edit', moduleName) && (
                                                 <AddEntityDialog
                                                     title="تعديل بيانات الموظف"
                                                     description="قم بتحديث بيانات الموظف هنا."
@@ -194,7 +195,7 @@ export default function EmployeesPage() {
                                                     <EmployeeForm employee={employee} onSave={handleSave} onClose={()=>{}} />
                                                 </AddEntityDialog>
                                             )}
-                                            {can('delete', 'hr') && (
+                                            {can('delete', moduleName) && (
                                                 <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(employee.id!)}>
                                                     <Trash2 className="ml-2 h-4 w-4" />
                                                     حذف

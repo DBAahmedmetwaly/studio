@@ -8,74 +8,132 @@ import { ref, onValue, set } from 'firebase/database';
 import { Loader2 } from 'lucide-react';
 
 // This is a simplified version. In a real app, you'd fetch this from your auth provider/backend.
-const MOCK_CURRENT_USER_ROLE: Role = 'مسؤول'; 
+const MOCK_CURRENT_USER_ROLE = 'مسؤول'; 
+
+type RoleName = 'مسؤول' | 'محاسب' | 'أمين مخزن' | 'أمين صندوق';
+
+export type PermissionAction = "view" | "add" | "edit" | "delete" | "print" | "generate";
+
+export type PermissionModule = {
+    label: string;
+    group: string;
+    actions: PermissionAction[];
+};
+
+export const permissionsConfig = {
+    dashboard: { label: "لوحة التحكم", group: "general", actions: ["view"] },
+    
+    masterData_items: { label: "الأصناف", group: "masterData", actions: ["view", "add", "edit", "delete"] },
+    masterData_warehouses: { label: "المخازن", group: "masterData", actions: ["view", "add", "edit", "delete"] },
+    masterData_customers: { label: "العملاء", group: "masterData", actions: ["view", "add", "edit", "delete"] },
+    masterData_suppliers: { label: "الموردون", group: "masterData", actions: ["view", "add", "edit", "delete"] },
+    masterData_partners: { label: "الشركاء", group: "masterData", actions: ["view", "add", "edit", "delete"] },
+    masterData_cashAccounts: { label: "الخزائن والبنوك", group: "masterData", actions: ["view", "add", "edit", "delete"] },
+    masterData_salesReps: { label: "مناديب المبيعات", group: "masterData", actions: ["view", "add", "edit", "delete"] },
+
+    inventory_stockIn: { label: "استلام مخزون", group: "inventory", actions: ["view", "add", "delete", "print"] },
+    inventory_stockOut: { label: "صرف مخزون", group: "inventory", actions: ["view", "add", "delete", "print"] },
+    inventory_transfer: { label: "تحويل مخزون", group: "inventory", actions: ["view", "add", "delete", "print"] },
+    inventory_adjustment: { label: "تسوية المخزون", group: "inventory", actions: ["view", "add", "delete", "print"] },
+    inventory_movements: { label: "حركة المخزون", group: "inventory", actions: ["view"] },
+
+    sales_invoices: { label: "فواتير البيع", group: "sales", actions: ["view", "add", "edit", "delete", "print"] },
+    sales_returns: { label: "مرتجعات البيع", group: "sales", actions: ["view", "add", "edit", "delete", "print"] },
+    sales_issueToRep: { label: "صرف بضاعة لمندوب", group: "sales", actions: ["view", "add", "delete"] },
+    sales_returnFromRep: { label: "مرتجع بضاعة من مندوب", group: "sales", actions: ["view", "add", "delete"] },
+    sales_remitFromRep: { label: "توريد نقدية من مندوب", group: "sales", actions: ["view", "add", "delete"] },
+
+    purchases_invoices: { label: "فواتير الشراء", group: "purchases", actions: ["view", "add", "edit", "delete", "print"] },
+    purchases_returns: { label: "مرتجعات الشراء", group: "purchases", actions: ["view", "add", "edit", "delete", "print"] },
+
+    accounting_journal: { label: "قيود اليومية", group: "accounting", actions: ["view"] },
+    accounting_expenses: { label: "إدارة المصروفات", group: "accounting", actions: ["view", "add", "delete"] },
+    accounting_exceptionalIncome: { label: "الدخل الاستثنائي", group: "accounting", actions: ["view", "add", "delete"] },
+    accounting_supplierPayments: { label: "مدفوعات الموردين", group: "accounting", actions: ["view", "add", "delete"] },
+    accounting_customerPayments: { label: "مقبوضات العملاء", group: "accounting", actions: ["view", "add", "delete"] },
+    accounting_treasury: { label: "حركة الخزينة", group: "accounting", actions: ["view", "add", "delete"] },
+    accounting_aiAnalysis: { label: "تحليل مالي بالذكاء الاصطناعي", group: "accounting", actions: ["view", "generate"] },
+    
+    hr_employees: { label: "الموظفين", group: "hr", actions: ["view", "add", "edit", "delete"] },
+    hr_advances: { label: "سلف الموظفين", group: "hr", actions: ["view", "add", "delete"] },
+    hr_adjustments: { label: "المكافآت والجزاءات", group: "hr", actions: ["view", "add", "delete"] },
+    hr_payroll: { label: "احتساب الرواتب", group: "hr", actions: ["view", "generate", "print"] },
+
+    analytics: { label: "التحليلات", group: "reports", actions: ["view"] },
+    reports_financialStatements: { label: "القوائم المالية", group: "reports", actions: ["view", "print"] },
+    reports_partnerShares: { label: "حصص الشركاء", group: "reports", actions: ["view", "generate", "print"] },
+    reports_customerStatement: { label: "كشف حساب العملاء", group: "reports", actions: ["view", "generate", "print"] },
+    reports_supplierStatement: { label: "كشف حساب الموردين", group: "reports", actions: ["view", "generate", "print"] },
+    reports_itemProfitLoss: { label: "أرباح وخسائر الأصناف", group: "reports", actions: ["view", "generate", "print"] },
+
+    settings_users: { label: "المستخدمون", group: "settings", actions: ["view", "add", "edit", "delete"] },
+    settings_roles: { label: "الأدوار والصلاحيات", group: "settings", actions: ["view", "edit"] },
+    settings_general: { label: "الإعدادات العامة", group: "settings", actions: ["view", "edit"] },
+    settings_backup: { label: "النسخ الاحتياطي", group: "settings", actions: ["view", "generate"] },
+};
+
+const moduleGroupLabels: Record<string, string> = {
+    general: "عام",
+    masterData: "البيانات الرئيسية",
+    inventory: "المخزون",
+    sales: "المبيعات",
+    purchases: "المشتريات",
+    accounting: "المحاسبة",
+    hr: "الموارد البشرية",
+    reports: "التقارير والتحليلات",
+    settings: "الإعدادات",
+};
+
+export const getModuleGroupLabel = (groupKey: string) => moduleGroupLabels[groupKey] || groupKey;
+
+// Function to generate full permissions for the admin role
+const generateAdminPermissions = () => {
+    const adminPermissions: { [key: string]: { [key: string]: boolean } } = {};
+    for (const moduleKey in permissionsConfig) {
+        adminPermissions[moduleKey] = {};
+        const module = permissionsConfig[moduleKey as keyof typeof permissionsConfig];
+        for (const action of module.actions) {
+            adminPermissions[moduleKey][action] = true;
+        }
+    }
+    return adminPermissions;
+};
 
 const initialRoles = {
-  مسؤول: {
+  "مسؤول": generateAdminPermissions(),
+  "محاسب": {
     dashboard: { view: true },
-    masterData: { view: true, add: true, edit: true, delete: true },
-    inventory: { view: true, add: true, edit: true, delete: true },
-    sales: { view: true, add: true, edit: true, delete: true, print: true },
-    purchases: { view: true, add: true, edit: true, delete: true, print: true },
-    accounting: { view: true, add: true, edit: true, delete: true },
-    hr: { view: true, add: true, edit: true, delete: true },
-    reports: { view: true, generate: true },
-    analytics: { view: true },
-    users: { view: true, add: true, edit: true, delete: true },
-    roles: { view: true, edit: true },
-    settings: { view: true, edit: true },
-  },
-  محاسب: {
-    dashboard: { view: true },
-    masterData: { view: true, add: true, edit: true, delete: false },
-    inventory: { view: true, add: false, edit: false, delete: false },
-    sales: { view: true, add: true, edit: true, delete: false, print: true },
-    purchases: { view: true, add: true, edit: true, delete: false, print: true },
-    accounting: { view: true, add: true, edit: true, delete: true },
-    hr: { view: false, add: false, edit: false, delete: false },
-    reports: { view: true, generate: true },
-    analytics: { view: true },
-    users: { view: false, add: false, edit: false, delete: false },
-    roles: { view: false, edit: false },
-    settings: { view: false, edit: false },
+    masterData_items: { view: true, add: true, edit: true, delete: false },
+    sales_invoices: { view: true, add: true, edit: true, delete: false, print: true },
+    purchases_invoices: { view: true, add: true, edit: true, delete: false, print: true },
+    accounting_journal: { view: true },
+    accounting_expenses: { view: true, add: true, edit: false, delete: false },
+    reports_customerStatement: { view: true, generate: true, print: true },
   },
   "أمين مخزن": {
     dashboard: { view: true },
-    masterData: { view: true, add: false, edit: false, delete: false },
-    inventory: { view: true, add: true, edit: true, delete: true },
-    sales: { view: false, add: false, edit: false, delete: false, print: false },
-    purchases: { view: false, add: false, edit: false, delete: false, print: false },
-    accounting: { view: false, add: false, edit: false, delete: false },
-    hr: { view: false, add: false, edit: false, delete: false },
-    reports: { view: true, generate: false },
-    analytics: { view: false },
-    users: { view: false, add: false, edit: false, delete: false },
-    roles: { view: false, edit: false },
-    settings: { view: false, edit: false },
+    masterData_items: { view: true, add: false, edit: false, delete: false },
+    inventory_stockIn: { view: true, add: true, delete: false, print: true },
+    inventory_stockOut: { view: true, add: true, delete: false, print: true },
+    inventory_transfer: { view: true, add: true, delete: false, print: true },
+    inventory_movements: { view: true },
   },
   "أمين صندوق": {
     dashboard: { view: true },
-    masterData: { view: true, add: false, edit: false, delete: false },
-    inventory: { view: false, add: false, edit: false, delete: false },
-    sales: { view: true, add: true, edit: false, delete: false, print: true },
-    purchases: { view: true, add: true, edit: false, delete: false, print: true },
-    accounting: { view: true, add: true, edit: false, delete: false },
-    hr: { view: false, add: false, edit: false, delete: false },
-    reports: { view: true, generate: false },
-    analytics: { view: true },
-    users: { view: false, add: false, edit: false, delete: false },
-    roles: { view: false, edit: false },
-    settings: { view: false, edit: false },
+    accounting_customerPayments: { view: true, add: true, delete: false },
+    accounting_supplierPayments: { view: true, add: true, delete: false },
+    accounting_treasury: { view: true, add: true, delete: false },
   },
 };
 
+
 type Role = keyof typeof initialRoles;
-type Module = keyof (typeof initialRoles)[Role];
-type Action = keyof (typeof initialRoles)[Role][Module];
+type Module = keyof typeof permissionsConfig;
+type Action = PermissionAction;
 
 interface PermissionsContextType {
   role: Role;
-  permissions: (typeof initialRoles)[Role];
+  permissions: any;
   can: (action: Action, module: Module | string) => boolean;
 }
 
@@ -101,7 +159,7 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
     return () => unsubscribe();
   }, []);
 
-  const role = MOCK_CURRENT_USER_ROLE;
+  const role = MOCK_CURRENT_USER_ROLE as Role;
   const permissions = allRoles ? allRoles[role] : null;
 
   const can = useMemo(() => (action: Action, module: Module | string): boolean => {

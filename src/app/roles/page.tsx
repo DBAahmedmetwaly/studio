@@ -19,7 +19,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
 import {
   Accordion,
   AccordionContent,
@@ -32,26 +31,12 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { database } from "@/lib/firebase";
 import { ref, set } from "firebase/database";
+import { permissionsConfig, PermissionModule, PermissionAction, getModuleGroupLabel } from "@/contexts/permissions-context";
 
-
-const permissionsMap = {
-  dashboard: { label: "لوحة التحكم", actions: { view: "عرض" } },
-  masterData: { label: "البيانات الرئيسية", actions: { view: "عرض", add: "إضافة", edit: "تعديل", delete: "حذف" } },
-  inventory: { label: "المخزون", actions: { view: "عرض", add: "إضافة", edit: "تعديل", delete: "حذف" } },
-  sales: { label: "المبيعات", actions: { view: "عرض", add: "إضافة", edit: "تعديل", delete: "حذف", print: "طباعة" } },
-  purchases: { label: "المشتريات", actions: { view: "عرض", add: "إضافة", edit: "تعديل", delete: "حذف", print: "طباعة" } },
-  accounting: { label: "المحاسبة", actions: { view: "عرض", add: "إضافة", edit: "تعديل", delete: "حذف" } },
-  hr: { label: "الموارد البشرية", actions: { view: "عرض", add: "إضافة", edit: "تعديل", delete: "حذف" } },
-  reports: { label: "التقارير", actions: { view: "عرض", generate: "إنشاء" } },
-  analytics: { label: "التحليلات", actions: { view: "عرض" } },
-  users: { label: "المستخدمون", actions: { view: "عرض", add: "إضافة", edit: "تعديل", delete: "حذف" } },
-  roles: { label: "الأدوار والصلاحيات", actions: { view: "عرض", edit: "تعديل" } },
-  settings: { label: "الإعدادات", actions: { view: "عرض", edit: "تعديل" } },
-};
 
 type Role = string;
-type Module = keyof typeof permissionsMap;
-type Action = "view" | "add" | "edit" | "delete" | "print" | "generate";
+type ModuleKey = keyof typeof permissionsConfig;
+
 
 export default function RolesPage() {
   const { data: rolesData, loading } = useFirebase<any>('roles');
@@ -60,7 +45,6 @@ export default function RolesPage() {
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    // Convert array from useFirebase to object for easier manipulation
     if (rolesData.length > 0) {
         const rolesObject = rolesData.reduce((acc, role) => {
             acc[role.id] = role;
@@ -73,8 +57,8 @@ export default function RolesPage() {
 
   const handlePermissionChange = (
     role: Role,
-    module: Module,
-    action: Action,
+    module: ModuleKey,
+    action: PermissionAction,
     checked: boolean
   ) => {
     setRoles((prevRoles: any) => ({
@@ -82,7 +66,7 @@ export default function RolesPage() {
       [role]: {
         ...prevRoles[role],
         [module]: {
-          ...prevRoles[role][module],
+          ...prevRoles[role]?.[module],
           [action]: checked,
         },
       },
@@ -103,7 +87,24 @@ export default function RolesPage() {
     }
   }
 
-  const allPossibleActions: Action[] = ["view", "add", "edit", "delete", "print", "generate"];
+  const allPossibleActions: PermissionAction[] = ["view", "add", "edit", "delete", "print", "generate"];
+  const allActionLabels: Record<PermissionAction, string> = {
+    view: "عرض",
+    add: "إضافة",
+    edit: "تعديل",
+    delete: "حذف",
+    print: "طباعة",
+    generate: "إنشاء",
+  };
+
+  const groupedModules = Object.entries(permissionsConfig).reduce((acc, [key, value]) => {
+      const groupKey = value.group;
+      if (!acc[groupKey]) {
+          acc[groupKey] = [];
+      }
+      acc[groupKey].push({ key: key as ModuleKey, ...value });
+      return acc;
+  }, {} as Record<string, (PermissionModule & { key: ModuleKey })[]>);
 
 
   if (loading || !roles) {
@@ -127,7 +128,7 @@ export default function RolesPage() {
           <CardHeader>
             <CardTitle>إدارة صلاحيات الأدوار</CardTitle>
             <CardDescription>
-              قم بتحديد الصلاحيات لكل دور في النظام.
+              قم بتحديد الصلاحيات لكل دور في النظام على مستوى كل شاشة.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -144,41 +145,47 @@ export default function RolesPage() {
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>الوحدة</TableHead>
+                            <TableHead>الشاشة/الوحدة</TableHead>
                             {allPossibleActions.map(action => (
-                               <TableHead key={action} className="text-center">{(permissionsMap.masterData.actions as any)[action] || action}</TableHead>
+                               <TableHead key={action} className="text-center">{allActionLabels[action]}</TableHead>
                             ))}
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {Object.keys(permissionsMap).map((moduleKey) => {
-                            const module = moduleKey as Module;
-                            const moduleInfo = permissionsMap[module];
-                            const moduleActions = moduleInfo.actions as Record<string, string>;
-                            const rolePermissions = roles[role][module];
+                           {Object.entries(groupedModules).map(([groupKey, modules]) => (
+                               <React.Fragment key={groupKey}>
+                                    <TableRow className="bg-muted/50">
+                                        <TableCell colSpan={allPossibleActions.length + 1} className="font-bold">
+                                            {getModuleGroupLabel(groupKey)}
+                                        </TableCell>
+                                    </TableRow>
+                                    {modules.map((module) => {
+                                        const moduleActions = module.actions;
+                                        const rolePermissions = roles[role]?.[module.key];
 
-                            return (
-                              <TableRow key={module}>
-                                <TableCell className="font-medium">{moduleInfo.label}</TableCell>
-                                {allPossibleActions.map((actionKey) => {
-                                  const action = actionKey as Action;
-                                  return(
-                                    <TableCell key={action} className="text-center">
-                                      {action in moduleActions ? (
-                                        <Checkbox
-                                          checked={rolePermissions?.[action] || false}
-                                          onCheckedChange={(checked) => handlePermissionChange(role, module, action, !!checked)}
-                                          disabled={role === "مسؤول"}
-                                        />
-                                      ) : (
-                                        <span className="text-muted-foreground">-</span>
-                                      )}
-                                    </TableCell>
-                                  )
-                                })}
-                              </TableRow>
-                            );
-                          })}
+                                        return (
+                                          <TableRow key={module.key}>
+                                            <TableCell className="font-medium pr-6">{module.label}</TableCell>
+                                            {allPossibleActions.map((actionKey) => {
+                                              return(
+                                                <TableCell key={actionKey} className="text-center">
+                                                  {moduleActions.includes(actionKey) ? (
+                                                    <Checkbox
+                                                      checked={rolePermissions?.[actionKey] || false}
+                                                      onCheckedChange={(checked) => handlePermissionChange(role, module.key, actionKey, !!checked)}
+                                                      disabled={role === "مسؤول"}
+                                                    />
+                                                  ) : (
+                                                    <span className="text-muted-foreground">-</span>
+                                                  )}
+                                                </TableCell>
+                                              )
+                                            })}
+                                          </TableRow>
+                                        );
+                                    })}
+                               </React.Fragment>
+                           ))}
                         </TableBody>
                       </Table>
                     </div>
