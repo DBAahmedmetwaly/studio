@@ -42,6 +42,7 @@ interface SaleInvoice {
   customerName: string;
   warehouseId: string;
   total: number;
+  paidAmount?: number;
   items: any[];
   status?: 'pending' | 'approved';
 }
@@ -155,53 +156,54 @@ export default function SalesInvoicesListPage() {
                       <TableHead>رقم الفاتورة</TableHead>
                       <TableHead>العميل</TableHead>
                       <TableHead>التاريخ</TableHead>
-                      <TableHead>ملاحظات</TableHead>
                       <TableHead className="text-center">الإجمالي</TableHead>
+                      <TableHead className="text-center">المدفوع</TableHead>
+                      <TableHead className="text-center">المتبقي</TableHead>
                       <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredInvoices.length > 0 ? (
-                      filteredInvoices.map((invoice) => (
-                        <TableRow key={invoice.id}>
-                          <TableCell className="font-mono">{invoice.invoiceNumber}</TableCell>
-                          <TableCell>{invoice.customerName}</TableCell>
-                          <TableCell>{new Date(invoice.date).toLocaleDateString('ar-EG')}</TableCell>
-                          <TableCell>
-                            <span className="flex items-center gap-2 text-muted-foreground">
-                              <FileText className="h-4 w-4" />
-                              <span>{`تحتوي على ${invoice.items.length} أصناف`}</span>
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-center">{invoice.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
-                          <TableCell className="text-center">
-                             <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button aria-haspopup="true" size="icon" variant="ghost">
-                                        <MoreHorizontal className="h-4 w-4" />
-                                        <span className="sr-only">قائمة</span>
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                    <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                                    <DropdownMenuItem>
-                                        عرض التفاصيل
-                                    </DropdownMenuItem>
-                                     <DropdownMenuItem>
-                                        طباعة
-                                    </DropdownMenuItem>
-                                     <DropdownMenuItem onClick={() => router.push(`/sales/returns/new?invoiceId=${invoice.id}`)}>
-                                        <Undo2 className="ml-2 h-4 w-4" />
-                                        مرتجع
-                                    </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      ))
+                      filteredInvoices.map((invoice) => {
+                        const paid = invoice.paidAmount || 0;
+                        const remaining = invoice.total - paid;
+                        return (
+                            <TableRow key={invoice.id}>
+                            <TableCell className="font-mono">{invoice.invoiceNumber}</TableCell>
+                            <TableCell>{invoice.customerName}</TableCell>
+                            <TableCell>{new Date(invoice.date).toLocaleDateString('ar-EG')}</TableCell>
+                            <TableCell className="text-center font-semibold">{invoice.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
+                            <TableCell className="text-center text-green-600">{paid.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
+                            <TableCell className={`text-center font-bold ${remaining > 0 ? 'text-destructive' : ''}`}>{remaining.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
+                            <TableCell className="text-center">
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button aria-haspopup="true" size="icon" variant="ghost">
+                                            <MoreHorizontal className="h-4 w-4" />
+                                            <span className="sr-only">قائمة</span>
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+                                        <DropdownMenuItem>
+                                            عرض التفاصيل
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem>
+                                            طباعة
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => router.push(`/sales/returns/new?invoiceId=${invoice.id}`)}>
+                                            <Undo2 className="ml-2 h-4 w-4" />
+                                            مرتجع
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </TableCell>
+                            </TableRow>
+                        )
+                      })
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                        <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
                           لا توجد فواتير معتمدة تطابق الفلاتر المحددة.
                         </TableCell>
                       </TableRow>
