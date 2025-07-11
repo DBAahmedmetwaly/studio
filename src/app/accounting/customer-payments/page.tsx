@@ -23,16 +23,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AddEntityDialog } from '@/components/add-entity-dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-interface SupplierPayment {
+interface CustomerPayment {
     id?: string;
     date: string;
     amount: number;
-    supplierId: string;
-    paidFromAccountId: string;
+    customerId: string;
+    paidToAccountId: string;
     notes?: string;
 }
 
-interface Supplier {
+interface Customer {
     id: string;
     name: string;
 }
@@ -42,16 +42,16 @@ interface CashAccount {
     name: string;
 }
 
-const PaymentForm = ({ payment, onSave, onClose, suppliers, cashAccounts }: { payment?: SupplierPayment, onSave: (data: Omit<SupplierPayment, 'id'>) => void, onClose: () => void, suppliers: Supplier[], cashAccounts: CashAccount[] }) => {
+const PaymentForm = ({ payment, onSave, onClose, customers, cashAccounts }: { payment?: CustomerPayment, onSave: (data: Omit<CustomerPayment, 'id'>) => void, onClose: () => void, customers: Customer[], cashAccounts: CashAccount[] }) => {
     const [formData, setFormData] = useState(
-        payment || { date: new Date().toISOString().split('T')[0], amount: 0, supplierId: "", paidFromAccountId: "", notes: "" }
+        payment || { date: new Date().toISOString().split('T')[0], amount: 0, customerId: "", paidToAccountId: "", notes: "" }
     );
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         onSave({ ...formData, amount: Number(formData.amount) });
         if (!payment) { 
-            setFormData({ date: new Date().toISOString().split('T')[0], amount: 0, supplierId: "", paidFromAccountId: "", notes: "" });
+            setFormData({ date: new Date().toISOString().split('T')[0], amount: 0, customerId: "", paidToAccountId: "", notes: "" });
         }
         onClose();
     }
@@ -64,21 +64,21 @@ const PaymentForm = ({ payment, onSave, onClose, suppliers, cashAccounts }: { pa
                     <Input id="payment-date" type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="col-span-3" required/>
                 </div>
                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="payment-supplier" className="text-right">المورد</Label>
-                    <Select value={formData.supplierId} onValueChange={v => setFormData({...formData, supplierId: v})} required>
+                    <Label htmlFor="payment-customer" className="text-right">العميل</Label>
+                    <Select value={formData.customerId} onValueChange={v => setFormData({...formData, customerId: v})} required>
                         <SelectTrigger className="col-span-3">
-                            <SelectValue placeholder="اختر موردًا" />
+                            <SelectValue placeholder="اختر عميلاً" />
                         </SelectTrigger>
                         <SelectContent>
-                            {suppliers.map(w => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
+                            {customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                         </SelectContent>
                     </Select>
                 </div>
                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="paid-from" className="text-right">مدفوع من</Label>
-                    <Select value={formData.paidFromAccountId} onValueChange={v => setFormData({...formData, paidFromAccountId: v})} required>
+                    <Label htmlFor="paid-to" className="text-right">مستلم في</Label>
+                    <Select value={formData.paidToAccountId} onValueChange={v => setFormData({...formData, paidToAccountId: v})} required>
                         <SelectTrigger className="col-span-3">
-                            <SelectValue placeholder="اختر حساب الدفع" />
+                            <SelectValue placeholder="اختر حساب الاستلام" />
                         </SelectTrigger>
                         <SelectContent>
                            {cashAccounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
@@ -98,8 +98,8 @@ const PaymentForm = ({ payment, onSave, onClose, suppliers, cashAccounts }: { pa
                 <Info className="h-4 w-4" />
                 <AlertTitle>القيد المحاسبي المتوقع</AlertTitle>
                 <AlertDescription>
-                    من ح/ حسابات الموردين (مدين) <br/>
-                    إلى ح/ {cashAccounts.find(c => c.id === formData.paidFromAccountId)?.name || "النقدية"} (دائن)
+                    من ح/ {cashAccounts.find(c => c.id === formData.paidToAccountId)?.name || "النقدية"} (مدين) <br/>
+                    إلى ح/ حسابات العملاء (دائن)
                 </AlertDescription>
             </Alert>
             <div className="flex justify-end mt-4">
@@ -112,16 +112,16 @@ const PaymentForm = ({ payment, onSave, onClose, suppliers, cashAccounts }: { pa
     );
 };
 
-export default function SupplierPaymentsPage() {
-    const { data: payments, loading: loadingPayments, add, update, remove } = useFirebase<SupplierPayment>('supplierPayments');
-    const { data: suppliers, loading: loadingSuppliers } = useFirebase<Supplier>('suppliers');
+export default function CustomerPaymentsPage() {
+    const { data: payments, loading: loadingPayments, add, update, remove } = useFirebase<CustomerPayment>('customerPayments');
+    const { data: customers, loading: loadingCustomers } = useFirebase<Customer>('customers');
     const { data: cashAccounts, loading: loadingCashAccounts } = useFirebase<CashAccount>('cashAccounts');
     const { toast } = useToast();
     
-    const loading = loadingPayments || loadingSuppliers || loadingCashAccounts;
+    const loading = loadingPayments || loadingCustomers || loadingCashAccounts;
 
-     const getSupplierName = (supplierId: string) => {
-        return suppliers.find(s => s.id === supplierId)?.name || 'غير معروف';
+     const getCustomerName = (customerId: string) => {
+        return customers.find(c => c.id === customerId)?.name || 'غير معروف';
     };
 
     const getCashAccountName = (accountId: string) => {
@@ -156,24 +156,24 @@ export default function SupplierPaymentsPage() {
 
   return (
     <>
-      <PageHeader title="مدفوعات الموردين" />
+      <PageHeader title="مقبوضات العملاء" />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
         <div className="grid gap-6 lg:grid-cols-5">
             <Card className="lg:col-span-2">
             <CardHeader>
                 <CardTitle>إضافة دفعة جديدة</CardTitle>
                 <CardDescription>
-                سجل الدفعات التي تمت للموردين لتسوية حساباتهم.
+                سجل الدفعات المستلمة من العملاء لتسوية حساباتهم.
                 </CardDescription>
             </CardHeader>
             <CardContent>
-                <PaymentForm onSave={handleSave} onClose={()=>{}} suppliers={suppliers} cashAccounts={cashAccounts} />
+                <PaymentForm onSave={handleSave} onClose={()=>{}} customers={customers} cashAccounts={cashAccounts} />
             </CardContent>
             </Card>
             
             <Card className="lg:col-span-3">
                 <CardHeader>
-                    <CardTitle>سجل المدفوعات</CardTitle>
+                    <CardTitle>سجل المقبوضات</CardTitle>
                 </CardHeader>
                 <CardContent>
                     {loading ? (
@@ -186,8 +186,8 @@ export default function SupplierPaymentsPage() {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead className="w-[150px]">التاريخ</TableHead>
-                                        <TableHead>المورد</TableHead>
-                                        <TableHead>مدفوعة من</TableHead>
+                                        <TableHead>العميل</TableHead>
+                                        <TableHead>مستلمة في</TableHead>
                                         <TableHead className="text-center w-[150px]">المبلغ</TableHead>
                                         <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
                                     </TableRow>
@@ -196,8 +196,8 @@ export default function SupplierPaymentsPage() {
                                     {payments.map(payment => (
                                         <TableRow key={payment.id}>
                                             <TableCell>{new Date(payment.date).toLocaleDateString('ar-EG')}</TableCell>
-                                            <TableCell>{getSupplierName(payment.supplierId)}</TableCell>
-                                            <TableCell>{getCashAccountName(payment.paidFromAccountId)}</TableCell>
+                                            <TableCell>{getCustomerName(payment.customerId)}</TableCell>
+                                            <TableCell>{getCashAccountName(payment.paidToAccountId)}</TableCell>
                                             <TableCell className="text-center">{payment.amount.toLocaleString()}</TableCell>
                                             <TableCell className="text-center">
                                                 <DropdownMenu>
@@ -219,7 +219,7 @@ export default function SupplierPaymentsPage() {
                                                                 </DropdownMenuItem>
                                                             }
                                                         >
-                                                            <PaymentForm payment={payment} onSave={handleSave} onClose={() => {}} suppliers={suppliers} cashAccounts={cashAccounts} />
+                                                            <PaymentForm payment={payment} onSave={handleSave} onClose={() => {}} customers={customers} cashAccounts={cashAccounts} />
                                                         </AddEntityDialog>
                                                         <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(payment.id!)}>
                                                             <Trash2 className="ml-2 h-4 w-4" />

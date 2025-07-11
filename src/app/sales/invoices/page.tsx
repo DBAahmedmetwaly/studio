@@ -9,13 +9,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle, Trash2, Printer, Save, Loader2 } from "lucide-react";
+import { PlusCircle, Trash2, Printer, Save, Loader2, Info } from "lucide-react";
 import React, { useState, useEffect, useMemo } from "react";
 import useFirebase from "@/hooks/use-firebase";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from 'next/navigation';
 import { Switch } from "@/components/ui/switch";
 import { usePermissions } from "@/contexts/permissions-context";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 
 interface InvoiceItem {
@@ -353,7 +354,23 @@ export default function SalesInvoicePage() {
                     </div>
                     </div>
                     
-                    <div className="flex justify-end">
+                    <div className="flex justify-between items-start">
+                        <div className="w-full max-w-sm space-y-2 text-sm">
+                            <Alert>
+                                <Info className="h-4 w-4" />
+                                <AlertTitle>القيد المحاسبي المتوقع</AlertTitle>
+                                <AlertDescription>
+                                    <ul className="list-disc pr-4 text-xs">
+                                        <li>من ح/ حسابات العملاء (مدين بقيمة الفاتورة الإجمالية)</li>
+                                        <li>من ح/ خصم مسموح به (مدين بقيمة الخصم إن وجد)</li>
+                                        <li>إلى ح/ إيرادات المبيعات (دائن بقيمة المبيعات قبل الخصم)</li>
+                                        <hr className="my-1"/>
+                                        <li>من ح/ تكلفة البضاعة المباعة (مدين بتكلفة الأصناف)</li>
+                                        <li>إلى ح/ المخزون (دائن بتكلفة الأصناف)</li>
+                                    </ul>
+                                </AlertDescription>
+                            </Alert>
+                        </div>
                         <div className="w-full max-w-sm space-y-2 text-sm">
                             <div className="flex justify-between">
                                 <span>الإجمالي الفرعي</span>

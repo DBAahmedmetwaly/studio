@@ -14,13 +14,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle, Loader2, MoreHorizontal, Edit, Trash2 } from "lucide-react";
+import { PlusCircle, Loader2, MoreHorizontal, Edit, Trash2, Info } from "lucide-react";
 import useFirebase from '@/hooks/use-firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { AddEntityDialog } from '@/components/add-entity-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const EXPENSE_TYPES = [
     "إيجار", "رواتب", "كهرباء ومياه", "مواصلات", "تسويق وإعلان", "صيانة", "مستلزمات مكتبية", "مصروفات حكومية", "أخرى"
@@ -111,7 +112,15 @@ const ExpenseForm = ({ expense, onSave, onClose, warehouses, cashAccounts }: { e
                     </Select>
                 </div>
             </div>
-            <div className="flex justify-end">
+            <Alert className="mt-4">
+                <Info className="h-4 w-4" />
+                <AlertTitle>القيد المحاسبي المتوقع</AlertTitle>
+                <AlertDescription>
+                    من ح/ {formData.expenseType || "المصروفات"} (مدين) <br/>
+                    إلى ح/ {cashAccounts.find(c => c.id === formData.paidFromAccountId)?.name || "النقدية"} (دائن)
+                </AlertDescription>
+            </Alert>
+            <div className="flex justify-end mt-4">
                 <Button type="submit">
                     <PlusCircle className="ml-2 h-4 w-4" />
                     حفظ المصروف

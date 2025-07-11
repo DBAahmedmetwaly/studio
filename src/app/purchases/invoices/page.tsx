@@ -9,13 +9,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle, Trash2, Printer, Save, Wand2, Loader2 } from "lucide-react";
-import React, { useState, useEffect, useTransition } from "react";
-import { extractInvoiceItems } from "@/ai/flows/extract-invoice-items";
+import { PlusCircle, Trash2, Printer, Save, Info, Loader2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
 import useFirebase from "@/hooks/use-firebase";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from 'next/navigation';
 import { Switch } from "@/components/ui/switch";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
 
 interface InvoiceItem {
   id: string;
@@ -54,8 +55,6 @@ export default function PurchaseInvoicePage() {
   const [tax, setTax] = useState(0);
   const [total, setTotal] = useState(0);
   const [applyTax, setApplyTax] = useState(true);
-  const [invoiceText, setInvoiceText] = useState("");
-  const [isAiPending, startAiTransition] = useTransition();
   const [isSaving, setIsSaving] = useState(false);
 
   const [supplierId, setSupplierId] = useState("");
@@ -122,33 +121,6 @@ export default function PurchaseInvoicePage() {
             unit: selectedItem.unit,
         });
     }
-  }
-
-  const handleAiExtract = () => {
-    if(!invoiceText) return;
-    startAiTransition(async () => {
-        try {
-            const result = await extractInvoiceItems({text: invoiceText});
-            if (result && result.items) {
-                 const newAiItems: InvoiceItem[] = result.items.map((item, index) => {
-                     const matchedItem = availableItems.find(i => i.name.includes(item.itemName))
-                     return {
-                        id: matchedItem ? `${matchedItem.id}-${Date.now()}` : `ai-item-${Date.now()}-${index}`,
-                        name: item.itemName,
-                        qty: item.quantity,
-                        price: item.price,
-                        total: item.quantity * item.price,
-                        unit: matchedItem?.unit || 'قطعة'
-                    }
-                });
-                setItems(prevItems => [...prevItems, ...newAiItems]);
-                setInvoiceText("");
-            }
-        } catch (error) {
-            console.error("Failed to extract invoice items:", error);
-            toast({ variant: 'destructive', title: 'خطأ', description: 'فشل تحليل الفاتورة بالذكاء الاصطناعي.'});
-        }
-    });
   }
 
   const handleSaveInvoice = async () => {
@@ -333,7 +305,20 @@ export default function PurchaseInvoicePage() {
                 </div>
                 </div>
                 
-                <div className="flex justify-end">
+                <div className="flex justify-between items-start">
+                    <div className="w-full max-w-sm space-y-2 text-sm">
+                        <Alert>
+                            <Info className="h-4 w-4" />
+                            <AlertTitle>القيد المحاسبي المتوقع</AlertTitle>
+                            <AlertDescription>
+                                <ul className="list-disc pr-4 text-xs">
+                                    <li>من ح/ المخزون (مدين بقيمة البضاعة قبل الخصم)</li>
+                                    <li>إلى ح/ حسابات الموردين (دائن بقيمة الفاتورة الإجمالية)</li>
+                                    <li>إلى ح/ خصم مكتسب (دائن بقيمة الخصم إن وجد)</li>
+                                </ul>
+                            </AlertDescription>
+                        </Alert>
+                    </div>
                     <div className="w-full max-w-sm space-y-2 text-sm">
                         <div className="flex justify-between">
                             <span>الإجمالي الفرعي</span>

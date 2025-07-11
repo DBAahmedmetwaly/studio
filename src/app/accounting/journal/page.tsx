@@ -95,6 +95,20 @@ interface Supplier {
     id: string;
     name: string;
 }
+interface SupplierPayment {
+    id: string;
+    date: string;
+    amount: number;
+    supplierId: string;
+    paidFromAccountId: string;
+}
+interface CustomerPayment {
+    id: string;
+    date: string;
+    amount: number;
+    customerId: string;
+    paidToAccountId: string;
+}
 
 
 export default function JournalPage() {
@@ -120,9 +134,11 @@ export default function JournalPage() {
     const { data: purchaseReturns, loading: l14 } = useFirebase<PurchaseReturn>("purchaseReturns");
     const { data: customers, loading: l15 } = useFirebase<Customer>("customers");
     const { data: suppliers, loading: l16 } = useFirebase<Supplier>("suppliers");
+    const { data: supplierPayments, loading: l17 } = useFirebase<SupplierPayment>("supplierPayments");
+    const { data: customerPayments, loading: l18 } = useFirebase<CustomerPayment>("customerPayments");
 
 
-    const loading = l1 || l2 || l3 || l4 || l5 || l6 || l7 || l8 || l9 || l10 || l11 || l12 || l13 || l14 || l15 || l16;
+    const loading = l1 || l2 || l3 || l4 || l5 || l6 || l7 || l8 || l9 || l10 || l11 || l12 || l13 || l14 || l15 || l16 || l17 || l18;
     
     const itemsMap = useMemo(() => {
         const map = new Map<string, Item>();
@@ -254,9 +270,21 @@ export default function JournalPage() {
              }
         });
 
+        // Supplier Payments
+        supplierPayments.forEach(p => {
+            entries.push({ id: `supp-pay-debit-${p.id}`, date: p.date, number: `PAY-${p.id.slice(-4)}`, description: `سداد للمورد ${getSupplierName(p.supplierId)}`, debit: p.amount, credit: 0, account: 'حسابات الموردين' });
+            entries.push({ id: `supp-pay-credit-${p.id}`, date: p.date, number: `PAY-${p.id.slice(-4)}`, description: `دفع من ${getCashAccountName(p.paidFromAccountId)}`, debit: 0, credit: p.amount, account: getCashAccountName(p.paidFromAccountId) });
+        });
+
+        // Customer Payments
+        customerPayments.forEach(p => {
+            entries.push({ id: `cust-pay-debit-${p.id}`, date: p.date, number: `REC-${p.id.slice(-4)}`, description: `تحصيل من العميل ${getCustomerName(p.customerId)}`, debit: p.amount, credit: 0, account: getCashAccountName(p.paidToAccountId) });
+            entries.push({ id: `cust-pay-credit-${p.id}`, date: p.date, number: `REC-${p.id.slice(-4)}`, description: `تخفيض مديونية العميل`, debit: 0, credit: p.amount, account: 'حسابات العملاء' });
+        });
+
 
         return entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [sales, purchases, expenses, exceptionalIncomes, transfers, warehouses, itemsMap, cashAccounts, treasuryTxs, employeeAdvances, employees, employeeAdjustments, salesReturns, purchaseReturns, customers, suppliers]);
+    }, [sales, purchases, expenses, exceptionalIncomes, transfers, warehouses, itemsMap, cashAccounts, treasuryTxs, employeeAdvances, employees, employeeAdjustments, salesReturns, purchaseReturns, customers, suppliers, supplierPayments, customerPayments]);
 
     const filteredEntries = journalEntries.filter(entry => {
         const entryDate = new Date(entry.date);
