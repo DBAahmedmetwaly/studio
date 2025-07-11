@@ -34,6 +34,7 @@ interface SalesRep {
     id: string;
     name: string;
     linkedWarehouseId: string;
+    isSalesRep?: boolean;
 }
 
 interface Warehouse {
@@ -46,14 +47,16 @@ export default function IssueToRepPage() {
     const { toast } = useToast();
     const [items, setItems] = useState<IssueItem[]>([]);
     const [newItem, setNewItem] = useState({ id: "", qty: 1 });
-    const [selectedRep, setSelectedRep] = useState<string>("");
+    const [selectedRepId, setSelectedRepId] = useState<string>("");
     const [notes, setNotes] = useState<string>("");
     
     const { data: availableItems, loading: loadingItems } = useFirebase<Item>('items');
-    const { data: reps, loading: loadingReps } = useFirebase<SalesRep>('salesReps');
+    const { data: users, loading: loadingUsers } = useFirebase<User>("users");
+    const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>("warehouses");
     const { add: addIssue, getNextId } = useFirebase("stockIssuesToReps");
 
-    const loading = loadingItems || loadingReps;
+    const reps = users.filter(u => u.isSalesRep);
+    const loading = loadingItems || loadingUsers || loadingWarehouses;
 
     const itemsForCombobox = useMemo(() => {
         return availableItems.map(item => ({ value: item.id, label: item.name }));
@@ -82,18 +85,24 @@ export default function IssueToRepPage() {
     };
 
     const handleConfirm = async () => {
-        if (!selectedRep || items.length === 0) {
+        if (!selectedRepId || items.length === 0) {
             toast({ variant: "destructive", title: "بيانات غير مكتملة", description: "يرجى اختيار المندوب وإضافة صنف واحد على الأقل." });
             return;
         }
         
-        const rep = reps.find(r => r.id === selectedRep);
+        const rep = reps.find(r => r.id === selectedRepId);
         if (!rep) return;
+        
+        const warehouse = warehouses.find(w => w.id === rep.linkedWarehouseId);
+        if (!warehouse) {
+             toast({ variant: "destructive", title: "خطأ", description: "المخزن المرتبط بالمندوب غير موجود." });
+            return;
+        }
 
         const nextId = await getNextId('issueToRep');
         const record = {
-            salesRepId: selectedRep,
-            warehouseId: rep.linkedWarehouseId, // From rep's master data
+            salesRepId: selectedRepId,
+            warehouseId: rep.linkedWarehouseId,
             date: new Date().toISOString(),
             items: items.map(({id, name, qty}) => ({id, name, qty})),
             notes,
@@ -128,7 +137,7 @@ export default function IssueToRepPage() {
                     <div className="grid md:grid-cols-2 gap-6">
                         <div className="space-y-2">
                             <Label htmlFor="rep">مندوب المبيعات</Label>
-                            <Select value={selectedRep} onValueChange={setSelectedRep}>
+                            <Select value={selectedRepId} onValueChange={setSelectedRepId}>
                                 <SelectTrigger id="rep"><SelectValue placeholder="اختر المندوب" /></SelectTrigger>
                                 <SelectContent>
                                    {reps.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
@@ -137,7 +146,7 @@ export default function IssueToRepPage() {
                         </div>
                          <div className="space-y-2">
                             <Label>من مخزن</Label>
-                            <Input value={reps.find(r => r.id === selectedRep)?.name || 'اختر مندوبًا أولاً'} readOnly disabled />
+                            <Input value={warehouses.find(w => w.id === reps.find(r => r.id === selectedRepId)?.linkedWarehouseId)?.name || 'اختر مندوبًا أولاً'} readOnly disabled />
                          </div>
                     </div>
                     
