@@ -40,11 +40,12 @@ interface Employee {
   jobTitle: string;
   basicSalary: number;
   hireDate: string;
+  phone?: string;
 }
 
 const EmployeeForm = ({ employee, onSave, onClose }: { employee?: Employee, onSave: (data: Omit<Employee, 'id'> & { id?: string }) => void, onClose: () => void }) => {
   const [formData, setFormData] = useState<Omit<Employee, 'id'>>(
-    employee || { name: "", jobTitle: "", basicSalary: 0, hireDate: new Date().toISOString().split('T')[0] }
+    employee || { name: "", jobTitle: "", basicSalary: 0, hireDate: new Date().toISOString().split('T')[0], phone: "" }
   );
 
   const handleSubmit = () => {
@@ -70,6 +71,12 @@ const EmployeeForm = ({ employee, onSave, onClose }: { employee?: Employee, onSa
             المسمى الوظيفي
           </Label>
           <Input id="job-title" value={formData.jobTitle} onChange={(e) => setFormData({...formData, jobTitle: e.target.value})} className="col-span-3" required />
+        </div>
+        <div className="grid grid-cols-4 items-center gap-4">
+          <Label htmlFor="employee-phone" className="text-right">
+            رقم الهاتف
+          </Label>
+          <Input id="employee-phone" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} className="col-span-3" />
         </div>
         <div className="grid grid-cols-4 items-center gap-4">
           <Label htmlFor="basic-salary" className="text-right">
@@ -159,6 +166,7 @@ export default function EmployeesPage() {
                             <TableRow>
                                 <TableHead>اسم الموظف</TableHead>
                                 <TableHead>المسمى الوظيفي</TableHead>
+                                <TableHead>رقم الهاتف</TableHead>
                                 <TableHead className="text-center">الراتب الأساسي</TableHead>
                                 <TableHead className="text-center">تاريخ التعيين</TableHead>
                                 <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
@@ -169,6 +177,7 @@ export default function EmployeesPage() {
                                 <TableRow key={employee.id}>
                                     <TableCell className="font-medium">{employee.name}</TableCell>
                                     <TableCell>{employee.jobTitle}</TableCell>
+                                    <TableCell>{employee.phone || '-'}</TableCell>
                                     <TableCell className="text-center">{employee.basicSalary.toLocaleString()} ج.م</TableCell>
                                     <TableCell className="text-center">{new Date(employee.hireDate).toLocaleDateString('ar-EG')}</TableCell>
                                     <TableCell className="text-center">

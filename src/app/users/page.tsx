@@ -56,6 +56,7 @@ interface User {
   password?: string;
   role: string;
   warehouse: string;
+  phone?: string;
   isSalesRep?: boolean;
   isEmployee?: boolean;
   jobTitle?: string;
@@ -75,6 +76,7 @@ const UserForm = ({ user, onSave, onClose, warehouses, roles }: { user?: User, o
     password: "", 
     role: user?.role || "",
     warehouse: user?.warehouse || "",
+    phone: user?.phone || "",
     isSalesRep: user?.isSalesRep || false,
     isEmployee: user?.isEmployee || false,
     jobTitle: user?.jobTitle || "",
@@ -162,6 +164,10 @@ const UserForm = ({ user, onSave, onClose, warehouses, roles }: { user?: User, o
                     <Label htmlFor="job-title" className="text-right">المسمى الوظيفي</Label>
                     <Input id="job-title" value={formData.jobTitle} onChange={e => setFormData({...formData, jobTitle: e.target.value})} className="col-span-3" required={formData.isEmployee} />
                 </div>
+                 <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="employee-phone" className="text-right">رقم الهاتف</Label>
+                    <Input id="employee-phone" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="col-span-3" />
+                </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="basic-salary" className="text-right">الراتب الأساسي</Label>
                     <Input id="basic-salary" type="number" value={formData.basicSalary} onChange={e => setFormData({...formData, basicSalary: Number(e.target.value)})} className="col-span-3" required={formData.isEmployee} />
@@ -206,7 +212,8 @@ export default function UsersPage() {
                     name: user.name,
                     jobTitle: user.jobTitle,
                     basicSalary: user.basicSalary,
-                    hireDate: user.hireDate
+                    hireDate: user.hireDate,
+                    phone: user.phone,
                 });
             } else {
                 // If isEmployee is unchecked, remove them from employees collection
@@ -253,6 +260,7 @@ export default function UsersPage() {
                 isSalesRep: user.isSalesRep,
                 isEmployee: user.isEmployee,
                 uid: newAuthUser.uid, // Link to the auth user
+                phone: user.phone,
              };
             
             // Step 3: Create the user record in the Realtime Database.
@@ -269,6 +277,7 @@ export default function UsersPage() {
                     jobTitle: user.jobTitle,
                     basicSalary: user.basicSalary,
                     hireDate: user.hireDate,
+                    phone: user.phone,
                 };
                 // Use `update` here to set the employee data with the same key as the user
                 await updateEmployee(newUserKey, employeeRecord);
@@ -382,6 +391,7 @@ export default function UsersPage() {
                             </Avatar>
                             <div className="font-medium">
                                 <div>{user.name}</div>
+                                <div className="text-xs text-muted-foreground">{user.phone}</div>
                             </div>
                         </div>
                         </TableCell>
