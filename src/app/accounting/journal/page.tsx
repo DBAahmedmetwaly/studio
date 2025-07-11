@@ -520,7 +520,7 @@ export default function JournalPage() {
             </TabsContent>
             <TabsContent value="journal-view">
                  <Card>
-                <CardHeader>
+                <CardHeader className="text-center">
                     <CardTitle>عرض القيد المزدوج</CardTitle>
                     <CardDescription>
                     عرض تقليدي لقيود اليومية (من ح/ ... إلى ح/ ...).
@@ -532,7 +532,7 @@ export default function JournalPage() {
                             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                         </div>
                     ) : (
-                         <div className="space-y-4">
+                         <div className="space-y-4 max-w-4xl mx-auto">
                             {groupedEntries.map(entry => (
                                 <div key={entry.number} className="border rounded-lg p-4 space-y-2">
                                     <div className="flex justify-between items-center text-sm text-muted-foreground">
