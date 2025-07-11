@@ -1,0 +1,9 @@
+{
+  "rules": {
+    "users": {
+      ".indexOn": ["uid"]
+    },
+    ".read": "auth != null",
+    ".write": "auth != null"
+  }
+}
