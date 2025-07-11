@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { createContext, useContext, useMemo, useState, useEffect } from 'react';
@@ -6,9 +5,7 @@ import useFirebase from '@/hooks/use-firebase';
 import { database } from '@/lib/firebase';
 import { ref, onValue, set } from 'firebase/database';
 import { Loader2 } from 'lucide-react';
-
-// This is a simplified version. In a real app, you'd fetch this from your auth provider/backend.
-const MOCK_CURRENT_USER_ROLE = 'مسؤول'; 
+import { useAuth } from '@/contexts/auth-context';
 
 type RoleName = 'مسؤول' | 'محاسب' | 'أمين مخزن' | 'أمين صندوق';
 
@@ -99,7 +96,7 @@ const generateAdminPermissions = () => {
     return adminPermissions;
 };
 
-const initialRoles = {
+export const initialRoles = {
   "مسؤول": generateAdminPermissions(),
   "محاسب": {
     dashboard: { view: true },
@@ -140,6 +137,7 @@ interface PermissionsContextType {
 const PermissionsContext = createContext<PermissionsContextType | undefined>(undefined);
 
 export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
   const [allRoles, setAllRoles] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -159,7 +157,7 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
     return () => unsubscribe();
   }, []);
 
-  const role = MOCK_CURRENT_USER_ROLE as Role;
+  const role = user?.role as Role || "محاسب"; // Fallback role
   const permissions = allRoles ? allRoles[role] : null;
 
   const can = useMemo(() => (action: Action, module: Module | string): boolean => {

@@ -1,7 +1,7 @@
 
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import PageHeader from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,13 +26,22 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { useState, useEffect } from "react";
-import useFirebase from "@/hooks/use-firebase";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, History } from "lucide-react";
 import { database } from "@/lib/firebase";
-import { ref, set } from "firebase/database";
-import { permissionsConfig, PermissionModule, PermissionAction, getModuleGroupLabel } from "@/contexts/permissions-context";
+import { ref, set, onValue } from "firebase/database";
+import { permissionsConfig, PermissionModule, PermissionAction, getModuleGroupLabel, initialRoles } from "@/contexts/permissions-context";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 
 type Role = string;
@@ -40,21 +49,26 @@ type ModuleKey = keyof typeof permissionsConfig;
 
 
 export default function RolesPage() {
-  const { data: rolesData, loading } = useFirebase<any>('roles');
   const [roles, setRoles] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (rolesData.length > 0) {
-        const rolesObject = rolesData.reduce((acc, role) => {
-            acc[role.id] = role;
-            delete acc[role.id].id;
-            return acc;
-        }, {});
-        setRoles(rolesObject);
-    }
-  }, [rolesData]);
+    const rolesRef = ref(database, 'roles');
+    const unsubscribe = onValue(rolesRef, (snapshot) => {
+        if (snapshot.exists()) {
+            setRoles(snapshot.val());
+        } else {
+            // If roles don't exist in DB, set them from initialRoles
+            set(rolesRef, initialRoles);
+            setRoles(initialRoles);
+        }
+        setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const handlePermissionChange = (
     role: Role,
@@ -87,6 +101,22 @@ export default function RolesPage() {
         setIsSaving(false);
     }
   }
+
+  const handleRestoreDefaults = (roleToRestore: Role) => {
+    const defaultPermissionsForRole = initialRoles[roleToRestore as keyof typeof initialRoles];
+    if (!defaultPermissionsForRole) {
+      toast({ variant: "destructive", title: "خطأ", description: "لم يتم العثور على الدور الافتراضي." });
+      return;
+    }
+    
+    setRoles((prevRoles: any) => ({
+      ...prevRoles,
+      [roleToRestore]: defaultPermissionsForRole
+    }));
+
+    toast({ title: "تم استعادة الافتراضيات", description: `تم استعادة صلاحيات دور "${roleToRestore}". اضغط على حفظ لتطبيق التغييرات.` });
+  };
+
 
   const allPossibleActions: PermissionAction[] = ["view", "add", "edit", "delete", "print", "generate"];
   const allActionLabels: Record<PermissionAction, string> = {
@@ -137,8 +167,30 @@ export default function RolesPage() {
               {Object.keys(roles).map((role) => (
                 <AccordionItem value={role} key={role}>
                   <AccordionTrigger>
-                    <div className="flex items-center gap-4">
+                    <div className="flex w-full items-center justify-between">
                       <span className="font-bold text-lg">{role}</span>
+                       {role !== "مسؤول" && (
+                         <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
+                                <History className="ml-2 h-4 w-4" />
+                                استعادة الافتراضي
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>هل أنت متأكد من استعادة الافتراضيات؟</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  سيؤدي هذا إلى إعادة تعيين جميع صلاحيات دور "{role}" إلى الإعدادات الافتراضية الموصى بها. سيتم تطبيق التغييرات بعد الضغط على زر "حفظ التغييرات" الرئيسي.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleRestoreDefaults(role)}>نعم، قم بالاستعادة</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                       )}
                     </div>
                   </AccordionTrigger>
                   <AccordionContent>
