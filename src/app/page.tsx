@@ -9,7 +9,8 @@ import {
   Package,
   Users,
   Loader2,
-  Warehouse
+  Warehouse,
+  Coins,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -44,10 +45,21 @@ import useFirebase from "@/hooks/use-firebase";
 interface SaleInvoice {
   id: string;
   total: number;
+  paidAmount: number;
   customerName: string;
   date: string;
   warehouseId: string;
   items: { id: string; qty: number; }[];
+}
+interface CustomerPayment {
+    id: string;
+    amount: number;
+    paidToAccountId: string; // We can use this to filter by warehouse if cash accounts are linked
+}
+interface ExceptionalIncome {
+    id: string;
+    amount: number;
+    warehouseId?: string;
 }
 interface PurchaseInvoice {
   id: string;
@@ -71,6 +83,7 @@ interface StockTransferRecord { id: string; fromSourceId: string; toSourceId: st
 interface StockAdjustmentRecord { id: string; warehouseId: string; items: { itemId: string; difference: number; }[]; }
 interface SalesReturn { id: string; warehouseId: string; items: { id: string; name: string; qty: number; }[]; }
 interface PurchaseReturn { id: string; warehouseId: string; items: { id: string; name: string; qty: number; }[]; }
+interface CashAccount { id: string; name: string; warehouseId?: string }
 
 export default function Dashboard() {
   const { data: sales, loading: l1 } = useFirebase<SaleInvoice>("salesInvoices");
@@ -84,10 +97,13 @@ export default function Dashboard() {
   const { data: adjustments, loading: l9 } = useFirebase<StockAdjustmentRecord>('stockAdjustmentRecords');
   const { data: salesReturns, loading: l10 } = useFirebase<SalesReturn>('salesReturns');
   const { data: purchaseReturns, loading: l11 } = useFirebase<PurchaseReturn>('purchaseReturns');
+  const { data: customerPayments, loading: l12 } = useFirebase<CustomerPayment>('customerPayments');
+  const { data: exceptionalIncomes, loading: l13 } = useFirebase<ExceptionalIncome>('exceptionalIncomes');
+  const { data: cashAccounts, loading: l14 } = useFirebase<CashAccount>('cashAccounts');
   
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<string>('all');
 
-  const loading = l1 || l2 || l3 || l4 || l5 || l6 || l7 || l8 || l9 || l10 || l11;
+  const loading = l1 || l2 || l3 || l4 || l5 || l6 || l7 || l8 || l9 || l10 || l11 || l12 || l13 || l14;
   
   React.useEffect(() => {
     if (warehouses.length > 0 && selectedWarehouseId === 'all') {
@@ -100,11 +116,22 @@ export default function Dashboard() {
         if (selectedWarehouseId === 'all') return collection;
         return collection.filter(item => item[idField] === selectedWarehouseId);
     };
+    
+    // Get cash accounts linked to the selected warehouse
+    const warehouseCashAccountIds = cashAccounts
+        .filter(acc => acc.warehouseId === selectedWarehouseId)
+        .map(acc => acc.id);
 
     const filteredSales = filterByWarehouse(sales, 'warehouseId');
-    const filteredPurchases = filterByWarehouse(purchases, 'warehouseId');
 
-    const totalRevenue = filteredSales.reduce((acc, sale) => acc + sale.total, 0);
+    const receiptsFromInvoicePayments = filteredSales.reduce((acc, sale) => acc + (sale.paidAmount || 0), 0);
+    const receiptsFromCustomerPayments = customerPayments
+        .filter(p => selectedWarehouseId === 'all' || warehouseCashAccountIds.includes(p.paidToAccountId))
+        .reduce((acc, payment) => acc + payment.amount, 0);
+    const receiptsFromExceptionalIncomes = filterByWarehouse(exceptionalIncomes, 'warehouseId').reduce((acc, income) => acc + income.amount, 0);
+    
+    const totalReceipts = receiptsFromInvoicePayments + receiptsFromCustomerPayments + receiptsFromExceptionalIncomes;
+    
     const totalSalesCount = filteredSales.length;
     const totalCustomers = customers.length; // This is not warehouse-specific
 
@@ -132,8 +159,8 @@ export default function Dashboard() {
     const lowStockItems = warehouseItems.filter(item => item.currentStock <= (item.reorderPoint || 0)).slice(0, 5);
     const recentTransactions = filteredSales.slice(-5).reverse();
 
-    return { totalRevenue, totalSalesCount, totalCustomers, inventoryValue, lowStockItems, recentTransactions };
-  }, [selectedWarehouseId, sales, purchases, customers, allItems, warehouses, stockIns, stockOuts, transfers, adjustments, salesReturns, purchaseReturns]);
+    return { totalReceipts, totalSalesCount, totalCustomers, inventoryValue, lowStockItems, recentTransactions };
+  }, [selectedWarehouseId, sales, purchases, customers, allItems, warehouses, stockIns, stockOuts, transfers, adjustments, salesReturns, purchaseReturns, customerPayments, exceptionalIncomes, cashAccounts]);
 
 
   if (loading && !warehouses.length) {
@@ -172,14 +199,14 @@ export default function Dashboard() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                إجمالي الإيرادات
+                إجمالي المقبوضات
               </CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <Coins className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold font-headline">ج.م {dashboardData.totalRevenue.toLocaleString()}</div>
+              <div className="text-2xl font-bold font-headline">ج.م {dashboardData.totalReceipts.toLocaleString()}</div>
               <p className="text-xs text-muted-foreground">
-                إيرادات المخزن المحدد
+                إجمالي النقدية المحصلة
               </p>
             </CardContent>
           </Card>
@@ -311,3 +338,4 @@ export default function Dashboard() {
     </>
   );
 }
+
