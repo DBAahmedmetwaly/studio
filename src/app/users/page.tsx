@@ -66,7 +66,7 @@ const UserForm = ({ user, onSave, onClose, warehouses, roles }: { user?: User, o
     name: user?.name || "",
     loginName: user?.loginName || "",
     password: "", // Always initialize password to an empty string for controlled input
-    role: user?.role || "محاسب",
+    role: user?.role || "",
     warehouse: user?.warehouse || ""
   });
 
@@ -140,7 +140,7 @@ const UserForm = ({ user, onSave, onClose, warehouses, roles }: { user?: User, o
 };
 
 export default function UsersPage() {
-  const { data: users, loading: loadingUsers } = useFirebase<User>('users');
+  const { data: users, loading: loadingUsers, setData: setUsers } = useFirebase<User>('users');
   const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
   const { data: rolesData, loading: loadingRoles } = useFirebase<any>('roles');
   const { toast } = useToast();
@@ -153,6 +153,7 @@ export default function UsersPage() {
 
   const handleSave = async (user: Omit<User, 'id'> & { id?: string }) => {
     try {
+        const { add, update } = useFirebase<User>('users');
         if (user.id) {
             if (!can('edit', moduleName)) return toast({variant: 'destructive', title: 'غير مصرح به'});
             await update(user.id, user);
@@ -187,8 +188,6 @@ export default function UsersPage() {
     }
   }
 
-  const { add, update, remove } = useFirebase<User>('users');
-
   const handleDelete = async (userToDelete: User) => {
     if (!can('delete', moduleName)) {
       toast({ variant: 'destructive', title: 'غير مصرح به' });
@@ -202,7 +201,11 @@ export default function UsersPage() {
 
     if (confirm(`هل أنت متأكد من حذف المستخدم "${userToDelete.name}"؟`)) {
       try {
+        const { remove } = useFirebase<User>(`users`);
         await remove(userToDelete.id);
+
+        setUsers(prevUsers => prevUsers.filter(u => u.id !== userToDelete.id));
+
         toast({ title: "تم حذف المستخدم بنجاح" });
         // For full deletion, you would also need to delete the user from Firebase Authentication,
         // which requires elevated admin privileges, typically handled via a backend function.
