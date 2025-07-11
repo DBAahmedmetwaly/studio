@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState } from 'react';
@@ -30,6 +31,7 @@ interface EmployeeAdvance {
     employeeId: string;
     paidFromAccountId: string;
     notes?: string;
+    receiptNumber?: string;
 }
 
 interface Employee {
@@ -42,7 +44,7 @@ interface CashAccount {
     name: string;
 }
 
-const AdvanceForm = ({ advance, onSave, onClose, employees, cashAccounts }: { advance?: EmployeeAdvance, onSave: (data: any) => void, onClose: () => void, employees: Employee[], cashAccounts: CashAccount[] }) => {
+const AdvanceForm = ({ advance, onSave, onClose, employees, cashAccounts }: { advance?: EmployeeAdvance, onSave: (data: Omit<EmployeeAdvance, 'id' | 'receiptNumber'>) => void, onClose: () => void, employees: Employee[], cashAccounts: CashAccount[] }) => {
     const [formData, setFormData] = useState(
         advance || { date: new Date().toISOString().split('T')[0], amount: 0, employeeId: "", paidFromAccountId: "", notes: "" }
     );
@@ -105,7 +107,7 @@ const AdvanceForm = ({ advance, onSave, onClose, employees, cashAccounts }: { ad
 };
 
 export default function EmployeeAdvancesPage() {
-    const { data: advances, loading: loadingAdvances, add, update, remove } = useFirebase<EmployeeAdvance>('employeeAdvances');
+    const { data: advances, loading: loadingAdvances, add, update, remove, getNextId } = useFirebase<EmployeeAdvance>('employeeAdvances');
     const { data: employees, loading: loadingEmployees } = useFirebase<Employee>('employees');
     const { data: cashAccounts, loading: loadingCashAccounts } = useFirebase<CashAccount>('cashAccounts');
     const { toast } = useToast();
@@ -122,17 +124,13 @@ export default function EmployeeAdvancesPage() {
     }
 
 
-    const handleSave = async (data: any) => {
+    const handleSave = async (data: Omit<EmployeeAdvance, 'id' | 'receiptNumber'>) => {
         try {
-            if (data.id) {
-                if (!can('edit', 'hr')) return toast({ variant: "destructive", title: "غير مصرح به" });
-                await update(data.id, data);
-                toast({ title: "تم التحديث بنجاح" });
-            } else {
-                if (!can('add', 'hr')) return toast({ variant: "destructive", title: "غير مصرح به" });
-                await add(data);
-                toast({ title: "تمت الإضافة بنجاح" });
-            }
+            if (!can('add', 'hr')) return toast({ variant: "destructive", title: "غير مصرح به" });
+            const receiptNumber = `ADV-${await getNextId('employeeAdvance')}`;
+            const newAdvance = { ...data, receiptNumber };
+            await add(newAdvance);
+            toast({ title: "تمت الإضافة بنجاح", description: `تم حفظ السلفة برقم إيصال: ${receiptNumber}` });
         } catch (error) {
             toast({ variant: "destructive", title: "حدث خطأ", description: "فشل الحفظ" });
         }
@@ -209,7 +207,7 @@ export default function EmployeeAdvancesPage() {
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
                                                         <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                                                        {can('edit', 'hr') && (
+                                                        {/* {can('edit', 'hr') && (
                                                             <AddEntityDialog
                                                                 title="تعديل السلفة"
                                                                 description="تحديث تفاصيل السلفة."
@@ -222,7 +220,7 @@ export default function EmployeeAdvancesPage() {
                                                             >
                                                                 <AdvanceForm advance={advance} onSave={handleSave} onClose={() => {}} employees={employees} cashAccounts={cashAccounts} />
                                                             </AddEntityDialog>
-                                                        )}
+                                                        )} */}
                                                         {can('delete', 'hr') && (
                                                             <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(advance.id!)}>
                                                                 <Trash2 className="ml-2 h-4 w-4" />

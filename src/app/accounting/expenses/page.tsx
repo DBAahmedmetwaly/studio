@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState } from 'react';
@@ -36,6 +37,7 @@ interface Expense {
     warehouseId?: string;
     expenseType: string;
     paidFromAccountId: string;
+    receiptNumber?: string;
 }
 
 interface Warehouse {
@@ -48,8 +50,8 @@ interface CashAccount {
     name: string;
 }
 
-const ExpenseForm = ({ expense, onSave, onClose, warehouses, cashAccounts }: { expense?: Expense, onSave: (data: Expense) => void, onClose: () => void, warehouses: Warehouse[], cashAccounts: CashAccount[] }) => {
-    const [formData, setFormData] = useState<Omit<Expense, 'id'>>(
+const ExpenseForm = ({ expense, onSave, onClose, warehouses, cashAccounts }: { expense?: Expense, onSave: (data: Omit<Expense, 'id'|'receiptNumber'>) => void, onClose: () => void, warehouses: Warehouse[], cashAccounts: CashAccount[] }) => {
+    const [formData, setFormData] = useState<Omit<Expense, 'id'|'receiptNumber'>>(
         expense || { date: new Date().toISOString().split('T')[0], amount: 0, description: "", expenseType: "", paidFromAccountId: "" }
     );
 
@@ -131,7 +133,7 @@ const ExpenseForm = ({ expense, onSave, onClose, warehouses, cashAccounts }: { e
 };
 
 export default function ExpensesPage() {
-    const { data: expenses, loading: loadingExpenses, add, update, remove } = useFirebase<Expense>('expenses');
+    const { data: expenses, loading: loadingExpenses, add, update, remove, getNextId } = useFirebase<Expense>('expenses');
     const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
     const { data: cashAccounts, loading: loadingCashAccounts } = useFirebase<CashAccount>('cashAccounts');
     const { toast } = useToast();
@@ -148,15 +150,12 @@ export default function ExpensesPage() {
     }
 
 
-    const handleSave = async (data: Expense) => {
+    const handleSave = async (data: Omit<Expense, 'id' | 'receiptNumber'>) => {
         try {
-            if (data.id) {
-                await update(data.id, data);
-                toast({ title: "تم التحديث بنجاح" });
-            } else {
-                await add(data);
-                toast({ title: "تمت الإضافة بنجاح" });
-            }
+            const receiptNumber = `EXP-${await getNextId('expense')}`;
+            const newExpense = { ...data, receiptNumber };
+            await add(newExpense);
+            toast({ title: "تمت الإضافة بنجاح", description: `تم تسجيل المصروف برقم إيصال: ${receiptNumber}` });
         } catch (error) {
             toast({ variant: "destructive", title: "حدث خطأ", description: "فشل الحفظ" });
         }
@@ -231,7 +230,8 @@ export default function ExpensesPage() {
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
                                                         <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                                                        <AddEntityDialog
+                                                        {/* Edit is complex for numbered transactions, disabling for now. */}
+                                                        {/* <AddEntityDialog
                                                             title="تعديل المصروف"
                                                             description="تحديث تفاصيل المصروف."
                                                             triggerButton={
@@ -242,7 +242,7 @@ export default function ExpensesPage() {
                                                             }
                                                         >
                                                             <ExpenseForm expense={expense} onSave={handleSave} onClose={() => {}} warehouses={warehouses} cashAccounts={cashAccounts} />
-                                                        </AddEntityDialog>
+                                                        </AddEntityDialog> */}
                                                         <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(expense.id!)}>
                                                             <Trash2 className="ml-2 h-4 w-4" />
                                                             حذف

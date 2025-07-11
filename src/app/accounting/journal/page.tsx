@@ -27,16 +27,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 
 interface SaleInvoice {
-  id: string; date: string; customerName: string; total: number; warehouseId: string; discount: number;
+  id: string; date: string; customerName: string; total: number; warehouseId: string; discount: number; invoiceNumber?: string;
   items: { qty: number; cost?: number; price: number }[];
 }
-interface PurchaseInvoice { id: string; date: string; supplierName: string; total: number; warehouseId: string; discount: number; }
-interface Expense { id: string; date: string; description: string; amount: number; warehouseId?: string; expenseType: string; paidFromAccountId: string;}
-interface ExceptionalIncome { id: string; date: string; description: string; amount: number; warehouseId?: string; }
+interface PurchaseInvoice { id: string; date: string; supplierName: string; total: number; warehouseId: string; discount: number; invoiceNumber?: string; }
+interface Expense { id: string; date: string; description: string; amount: number; warehouseId?: string; expenseType: string; paidFromAccountId: string; receiptNumber?: string;}
+interface ExceptionalIncome { id: string; date: string; description: string; amount: number; warehouseId?: string; receiptNumber?: string; }
 interface Warehouse { id: string; name: string; }
 interface CashAccount { id: string; name: string; }
 interface StockTransferRecord {
-    id: string; date: string; fromSourceId: string; toSourceId: string;
+    id: string; date: string; fromSourceId: string; toSourceId: string; receiptNumber?: string;
     items: { id: string, name: string; qty: number, cost?:number }[];
 }
 interface Item {
@@ -51,6 +51,7 @@ interface TreasuryTransaction {
     amount: number;
     accountId: string;
     description: string;
+    receiptNumber?: string;
 }
 interface EmployeeAdvance {
     id: string;
@@ -58,6 +59,7 @@ interface EmployeeAdvance {
     employeeId: string;
     amount: number;
     paidFromAccountId: string;
+    receiptNumber?: string;
 }
 interface EmployeeAdjustment {
     id: string;
@@ -66,6 +68,7 @@ interface EmployeeAdjustment {
     type: 'reward' | 'penalty';
     amount: number;
     description: string;
+    receiptNumber?: string;
 }
 interface Employee {
     id: string;
@@ -77,6 +80,7 @@ interface SalesReturn {
     customerId: string;
     warehouseId: string;
     total: number;
+    receiptNumber?: string;
     items: { id: string; name: string; qty: number; price: number; }[];
 }
 interface PurchaseReturn {
@@ -85,6 +89,7 @@ interface PurchaseReturn {
     supplierId: string;
     warehouseId: string;
     total: number;
+    receiptNumber?: string;
     items: { id: string; name: string; qty: number; price: number; }[];
 }
 interface Customer {
@@ -101,6 +106,7 @@ interface SupplierPayment {
     amount: number;
     supplierId: string;
     paidFromAccountId: string;
+    receiptNumber?: string;
 }
 interface CustomerPayment {
     id: string;
@@ -108,6 +114,7 @@ interface CustomerPayment {
     amount: number;
     customerId: string;
     paidToAccountId: string;
+    receiptNumber?: string;
 }
 
 
@@ -158,71 +165,78 @@ export default function JournalPage() {
         sales.forEach(sale => {
             const costOfGoodsSold = sale.items.reduce((acc, item) => acc + (item.qty * (item.cost || item.price * 0.8)), 0);
             const totalBeforeDiscount = sale.total + (sale.discount || 0);
+            const number = sale.invoiceNumber || `INV-${sale.id.slice(-4)}`;
             // Accounts Receivable (Debit) for the final amount owed
-            entries.push({ id: `sale-ar-${sale.id}`, date: sale.date, warehouseId: sale.warehouseId, number: `INV-${sale.id.slice(-4)}`, description: `فاتورة بيع للعميل ${sale.customerName}`, debit: sale.total, credit: 0, account: 'حسابات العملاء' });
+            entries.push({ id: `sale-ar-${sale.id}`, date: sale.date, warehouseId: sale.warehouseId, number: number, description: `فاتورة بيع للعميل ${sale.customerName}`, debit: sale.total, credit: 0, account: 'حسابات العملاء' });
             // Sales Discount (Debit) if a discount was given
             if (sale.discount > 0) {
-                 entries.push({ id: `sale-discount-${sale.id}`, date: sale.date, warehouseId: sale.warehouseId, number: `INV-${sale.id.slice(-4)}`, description: `خصم مسموح به على فاتورة بيع`, debit: sale.discount, credit: 0, account: 'خصم مسموح به' });
+                 entries.push({ id: `sale-discount-${sale.id}`, date: sale.date, warehouseId: sale.warehouseId, number: number, description: `خصم مسموح به على فاتورة بيع`, debit: sale.discount, credit: 0, account: 'خصم مسموح به' });
             }
             // Sales Revenue (Credit) for the full amount before discount
-            entries.push({ id: `sale-rev-${sale.id}`, date: sale.date, warehouseId: sale.warehouseId, number: `INV-${sale.id.slice(-4)}`, description: `إيرادات من فاتورة بيع`, debit: 0, credit: totalBeforeDiscount, account: 'إيرادات المبيعات' });
+            entries.push({ id: `sale-rev-${sale.id}`, date: sale.date, warehouseId: sale.warehouseId, number: number, description: `إيرادات من فاتورة بيع`, debit: 0, credit: totalBeforeDiscount, account: 'إيرادات المبيعات' });
             // COGS entry
-            entries.push({ id: `sale-cogs-${sale.id}`, date: sale.date, warehouseId: sale.warehouseId, number: `INV-${sale.id.slice(-4)}`, description: `تكلفة بضاعة مباعة`, debit: costOfGoodsSold, credit: 0, account: 'تكلفة البضاعة المباعة' });
-            entries.push({ id: `sale-inv-${sale.id}`, date: sale.date, warehouseId: sale.warehouseId, number: `INV-${sale.id.slice(-4)}`, description: `تخفيض المخزون من ${getWarehouseName(sale.warehouseId)}`, debit: 0, credit: costOfGoodsSold, account: `مخزون - ${getWarehouseName(sale.warehouseId)}` });
+            entries.push({ id: `sale-cogs-${sale.id}`, date: sale.date, warehouseId: sale.warehouseId, number: number, description: `تكلفة بضاعة مباعة`, debit: costOfGoodsSold, credit: 0, account: 'تكلفة البضاعة المباعة' });
+            entries.push({ id: `sale-inv-${sale.id}`, date: sale.date, warehouseId: sale.warehouseId, number: number, description: `تخفيض المخزون من ${getWarehouseName(sale.warehouseId)}`, debit: 0, credit: costOfGoodsSold, account: `مخزون - ${getWarehouseName(sale.warehouseId)}` });
         });
 
         // Purchase Invoices
         purchases.forEach(p => {
              const totalBeforeDiscount = p.total + (p.discount || 0);
+             const number = p.invoiceNumber || `PUR-${p.id.slice(-4)}`;
             // Inventory (Debit) for the full value of goods
-            entries.push({ id: `pur-inv-${p.id}`, date: p.date, warehouseId: p.warehouseId, number: `PUR-${p.id.slice(-4)}`, description: `فاتورة شراء من ${p.supplierName}`, debit: totalBeforeDiscount, credit: 0, account: `مخزون - ${getWarehouseName(p.warehouseId)}` });
+            entries.push({ id: `pur-inv-${p.id}`, date: p.date, warehouseId: p.warehouseId, number: number, description: `فاتورة شراء من ${p.supplierName}`, debit: totalBeforeDiscount, credit: 0, account: `مخزون - ${getWarehouseName(p.warehouseId)}` });
             // Accounts Payable (Credit) for the final amount owed
-            entries.push({ id: `pur-ap-${p.id}`, date: p.date, warehouseId: p.warehouseId, number: `PUR-${p.id.slice(-4)}`, description: `مستحقات للمورد ${p.supplierName}`, debit: 0, credit: p.total, account: 'حسابات الموردين' });
+            entries.push({ id: `pur-ap-${p.id}`, date: p.date, warehouseId: p.warehouseId, number: number, description: `مستحقات للمورد ${p.supplierName}`, debit: 0, credit: p.total, account: 'حسابات الموردين' });
              // Purchase Discount (Credit) if a discount was received
             if (p.discount > 0) {
-                 entries.push({ id: `pur-discount-${p.id}`, date: p.date, warehouseId: p.warehouseId, number: `PUR-${p.id.slice(-4)}`, description: `خصم مكتسب على فاتورة شراء`, debit: 0, credit: p.discount, account: 'خصم مكتسب' });
+                 entries.push({ id: `pur-discount-${p.id}`, date: p.date, warehouseId: p.warehouseId, number: number, description: `خصم مكتسب على فاتورة شراء`, debit: 0, credit: p.discount, account: 'خصم مكتسب' });
             }
         });
         
         // Sales Returns
         salesReturns.forEach(sr => {
+            const number = sr.receiptNumber || `S-RET-${sr.id.slice(-4)}`;
             const costOfGoodsReturned = sr.items.reduce((acc, item) => {
                  const itemMaster = itemsMap.get(item.id);
                  const itemCost = itemMaster?.cost || item.price * 0.8; // Fallback
                  return acc + (item.qty * itemCost);
             }, 0);
-            entries.push({ id: `sal-ret-debit-${sr.id}`, date: sr.date, warehouseId: sr.warehouseId, number: `S-RET-${sr.id.slice(-4)}`, description: `مرتجع مبيعات من ${getCustomerName(sr.customerId)}`, debit: sr.total, credit: 0, account: 'مرتجعات ومسموحات المبيعات' });
-            entries.push({ id: `sal-ret-credit-${sr.id}`, date: sr.date, warehouseId: sr.warehouseId, number: `S-RET-${sr.id.slice(-4)}`, description: `تخفيض مديونية العميل ${getCustomerName(sr.customerId)}`, debit: 0, credit: sr.total, account: 'حسابات العملاء' });
+            entries.push({ id: `sal-ret-debit-${sr.id}`, date: sr.date, warehouseId: sr.warehouseId, number: number, description: `مرتجع مبيعات من ${getCustomerName(sr.customerId)}`, debit: sr.total, credit: 0, account: 'مرتجعات ومسموحات المبيعات' });
+            entries.push({ id: `sal-ret-credit-${sr.id}`, date: sr.date, warehouseId: sr.warehouseId, number: number, description: `تخفيض مديونية العميل ${getCustomerName(sr.customerId)}`, debit: 0, credit: sr.total, account: 'حسابات العملاء' });
             // Return goods to inventory
-            entries.push({ id: `sal-ret-inv-debit-${sr.id}`, date: sr.date, warehouseId: sr.warehouseId, number: `S-RET-${sr.id.slice(-4)}`, description: `إعادة بضاعة إلى مخزن ${getWarehouseName(sr.warehouseId)}`, debit: costOfGoodsReturned, credit: 0, account: `مخزون - ${getWarehouseName(sr.warehouseId)}` });
-            entries.push({ id: `sal-ret-inv-credit-${sr.id}`, date: sr.date, warehouseId: sr.warehouseId, number: `S-RET-${sr.id.slice(-4)}`, description: `عكس تكلفة البضاعة المباعة`, debit: 0, credit: costOfGoodsReturned, account: 'تكلفة البضاعة المباعة' });
+            entries.push({ id: `sal-ret-inv-debit-${sr.id}`, date: sr.date, warehouseId: sr.warehouseId, number: number, description: `إعادة بضاعة إلى مخزن ${getWarehouseName(sr.warehouseId)}`, debit: costOfGoodsReturned, credit: 0, account: `مخزون - ${getWarehouseName(sr.warehouseId)}` });
+            entries.push({ id: `sal-ret-inv-credit-${sr.id}`, date: sr.date, warehouseId: sr.warehouseId, number: number, description: `عكس تكلفة البضاعة المباعة`, debit: 0, credit: costOfGoodsReturned, account: 'تكلفة البضاعة المباعة' });
         });
 
         // Purchase Returns
         purchaseReturns.forEach(pr => {
-             entries.push({ id: `pur-ret-debit-${pr.id}`, date: pr.date, warehouseId: pr.warehouseId, number: `P-RET-${pr.id.slice(-4)}`, description: `تخفيض مستحقات المورد ${getSupplierName(pr.supplierId)}`, debit: pr.total, credit: 0, account: 'حسابات الموردين' });
-             entries.push({ id: `pur-ret-credit-${pr.id}`, date: pr.date, warehouseId: pr.warehouseId, number: `P-RET-${pr.id.slice(-4)}`, description: `مرتجع مشتريات إلى ${getSupplierName(pr.supplierId)}`, debit: 0, credit: pr.total, account: `مخزون - ${getWarehouseName(pr.warehouseId)}` });
+             const number = pr.receiptNumber || `P-RET-${pr.id.slice(-4)}`;
+             entries.push({ id: `pur-ret-debit-${pr.id}`, date: pr.date, warehouseId: pr.warehouseId, number: number, description: `تخفيض مستحقات المورد ${getSupplierName(pr.supplierId)}`, debit: pr.total, credit: 0, account: 'حسابات الموردين' });
+             entries.push({ id: `pur-ret-credit-${pr.id}`, date: pr.date, warehouseId: pr.warehouseId, number: number, description: `مرتجع مشتريات إلى ${getSupplierName(pr.supplierId)}`, debit: 0, credit: pr.total, account: `مخزون - ${getWarehouseName(pr.warehouseId)}` });
         });
 
 
         // Expenses
         expenses.forEach(e => {
+            const number = e.receiptNumber || `EXP-${e.id.slice(-4)}`;
             const expenseAccount = e.warehouseId && e.warehouseId !== 'none'
                 ? `${e.expenseType} - ${getWarehouseName(e.warehouseId)}`
                 : `${e.expenseType} (عام)`;
             const cashAccountName = getCashAccountName(e.paidFromAccountId)
-            entries.push({ id: `exp-debit-${e.id}`, date: e.date, warehouseId: e.warehouseId, number: `EXP-${e.id.slice(-4)}`, description: e.description, debit: e.amount, credit: 0, account: expenseAccount });
-            entries.push({ id: `exp-credit-${e.id}`, date: e.date, warehouseId: e.warehouseId, number: `EXP-${e.id.slice(-4)}`, description: `دفع من ${cashAccountName}`, debit: 0, credit: e.amount, account: cashAccountName });
+            entries.push({ id: `exp-debit-${e.id}`, date: e.date, warehouseId: e.warehouseId, number: number, description: e.description, debit: e.amount, credit: 0, account: expenseAccount });
+            entries.push({ id: `exp-credit-${e.id}`, date: e.date, warehouseId: e.warehouseId, number: number, description: `دفع من ${cashAccountName}`, debit: 0, credit: e.amount, account: cashAccountName });
         });
         
         // Exceptional Incomes
         exceptionalIncomes.forEach(i => {
-            entries.push({ id: `ex-inc-debit-${i.id}`, date: i.date, warehouseId: i.warehouseId, number: `INC-${i.id.slice(-4)}`, description: i.description, debit: i.amount, credit: 0, account: 'النقدية/البنك' });
-            entries.push({ id: `ex-inc-credit-${i.id}`, date: i.date, warehouseId: i.warehouseId, number: `INC-${i.id.slice(-4)}`, description: i.description, debit: 0, credit: i.amount, account: i.warehouseId ? `دخل استثنائي - ${getWarehouseName(i.warehouseId)}` : 'دخل استثنائي' });
+            const number = i.receiptNumber || `INC-${i.id.slice(-4)}`;
+            entries.push({ id: `ex-inc-debit-${i.id}`, date: i.date, warehouseId: i.warehouseId, number: number, description: i.description, debit: i.amount, credit: 0, account: 'النقدية/البنك' });
+            entries.push({ id: `ex-inc-credit-${i.id}`, date: i.date, warehouseId: i.warehouseId, number: number, description: i.description, debit: 0, credit: i.amount, account: i.warehouseId ? `دخل استثنائي - ${getWarehouseName(i.warehouseId)}` : 'دخل استثنائي' });
         });
 
         // Stock Transfers
         transfers.forEach(t => {
+            const number = t.receiptNumber || `TRN-${t.id.slice(-4)}`;
             const transferCost = t.items.reduce((acc, transferItem) => {
                 const itemMaster = itemsMap.get(transferItem.id);
                 // Use a fallback cost if not available
@@ -233,53 +247,58 @@ export default function JournalPage() {
             const toWarehouseName = getWarehouseName(t.toSourceId);
 
             // Debit the receiving warehouse (asset increase)
-            entries.push({ id: `trn-debit-${t.id}`, date: t.date, warehouseId: t.toSourceId, number: `TRN-${t.id.slice(-4)}`, description: `تحويل من ${fromWarehouseName}`, debit: transferCost, credit: 0, account: `مخزون - ${toWarehouseName}` });
+            entries.push({ id: `trn-debit-${t.id}`, date: t.date, warehouseId: t.toSourceId, number: number, description: `تحويل من ${fromWarehouseName}`, debit: transferCost, credit: 0, account: `مخزون - ${toWarehouseName}` });
             // Credit the sending warehouse (asset decrease)
-            entries.push({ id: `trn-credit-${t.id}`, date: t.date, warehouseId: t.fromSourceId, number: `TRN-${t.id.slice(-4)}`, description: `تحويل إلى ${toWarehouseName}`, debit: 0, credit: transferCost, account: `مخزون - ${fromWarehouseName}` });
+            entries.push({ id: `trn-credit-${t.id}`, date: t.date, warehouseId: t.fromSourceId, number: number, description: `تحويل إلى ${toWarehouseName}`, debit: 0, credit: transferCost, account: `مخزون - ${fromWarehouseName}` });
         });
         
         // Treasury Transactions
         treasuryTxs.forEach(tx => {
+            const number = tx.receiptNumber || `TRX-${tx.id.slice(-4)}`;
             const accountName = getCashAccountName(tx.accountId);
             if(tx.type === 'deposit') {
-                entries.push({ id: `trx-dep-debit-${tx.id}`, date: tx.date, warehouseId: undefined, number: `TRX-${tx.id.slice(-4)}`, description: `إيداع: ${tx.description}`, debit: tx.amount, credit: 0, account: accountName });
-                entries.push({ id: `trx-dep-credit-${tx.id}`, date: tx.date, warehouseId: undefined, number: `TRX-${tx.id.slice(-4)}`, description: `إيداع: ${tx.description}`, debit: 0, credit: tx.amount, account: 'حساب وسيط للإيداع' });
+                entries.push({ id: `trx-dep-debit-${tx.id}`, date: tx.date, warehouseId: undefined, number: number, description: `إيداع: ${tx.description}`, debit: tx.amount, credit: 0, account: accountName });
+                entries.push({ id: `trx-dep-credit-${tx.id}`, date: tx.date, warehouseId: undefined, number: number, description: `إيداع: ${tx.description}`, debit: 0, credit: tx.amount, account: 'حساب وسيط للإيداع' });
             } else { // withdrawal
-                 entries.push({ id: `trx-wit-debit-${tx.id}`, date: tx.date, warehouseId: undefined, number: `TRX-${tx.id.slice(-4)}`, description: `سحب: ${tx.description}`, debit: tx.amount, credit: 0, account: 'حساب وسيط للسحب' });
-                 entries.push({ id: `trx-wit-credit-${tx.id}`, date: tx.date, warehouseId: undefined, number: `TRX-${tx.id.slice(-4)}`, description: `سحب: ${tx.description}`, debit: 0, credit: tx.amount, account: accountName });
+                 entries.push({ id: `trx-wit-debit-${tx.id}`, date: tx.date, warehouseId: undefined, number: number, description: `سحب: ${tx.description}`, debit: tx.amount, credit: 0, account: 'حساب وسيط للسحب' });
+                 entries.push({ id: `trx-wit-credit-${tx.id}`, date: tx.date, warehouseId: undefined, number: number, description: `سحب: ${tx.description}`, debit: 0, credit: tx.amount, account: accountName });
             }
         });
 
         // Employee Advances
         employeeAdvances.forEach(adv => {
+            const number = adv.receiptNumber || `ADV-${adv.id.slice(-4)}`;
             const employeeName = getEmployeeName(adv.employeeId);
             const cashAccountName = getCashAccountName(adv.paidFromAccountId);
-            entries.push({ id: `adv-debit-${adv.id}`, date: adv.date, number: `ADV-${adv.id.slice(-4)}`, description: `سلفة للموظف ${employeeName}`, debit: adv.amount, credit: 0, account: 'سلف الموظفين' });
-            entries.push({ id: `adv-credit-${adv.id}`, date: adv.date, number: `ADV-${adv.id.slice(-4)}`, description: `دفع من ${cashAccountName}`, debit: 0, credit: adv.amount, account: cashAccountName });
+            entries.push({ id: `adv-debit-${adv.id}`, date: adv.date, number: number, description: `سلفة للموظف ${employeeName}`, debit: adv.amount, credit: 0, account: 'سلف الموظفين' });
+            entries.push({ id: `adv-credit-${adv.id}`, date: adv.date, number: number, description: `دفع من ${cashAccountName}`, debit: 0, credit: adv.amount, account: cashAccountName });
         });
         
         // Employee Adjustments (Rewards/Penalties)
         employeeAdjustments.forEach(adj => {
+             const number = adj.receiptNumber || `ADJ-${adj.id.slice(-4)}`;
              const employeeName = getEmployeeName(adj.employeeId);
              if (adj.type === 'reward') {
-                 entries.push({ id: `adj-rew-debit-${adj.id}`, date: adj.date, number: `ADJ-${adj.id.slice(-4)}`, description: `مكافأة لـ ${employeeName}: ${adj.description}`, debit: adj.amount, credit: 0, account: 'مصروف مكافآت' });
-                 entries.push({ id: `adj-rew-credit-${adj.id}`, date: adj.date, number: `ADJ-${adj.id.slice(-4)}`, description: `استحقاق مكافأة لـ ${employeeName}`, debit: 0, credit: adj.amount, account: 'رواتب مستحقة' });
+                 entries.push({ id: `adj-rew-debit-${adj.id}`, date: adj.date, number: number, description: `مكافأة لـ ${employeeName}: ${adj.description}`, debit: adj.amount, credit: 0, account: 'مصروف مكافآت' });
+                 entries.push({ id: `adj-rew-credit-${adj.id}`, date: adj.date, number: number, description: `استحقاق مكافأة لـ ${employeeName}`, debit: 0, credit: adj.amount, account: 'رواتب مستحقة' });
              } else { // penalty
-                 entries.push({ id: `adj-pen-debit-${adj.id}`, date: adj.date, number: `ADJ-${adj.id.slice(-4)}`, description: `خصم من ${employeeName}: ${adj.description}`, debit: adj.amount, credit: 0, account: 'رواتب مستحقة' });
-                 entries.push({ id: `adj-pen-credit-${adj.id}`, date: adj.date, number: `ADJ-${adj.id.slice(-4)}`, description: `إيراد جزاءات من ${employeeName}`, debit: 0, credit: adj.amount, account: 'إيرادات أخرى - جزاءات' });
+                 entries.push({ id: `adj-pen-debit-${adj.id}`, date: adj.date, number: number, description: `خصم من ${employeeName}: ${adj.description}`, debit: adj.amount, credit: 0, account: 'رواتب مستحقة' });
+                 entries.push({ id: `adj-pen-credit-${adj.id}`, date: adj.date, number: number, description: `إيراد جزاءات من ${employeeName}`, debit: 0, credit: adj.amount, account: 'إيرادات أخرى - جزاءات' });
              }
         });
 
         // Supplier Payments
         supplierPayments.forEach(p => {
-            entries.push({ id: `supp-pay-debit-${p.id}`, date: p.date, number: `PAY-${p.id.slice(-4)}`, description: `سداد للمورد ${getSupplierName(p.supplierId)}`, debit: p.amount, credit: 0, account: 'حسابات الموردين' });
-            entries.push({ id: `supp-pay-credit-${p.id}`, date: p.date, number: `PAY-${p.id.slice(-4)}`, description: `دفع من ${getCashAccountName(p.paidFromAccountId)}`, debit: 0, credit: p.amount, account: getCashAccountName(p.paidFromAccountId) });
+            const number = p.receiptNumber || `PAY-${p.id.slice(-4)}`;
+            entries.push({ id: `supp-pay-debit-${p.id}`, date: p.date, number: number, description: `سداد للمورد ${getSupplierName(p.supplierId)}`, debit: p.amount, credit: 0, account: 'حسابات الموردين' });
+            entries.push({ id: `supp-pay-credit-${p.id}`, date: p.date, number: number, description: `دفع من ${getCashAccountName(p.paidFromAccountId)}`, debit: 0, credit: p.amount, account: getCashAccountName(p.paidFromAccountId) });
         });
 
         // Customer Payments
         customerPayments.forEach(p => {
-            entries.push({ id: `cust-pay-debit-${p.id}`, date: p.date, number: `REC-${p.id.slice(-4)}`, description: `تحصيل من العميل ${getCustomerName(p.customerId)}`, debit: p.amount, credit: 0, account: getCashAccountName(p.paidToAccountId) });
-            entries.push({ id: `cust-pay-credit-${p.id}`, date: p.date, number: `REC-${p.id.slice(-4)}`, description: `تخفيض مديونية العميل`, debit: 0, credit: p.amount, account: 'حسابات العملاء' });
+            const number = p.receiptNumber || `REC-${p.id.slice(-4)}`;
+            entries.push({ id: `cust-pay-debit-${p.id}`, date: p.date, number: number, description: `تحصيل من العميل ${getCustomerName(p.customerId)}`, debit: p.amount, credit: 0, account: getCashAccountName(p.paidToAccountId) });
+            entries.push({ id: `cust-pay-credit-${p.id}`, date: p.date, number: number, description: `تخفيض مديونية العميل`, debit: 0, credit: p.amount, account: 'حسابات العملاء' });
         });
 
 
@@ -364,7 +383,7 @@ export default function JournalPage() {
                             {filteredEntries.map((entry) => (
                                  <TableRow key={entry.id}>
                                     <TableCell>{new Date(entry.date).toLocaleDateString('ar-EG')}</TableCell>
-                                    <TableCell>{entry.number}</TableCell>
+                                    <TableCell className="font-mono">{entry.number}</TableCell>
                                     <TableCell>{entry.description}</TableCell>
                                     <TableCell>{entry.account}</TableCell>
                                     <TableCell className="text-center font-mono">{entry.debit > 0 ? entry.debit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</TableCell>

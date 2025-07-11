@@ -16,30 +16,27 @@ const useFirebase = <T extends object>(path: string) => {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    const fetchData = async () => {
-        setLoading(true);
-        const dbRef = ref(database, path);
-        try {
-            const snapshot = await get(dbRef);
-            if (snapshot.exists()) {
-                const snapshotData = snapshot.val();
-                 const dataArray = Object.keys(snapshotData).map((key) => ({
-                  id: key,
-                  ...snapshotData[key],
-                }));
-                setData(dataArray);
-            } else {
-                setData([]);
-            }
-        } catch (e: any) {
-            setError(e);
-            console.error(`Firebase read failed for path: ${path}`, e);
-        } finally {
-            setLoading(false);
-        }
-    };
+    const dbRef = ref(database, path);
     
-    fetchData();
+    const unsubscribe = onValue(dbRef, (snapshot) => {
+        if (snapshot.exists()) {
+            const snapshotData = snapshot.val();
+             const dataArray = Object.keys(snapshotData).map((key) => ({
+              id: key,
+              ...snapshotData[key],
+            }));
+            setData(dataArray);
+        } else {
+            setData([]);
+        }
+        setLoading(false);
+    }, (e) => {
+        setError(e);
+        setLoading(false);
+        console.error(`Firebase read failed for path: ${path}`, e);
+    });
+
+    return () => unsubscribe();
     
   }, [path]);
 
@@ -82,12 +79,12 @@ const useFirebase = <T extends object>(path: string) => {
     }
   }, [path]);
 
-  const getNextId = useCallback(async (counterName: string, startFrom = 0): Promise<number | null> => {
+  const getNextId = useCallback(async (counterName: string, startFrom = 1000): Promise<number | null> => {
     const counterRef = ref(database, `counters/${counterName}`);
     try {
         const { committed, snapshot } = await runTransaction(counterRef, (currentValue) => {
             if (currentValue === null) {
-                return startFrom + 1;
+                return startFrom;
             }
             return currentValue + 1;
         });
@@ -106,5 +103,3 @@ const useFirebase = <T extends object>(path: string) => {
 };
 
 export default useFirebase;
-
-    

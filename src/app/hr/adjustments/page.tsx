@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState } from 'react';
@@ -31,6 +32,7 @@ interface EmployeeAdjustment {
     employeeId: string;
     type: 'reward' | 'penalty';
     description: string;
+    receiptNumber?: string;
 }
 
 interface Employee {
@@ -38,8 +40,8 @@ interface Employee {
     name: string;
 }
 
-const AdjustmentForm = ({ adjustment, onSave, onClose, employees }: { adjustment?: EmployeeAdjustment, onSave: (data: any) => void, onClose: () => void, employees: Employee[]}) => {
-    const [formData, setFormData] = useState(
+const AdjustmentForm = ({ adjustment, onSave, onClose, employees }: { adjustment?: EmployeeAdjustment, onSave: (data: Omit<EmployeeAdjustment, 'id' | 'receiptNumber'>) => void, onClose: () => void, employees: Employee[]}) => {
+    const [formData, setFormData] = useState<Omit<EmployeeAdjustment, 'id'|'receiptNumber'>>(
         adjustment || { date: new Date().toISOString().split('T')[0], amount: 0, employeeId: "", type: "reward", description: "" }
     );
 
@@ -102,7 +104,7 @@ const AdjustmentForm = ({ adjustment, onSave, onClose, employees }: { adjustment
 };
 
 export default function EmployeeAdjustmentsPage() {
-    const { data: adjustments, loading: loadingAdjustments, add, update, remove } = useFirebase<EmployeeAdjustment>('employeeAdjustments');
+    const { data: adjustments, loading: loadingAdjustments, add, update, remove, getNextId } = useFirebase<EmployeeAdjustment>('employeeAdjustments');
     const { data: employees, loading: loadingEmployees } = useFirebase<Employee>('employees');
     const { toast } = useToast();
     const { can } = usePermissions();
@@ -113,17 +115,13 @@ export default function EmployeeAdjustmentsPage() {
         return employees.find(s => s.id === employeeId)?.name || 'غير معروف';
     };
 
-    const handleSave = async (data: any) => {
+    const handleSave = async (data: Omit<EmployeeAdjustment, 'id' | 'receiptNumber'>) => {
         try {
-            if (data.id) {
-                if (!can('edit', 'hr')) return toast({ variant: "destructive", title: "غير مصرح به" });
-                await update(data.id, data);
-                toast({ title: "تم التحديث بنجاح" });
-            } else {
-                if (!can('add', 'hr')) return toast({ variant: "destructive", title: "غير مصرح به" });
-                await add(data);
-                toast({ title: "تمت الإضافة بنجاح" });
-            }
+            if (!can('add', 'hr')) return toast({ variant: "destructive", title: "غير مصرح به" });
+            const receiptNumber = `ADJ-${await getNextId('employeeAdjustment')}`;
+            const newAdjustment = { ...data, receiptNumber };
+            await add(newAdjustment);
+            toast({ title: "تمت الإضافة بنجاح", description: `تم حفظ الإجراء برقم: ${receiptNumber}` });
         } catch (error) {
             toast({ variant: "destructive", title: "حدث خطأ", description: "فشل الحفظ" });
         }
@@ -209,7 +207,7 @@ export default function EmployeeAdjustmentsPage() {
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
                                                         <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                                                        {can('edit', 'hr') && (
+                                                        {/* {can('edit', 'hr') && (
                                                             <AddEntityDialog
                                                                 title="تعديل البند"
                                                                 description="تحديث تفاصيل البند."
@@ -222,7 +220,7 @@ export default function EmployeeAdjustmentsPage() {
                                                             >
                                                                 <AdjustmentForm adjustment={adj} onSave={handleSave} onClose={() => {}} employees={employees} />
                                                             </AddEntityDialog>
-                                                        )}
+                                                        )} */}
                                                         {can('delete', 'hr') && (
                                                             <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(adj.id!)}>
                                                                 <Trash2 className="ml-2 h-4 w-4" />

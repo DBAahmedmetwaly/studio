@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState } from 'react';
@@ -29,6 +30,7 @@ interface ExceptionalIncome {
     amount: number;
     description: string;
     warehouseId?: string;
+    receiptNumber?: string;
 }
 
 interface Warehouse {
@@ -36,8 +38,8 @@ interface Warehouse {
     name: string;
 }
 
-const IncomeForm = ({ income, onSave, onClose, warehouses }: { income?: ExceptionalIncome, onSave: (data: ExceptionalIncome) => void, onClose: () => void, warehouses: Warehouse[] }) => {
-    const [formData, setFormData] = useState<ExceptionalIncome>(
+const IncomeForm = ({ income, onSave, onClose, warehouses }: { income?: ExceptionalIncome, onSave: (data: Omit<ExceptionalIncome, 'id'|'receiptNumber'>) => void, onClose: () => void, warehouses: Warehouse[] }) => {
+    const [formData, setFormData] = useState<Omit<ExceptionalIncome, 'id'|'receiptNumber'>>(
         income || { date: new Date().toISOString().split('T')[0], amount: 0, description: "" }
     );
 
@@ -83,7 +85,7 @@ const IncomeForm = ({ income, onSave, onClose, warehouses }: { income?: Exceptio
 
 
 export default function ExceptionalIncomePage() {
-    const { data: incomes, loading: loadingIncomes, add, update, remove } = useFirebase<ExceptionalIncome>('exceptionalIncomes');
+    const { data: incomes, loading: loadingIncomes, add, update, remove, getNextId } = useFirebase<ExceptionalIncome>('exceptionalIncomes');
     const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
     const { toast } = useToast();
     
@@ -94,15 +96,12 @@ export default function ExceptionalIncomePage() {
         return warehouses.find(w => w.id === warehouseId)?.name || 'غير معروف';
     };
 
-    const handleSave = async (data: ExceptionalIncome) => {
+    const handleSave = async (data: Omit<ExceptionalIncome, 'id' | 'receiptNumber'>) => {
         try {
-            if (data.id) {
-                await update(data.id, data);
-                toast({ title: "تم التحديث بنجاح" });
-            } else {
-                await add(data);
-                toast({ title: "تمت الإضافة بنجاح" });
-            }
+            const receiptNumber = `INC-${await getNextId('exceptionalIncome')}`;
+            const newIncome = { ...data, receiptNumber };
+            await add(newIncome);
+            toast({ title: "تمت الإضافة بنجاح", description: `تم تسجيل الدخل برقم إيصال: ${receiptNumber}` });
         } catch (error) {
             toast({ variant: "destructive", title: "حدث خطأ", description: "فشل الحفظ" });
         }
@@ -175,7 +174,7 @@ export default function ExceptionalIncomePage() {
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
                                                     <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                                                    <AddEntityDialog
+                                                    {/* <AddEntityDialog
                                                         title="تعديل الدخل"
                                                         description="تحديث تفاصيل سجل الدخل."
                                                         triggerButton={
@@ -186,7 +185,7 @@ export default function ExceptionalIncomePage() {
                                                         }
                                                     >
                                                         <IncomeForm income={income} onSave={handleSave} onClose={() => {}} warehouses={warehouses} />
-                                                    </AddEntityDialog>
+                                                    </AddEntityDialog> */}
                                                      <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(income.id!)}>
                                                         <Trash2 className="ml-2 h-4 w-4" />
                                                         حذف

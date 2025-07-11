@@ -88,10 +88,10 @@ export default function SalesInvoicesListPage() {
                           <TableCell>{invoice.customerName}</TableCell>
                           <TableCell>{new Date(invoice.date).toLocaleDateString('ar-EG')}</TableCell>
                           <TableCell>
-                            <Link href={`/sales/invoices/details/${invoice.id}`} className="flex items-center gap-2 text-primary hover:underline">
+                            <span className="flex items-center gap-2 text-muted-foreground">
                               <FileText className="h-4 w-4" />
                               <span>{`تحتوي على ${invoice.items.length} أصناف`}</span>
-                            </Link>
+                            </span>
                           </TableCell>
                           <TableCell className="text-center">{invoice.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
                           <TableCell className="text-center">
@@ -104,7 +104,7 @@ export default function SalesInvoicesListPage() {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                     <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                                    <DropdownMenuItem onClick={() => router.push(`/sales/invoices/details/${invoice.id}`)}>
+                                    <DropdownMenuItem>
                                         عرض التفاصيل
                                     </DropdownMenuItem>
                                      <DropdownMenuItem>

@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState } from 'react';
@@ -30,6 +31,7 @@ interface CustomerPayment {
     customerId: string;
     paidToAccountId: string;
     notes?: string;
+    receiptNumber?: string;
 }
 
 interface Customer {
@@ -42,7 +44,7 @@ interface CashAccount {
     name: string;
 }
 
-const PaymentForm = ({ payment, onSave, onClose, customers, cashAccounts }: { payment?: CustomerPayment, onSave: (data: Omit<CustomerPayment, 'id'>) => void, onClose: () => void, customers: Customer[], cashAccounts: CashAccount[] }) => {
+const PaymentForm = ({ payment, onSave, onClose, customers, cashAccounts }: { payment?: CustomerPayment, onSave: (data: Omit<CustomerPayment, 'id' | 'receiptNumber'>) => void, onClose: () => void, customers: Customer[], cashAccounts: CashAccount[] }) => {
     const [formData, setFormData] = useState(
         payment || { date: new Date().toISOString().split('T')[0], amount: 0, customerId: "", paidToAccountId: "", notes: "" }
     );
@@ -113,7 +115,7 @@ const PaymentForm = ({ payment, onSave, onClose, customers, cashAccounts }: { pa
 };
 
 export default function CustomerPaymentsPage() {
-    const { data: payments, loading: loadingPayments, add, update, remove } = useFirebase<CustomerPayment>('customerPayments');
+    const { data: payments, loading: loadingPayments, add, update, remove, getNextId } = useFirebase<CustomerPayment>('customerPayments');
     const { data: customers, loading: loadingCustomers } = useFirebase<Customer>('customers');
     const { data: cashAccounts, loading: loadingCashAccounts } = useFirebase<CashAccount>('cashAccounts');
     const { toast } = useToast();
@@ -128,15 +130,12 @@ export default function CustomerPaymentsPage() {
         return cashAccounts.find(acc => acc.id === accountId)?.name || 'غير معروف';
     }
 
-    const handleSave = async (data: any) => {
+    const handleSave = async (data: Omit<CustomerPayment, 'id' | 'receiptNumber'>) => {
         try {
-            if (data.id) {
-                await update(data.id, data);
-                toast({ title: "تم التحديث بنجاح" });
-            } else {
-                await add(data);
-                toast({ title: "تمت الإضافة بنجاح" });
-            }
+            const receiptNumber = `REC-${await getNextId('customerPayment')}`;
+            const newPayment = { ...data, receiptNumber };
+            await add(newPayment);
+            toast({ title: "تمت الإضافة بنجاح", description: `تم حفظ الدفعة برقم إيصال: ${receiptNumber}` });
         } catch (error) {
             toast({ variant: "destructive", title: "حدث خطأ", description: "فشل الحفظ" });
         }
@@ -209,7 +208,7 @@ export default function CustomerPaymentsPage() {
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
                                                         <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                                                        <AddEntityDialog
+                                                        {/* <AddEntityDialog
                                                             title="تعديل الدفعة"
                                                             description="تحديث تفاصيل الدفعة."
                                                             triggerButton={
@@ -220,7 +219,7 @@ export default function CustomerPaymentsPage() {
                                                             }
                                                         >
                                                             <PaymentForm payment={payment} onSave={handleSave} onClose={() => {}} customers={customers} cashAccounts={cashAccounts} />
-                                                        </AddEntityDialog>
+                                                        </AddEntityDialog> */}
                                                         <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(payment.id!)}>
                                                             <Trash2 className="ml-2 h-4 w-4" />
                                                             حذف
