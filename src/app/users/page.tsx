@@ -49,13 +49,17 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 interface User {
   id?: string;
-  uid?: string; // Add uid to the interface
+  uid?: string;
   name: string;
   loginName: string;
-  password?: string; // Optional for security reasons when fetching/displaying
+  password?: string;
   role: string;
-  warehouse: string; // Can be an ID or "all"
+  warehouse: string;
   isSalesRep?: boolean;
+  isEmployee?: boolean;
+  jobTitle?: string;
+  basicSalary?: number;
+  hireDate?: string;
 }
 
 interface Warehouse {
@@ -67,10 +71,14 @@ const UserForm = ({ user, onSave, onClose, warehouses, roles }: { user?: User, o
   const [formData, setFormData] = useState({
     name: user?.name || "",
     loginName: user?.loginName || "",
-    password: "", // Always initialize password to an empty string for controlled input
+    password: "", 
     role: user?.role || "",
     warehouse: user?.warehouse || "",
     isSalesRep: user?.isSalesRep || false,
+    isEmployee: user?.isEmployee || false,
+    jobTitle: user?.jobTitle || "",
+    basicSalary: user?.basicSalary || 0,
+    hireDate: user?.hireDate || new Date().toISOString().split('T')[0],
   });
 
 
@@ -140,6 +148,30 @@ const UserForm = ({ user, onSave, onClose, warehouses, roles }: { user?: User, o
             </Label>
             <Checkbox id="is-sales-rep" checked={formData.isSalesRep} onCheckedChange={(checked) => setFormData({...formData, isSalesRep: !!checked})} />
         </div>
+         <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="is-employee" className="text-right">
+                موظف بالشركة
+            </Label>
+            <Checkbox id="is-employee" checked={formData.isEmployee} onCheckedChange={(checked) => setFormData({...formData, isEmployee: !!checked})} />
+        </div>
+        
+        {formData.isEmployee && (
+            <div className="col-span-4 space-y-4 pt-4 border-t">
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="job-title" className="text-right">المسمى الوظيفي</Label>
+                    <Input id="job-title" value={formData.jobTitle} onChange={e => setFormData({...formData, jobTitle: e.target.value})} className="col-span-3" required={formData.isEmployee} />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="basic-salary" className="text-right">الراتب الأساسي</Label>
+                    <Input id="basic-salary" type="number" value={formData.basicSalary} onChange={e => setFormData({...formData, basicSalary: Number(e.target.value)})} className="col-span-3" required={formData.isEmployee} />
+                </div>
+                 <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="hire-date" className="text-right">تاريخ التعيين</Label>
+                    <Input id="hire-date" type="date" value={formData.hireDate} onChange={e => setFormData({...formData, hireDate: e.target.value})} className="col-span-3" required={formData.isEmployee} />
+                </div>
+            </div>
+        )}
+
       </div>
        <div className="flex justify-end">
         <Button onClick={handleSubmit}>حفظ</Button>
@@ -150,6 +182,7 @@ const UserForm = ({ user, onSave, onClose, warehouses, roles }: { user?: User, o
 
 export default function UsersPage() {
   const { data: usersData, loading: loadingUsers, add, update, remove } = useFirebase<User>('users');
+  const { add: addEmployee, update: updateEmployee } = useFirebase<any>('employees');
   const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
   const { data: rolesData, loading: loadingRoles } = useFirebase<any>('roles');
   const { toast } = useToast();
@@ -167,6 +200,14 @@ export default function UsersPage() {
             if (!can('edit', moduleName)) return toast({variant: 'destructive', title: 'غير مصرح به'});
             const { id, ...dataToUpdate } = user;
             await update(id, dataToUpdate);
+             if (user.isEmployee) {
+                await updateEmployee(id, {
+                    name: user.name,
+                    jobTitle: user.jobTitle,
+                    basicSalary: user.basicSalary,
+                    hireDate: user.hireDate
+                });
+            }
             toast({ title: "تم تحديث المستخدم بنجاح" });
         } else {
             // This is a new user
@@ -178,15 +219,29 @@ export default function UsersPage() {
             
             const email = `${user.loginName}@admin.com`;
             
-            // Step 1: Save user data to Realtime Database first, but without the password.
-            const userDataForDb = { ...user };
-            delete userDataForDb.password;
+            const userDataForDb = { 
+                name: user.name,
+                loginName: user.loginName,
+                role: user.role,
+                warehouse: user.warehouse,
+                isSalesRep: user.isSalesRep,
+             };
             
-            // The `add` function returns the key of the new user record.
             const newUserKey = await add(userDataForDb);
 
             if (!newUserKey) {
                 throw new Error("Failed to get new user key from database.");
+            }
+            
+             // Create employee record if applicable
+            if (user.isEmployee) {
+                await addEmployee({
+                    id: newUserKey, // Use the same key for employee record
+                    name: user.name,
+                    jobTitle: user.jobTitle,
+                    basicSalary: user.basicSalary,
+                    hireDate: user.hireDate
+                });
             }
 
             // Step 2: Create the user in Firebase Auth.
