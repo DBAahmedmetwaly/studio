@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { createContext, useContext, useMemo, useState, useEffect } from 'react';
@@ -144,13 +145,19 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
   useEffect(() => {
     const rolesRef = ref(database, 'roles');
     const unsubscribe = onValue(rolesRef, (snapshot) => {
+        let rolesData;
         if (snapshot.exists()) {
-            setAllRoles(snapshot.val());
+            rolesData = snapshot.val();
         } else {
             // If roles don't exist in DB, set them from initialRoles
             set(rolesRef, initialRoles);
-            setAllRoles(initialRoles);
+            rolesData = initialRoles;
         }
+        
+        // Always ensure the 'مسؤول' role has full permissions from the code definition.
+        rolesData['مسؤول'] = generateAdminPermissions();
+        
+        setAllRoles(rolesData);
         setLoading(false);
     });
 
@@ -162,12 +169,16 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const can = useMemo(() => (action: Action, module: Module | string): boolean => {
     if (!permissions) return false;
+    
+    // The 'مسؤول' role can do everything, always.
+    if (role === 'مسؤول') return true;
+    
     const m = module as Module;
     if (!permissions[m] || !(action in permissions[m])) {
         return false;
     }
     return permissions[m][action as keyof typeof permissions[m]] || false;
-  }, [permissions]);
+  }, [permissions, role]);
 
   if (loading || !permissions) {
     return (
