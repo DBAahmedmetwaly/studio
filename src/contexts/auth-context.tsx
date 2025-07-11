@@ -5,7 +5,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect } from
 import { Loader2, LogIn } from 'lucide-react';
 import { auth, database } from "@/lib/firebase";
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut as firebaseSignOut, User as FirebaseUser } from "firebase/auth";
-import { ref, onValue, get } from 'firebase/database';
+import { ref, onValue, get, query, equalTo, orderByChild } from 'firebase/database';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -18,27 +18,26 @@ interface User {
   loginName: string;
   role: string;
   warehouse: string;
-  uid?: string; // Firebase Auth UID - now optional
+  uid?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  signIn: (loginName: string, pass: string) => Promise<void>;
+  signIn: (email: string, pass: string) => Promise<void>;
   signOut: () => Promise<void>;
   error: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-
-const LoginPage = ({ onSignIn, loading, error }: { onSignIn: (l: string, p: string) => void; loading: boolean, error: string | null }) => {
-    const [loginName, setLoginName] = useState('admin');
-    const [password, setPassword] = useState('123123');
+const LoginPage = ({ onSignIn, loading, error }: { onSignIn: (e: string, p: string) => void; loading: boolean, error: string | null }) => {
+    const [email, setEmail] = useState('admin@admin.com');
+    const [password, setPassword] = useState('123123123');
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSignIn(loginName, password);
+        onSignIn(email, password);
     };
 
     return (
@@ -48,13 +47,13 @@ const LoginPage = ({ onSignIn, loading, error }: { onSignIn: (l: string, p: stri
                     <CardHeader>
                         <CardTitle className="text-2xl">تسجيل الدخول</CardTitle>
                         <CardDescription>
-                            أدخل اسم المستخدم وكلمة المرور للدخول إلى النظام.
+                            أدخل البريد الإلكتروني وكلمة المرور للدخول إلى النظام.
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="grid gap-4">
                         <div className="grid gap-2">
-                            <Label htmlFor="loginName">اسم المستخدم</Label>
-                            <Input id="loginName" type="text" value={loginName} onChange={e => setLoginName(e.target.value)} required />
+                            <Label htmlFor="email">البريد الإلكتروني</Label>
+                            <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="password">كلمة المرور</Label>
@@ -77,60 +76,62 @@ const LoginPage = ({ onSignIn, loading, error }: { onSignIn: (l: string, p: stri
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(false); // Set to false initially
+  const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const signIn = async (loginName: string, pass: string): Promise<void> => {
+  const fetchUserData = async (firebaseUser: FirebaseUser) => {
+      const usersRef = ref(database, 'users');
+      const userQuery = query(usersRef, orderByChild('uid'), equalTo(firebaseUser.uid));
+      const snapshot = await get(userQuery);
+
+      if (snapshot.exists()) {
+          const usersData = snapshot.val();
+          const userKey = Object.keys(usersData)[0];
+          const userData = usersData[userKey];
+          setUser({ ...userData, id: userKey });
+      } else {
+          console.error("No user data found in Realtime Database for this auth user.");
+          setUser(null); // Or handle this case appropriately
+      }
+      setLoading(false);
+  };
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        fetchUserData(firebaseUser);
+      } else {
+        setUser(null);
+        setLoading(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const signIn = async (email: string, pass: string): Promise<void> => {
     setLoading(true);
     setAuthError(null);
     try {
-        const usersRef = ref(database, 'users');
-        const snapshot = await get(usersRef);
-
-        if (snapshot.exists()) {
-            const usersData = snapshot.val();
-            const foundUserKey = Object.keys(usersData).find(key => usersData[key].loginName === loginName);
-
-            if (foundUserKey) {
-                // NOTE: This is an insecure login for demonstration purposes as password is not checked.
-                const userData = usersData[foundUserKey];
-                setUser({ ...userData, id: foundUserKey });
-                sessionStorage.setItem('smart-accountant-user', JSON.stringify({ ...userData, id: foundUserKey }));
-            } else {
-                setAuthError("اسم المستخدم أو كلمة المرور غير صحيحة.");
-            }
-        } else {
-             setAuthError("لا يوجد مستخدمين في قاعدة البيانات.");
-        }
+        await signInWithEmailAndPassword(auth, email, pass);
     } catch (error: any) {
         console.error("Sign in failed:", error);
-        setAuthError("حدث خطأ أثناء تسجيل الدخول.");
-    } finally {
-        setLoading(false);
+        if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+            setAuthError("البريد الإلكتروني أو كلمة المرور غير صحيحة.");
+        } else {
+            setAuthError("حدث خطأ أثناء تسجيل الدخول.");
+        }
+        setLoading(false); // Make sure loading is false on error
     }
+    // Loading state will be handled by onAuthStateChanged
   };
 
   const signOut = async (): Promise<void> => {
+    await firebaseSignOut(auth);
     setUser(null);
-    sessionStorage.removeItem('smart-accountant-user');
   };
   
-  useEffect(() => {
-    // Check if user is stored in session storage on page load
-    try {
-        const storedUser = sessionStorage.getItem('smart-accountant-user');
-        if (storedUser) {
-            setUser(JSON.parse(storedUser));
-        }
-    } catch (e) {
-        console.error("Failed to parse user from session storage", e);
-        sessionStorage.removeItem('smart-accountant-user');
-    }
-    setLoading(false);
-  }, []);
-
-
   if (loading) {
       return (
           <div className="flex h-screen w-full items-center justify-center">
