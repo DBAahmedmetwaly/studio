@@ -1,11 +1,15 @@
+
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { onAuthStateChanged, User as FirebaseUser, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut } from 'firebase/auth';
 import { auth, database } from '@/lib/firebase';
-import useFirebase from '@/hooks/use-firebase';
 import { Loader2 } from 'lucide-react';
 import { ref, set, query, orderByChild, equalTo, get } from 'firebase/database';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 
 
 interface User {
@@ -69,11 +73,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const userData = snapshot.val();
     const userKey = Object.keys(userData)[0];
-    const userEmail = userData[userKey].email; // Assuming you store email
+    const userEmail = `${loginName}@smart-accountant.app`; // Construct email
 
-    if (!userEmail) {
-        throw new Error("لا يوجد بريد إلكتروني مرتبط بهذا المستخدم.");
-    }
     
     const userCredential = await signInWithEmailAndPassword(auth, userEmail, pass);
     await fetchUserAppData(userCredential.user);
