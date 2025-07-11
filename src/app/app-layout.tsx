@@ -46,6 +46,7 @@ import {
   FileUp,
   FileDown,
   Coins,
+  LogOut,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -53,6 +54,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ModeToggle } from "@/components/mode-toggle";
 import { usePermissions } from "@/contexts/permissions-context";
+import { useAuth } from "@/contexts/auth-context";
+import { Button } from "@/components/ui/button";
 
 const Logo = () => (
     <div className="flex items-center gap-2" >
@@ -142,6 +145,8 @@ const NavSubLink = ({ href, children, module }: { href: string; children: React.
 };
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
+  const { user, signOut } = useAuth();
+  
   return (
     <SidebarProvider>
       <Sidebar side="right">
@@ -229,16 +234,19 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter>
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-card m-2">
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-card m-2">
                 <Avatar>
                     <AvatarImage src="https://placehold.co/100x100.png" />
-                    <AvatarFallback>AD</AvatarFallback>
+                    <AvatarFallback>{user?.name?.charAt(0) || 'U'}</AvatarFallback>
                 </Avatar>
-                <div className="flex flex-col">
-                    <span className="font-semibold text-sm">مستخدم مسؤول</span>
-                    <span className="text-xs text-muted-foreground">admin@example.com</span>
+                <div className="flex flex-col flex-1 overflow-hidden">
+                    <span className="font-semibold text-sm truncate">{user?.name || "مستخدم"}</span>
+                    <span className="text-xs text-muted-foreground truncate">{user?.loginName ? `${user.loginName}@admin.com` : "email@example.com"}</span>
                 </div>
                  <ModeToggle />
+                 <Button variant="ghost" size="icon" onClick={signOut}>
+                    <LogOut className="h-5 w-5 text-destructive" />
+                 </Button>
             </div>
         </SidebarFooter>
       </Sidebar>
