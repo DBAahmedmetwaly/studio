@@ -2,7 +2,7 @@
 
 "use client";
 
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import PageHeader from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,19 +31,58 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 
 interface PurchaseInvoice {
   id: string;
   invoiceNumber: string;
   date: string;
+  supplierId: string;
   supplierName: string;
+  warehouseId: string;
   total: number;
   items: any[];
 }
+interface Supplier { id: string; name: string; }
+interface Warehouse { id: string; name: string; }
+
 
 export default function PurchaseInvoicesListPage() {
-  const { data: invoices, loading } = useFirebase<PurchaseInvoice>("purchaseInvoices");
+  const { data: invoices, loading: loadingInvoices } = useFirebase<PurchaseInvoice>("purchaseInvoices");
+  const { data: suppliers, loading: loadingSuppliers } = useFirebase<Supplier>("suppliers");
+  const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>("warehouses");
   const router = useRouter();
+
+  const [filters, setFilters] = useState({
+    supplierId: "all",
+    warehouseId: "all",
+    fromDate: "",
+    toDate: "",
+  });
+
+  const loading = loadingInvoices || loadingSuppliers || loadingWarehouses;
+
+  const handleFilterChange = (key: keyof typeof filters, value: string) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const filteredInvoices = useMemo(() => {
+    return invoices.filter(invoice => {
+      const invoiceDate = new Date(invoice.date);
+      const from = filters.fromDate ? new Date(filters.fromDate) : null;
+      const to = filters.toDate ? new Date(filters.toDate) : null;
+
+      if (from && invoiceDate < from) return false;
+      if (to && invoiceDate > to) return false;
+      if (filters.supplierId !== 'all' && invoice.supplierId !== filters.supplierId) return false;
+      if (filters.warehouseId !== 'all' && invoice.warehouseId !== filters.warehouseId) return false;
+      
+      return true;
+    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [invoices, filters]);
+
 
   return (
     <>
@@ -54,6 +93,48 @@ export default function PurchaseInvoicesListPage() {
         </Button>
       </PageHeader>
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
+        <Card>
+            <CardHeader>
+                <CardTitle>فلاتر البحث</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                     <div className="space-y-2">
+                        <Label>المورد</Label>
+                        <Select value={filters.supplierId} onValueChange={(v) => handleFilterChange("supplierId", v)}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="اختر المورد" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">كل الموردين</SelectItem>
+                                {suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                     <div className="space-y-2">
+                        <Label>المخزن</Label>
+                        <Select value={filters.warehouseId} onValueChange={(v) => handleFilterChange("warehouseId", v)}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="اختر المخزن" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">كل المخازن</SelectItem>
+                                {warehouses.map(w => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                     <div className="space-y-2">
+                        <Label>من تاريخ</Label>
+                        <Input type="date" value={filters.fromDate} onChange={(e) => handleFilterChange("fromDate", e.target.value)} />
+                    </div>
+                     <div className="space-y-2">
+                        <Label>إلى تاريخ</Label>
+                        <Input type="date" value={filters.toDate} onChange={(e) => handleFilterChange("toDate", e.target.value)} />
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>قائمة فواتير الشراء</CardTitle>
@@ -80,8 +161,8 @@ export default function PurchaseInvoicesListPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {invoices && invoices.length > 0 ? (
-                      invoices.map((invoice) => (
+                    {filteredInvoices && filteredInvoices.length > 0 ? (
+                      filteredInvoices.map((invoice) => (
                         <TableRow key={invoice.id}>
                           <TableCell className="font-mono">{invoice.invoiceNumber}</TableCell>
                           <TableCell>{invoice.supplierName}</TableCell>
@@ -121,7 +202,7 @@ export default function PurchaseInvoicesListPage() {
                     ) : (
                       <TableRow>
                         <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
-                          لا توجد فواتير مسجلة بعد.
+                          لا توجد فواتير مسجلة تطابق الفلاتر المحددة.
                         </TableCell>
                       </TableRow>
                     )}
