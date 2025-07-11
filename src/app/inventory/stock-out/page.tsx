@@ -10,9 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { PlusCircle, Trash2, Printer, Save, Loader2 } from "lucide-react";
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import useFirebase from "@/hooks/use-firebase";
 import { useToast } from "@/hooks/use-toast";
+import { Combobox } from "@/components/ui/combobox";
 
 interface StockItem {
   id: string; // The database ID of the item
@@ -33,6 +34,18 @@ interface Warehouse {
     name: string;
 }
 
+interface PurchaseReturn {
+    id: string;
+    receiptNumber?: string;
+    supplierId: string;
+    warehouseId: string;
+    items: { id: string; name: string; qty: number; }[];
+}
+
+interface Supplier {
+    id: string;
+    name: string;
+}
 
 export default function StockOutPage() {
     const { toast } = useToast();
@@ -41,10 +54,46 @@ export default function StockOutPage() {
     const [source, setSource] = useState<string>("");
     const [notes, setNotes] = useState<string>("");
     const [reason, setReason] = useState<string>("");
+    const [selectedPurchaseReturn, setSelectedPurchaseReturn] = useState<string>("");
 
     const { data: availableItems, loading: loadingItems } = useFirebase<Item>('items');
     const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
+    const { data: purchaseReturns, loading: loadingReturns } = useFirebase<PurchaseReturn>('purchaseReturns');
+    const { data: suppliers, loading: loadingSuppliers } = useFirebase<Supplier>('suppliers');
     const { add: addStockOutRecord, getNextId } = useFirebase("stockOutRecords");
+
+    const getSupplierName = (supplierId: string) => suppliers.find(s => s.id === supplierId)?.name || 'غير معروف';
+
+    const purchaseReturnOptions = useMemo(() => 
+        purchaseReturns.map(pr => ({
+            value: pr.id,
+            label: `${pr.receiptNumber || pr.id} - ${getSupplierName(pr.supplierId)}`
+        })), [purchaseReturns, suppliers]);
+
+    useEffect(() => {
+        if(reason === 'return' && selectedPurchaseReturn) {
+            const preturn = purchaseReturns.find(pr => pr.id === selectedPurchaseReturn);
+            if(preturn) {
+                setSource(preturn.warehouseId); // Automatically select warehouse from return document
+                const returnItems: StockItem[] = preturn.items.map(item => {
+                    const availableItem = availableItems.find(i => i.id === item.id);
+                    return {
+                        id: item.id,
+                        name: item.name,
+                        qty: item.qty,
+                        unit: availableItem?.unit || 'قطعة',
+                        uniqueId: `${item.id}-${Date.now()}`
+                    }
+                })
+                setItems(returnItems);
+            }
+        } else {
+            setItems([]);
+             if (reason !== 'return') {
+                setSource(""); // Reset warehouse if reason is not purchase return
+            }
+        }
+    }, [reason, selectedPurchaseReturn, purchaseReturns, availableItems]);
 
 
     const handleAddItem = () => {
@@ -94,6 +143,7 @@ export default function StockOutPage() {
         setSource("");
         setReason("");
         setNotes("");
+        setSelectedPurchaseReturn("");
     }
 
     const handleConfirm = async () => {
@@ -131,7 +181,7 @@ export default function StockOutPage() {
         }
     };
 
-    const loading = loadingItems || loadingWarehouses;
+    const loading = loadingItems || loadingWarehouses || loadingReturns || loadingSuppliers;
     const getUnitLabel = (unit: string) => {
         const units = { piece: "قطعة", weight: "وزن", meter: "متر", kilo: "كيلو", gram: "جرام" };
         return units[unit as keyof typeof units] || unit;
@@ -142,7 +192,7 @@ export default function StockOutPage() {
     <>
       <PageHeader title="صرف مخزون">
         <div className="flex gap-2 no-print">
-            <Button onClick={handlePrint}>
+            <Button onClick={handlePrint} variant="outline">
                 <Printer className="ml-2 h-4 w-4" />
                 طباعة
             </Button>
@@ -167,7 +217,7 @@ export default function StockOutPage() {
                     <div className="grid md:grid-cols-2 gap-6">
                         <div className="space-y-2">
                             <Label htmlFor="warehouse">من مخزن</Label>
-                            <Select value={source} onValueChange={setSource}>
+                            <Select value={source} onValueChange={setSource} disabled={reason === 'return'}>
                                 <SelectTrigger id="warehouse">
                                     <SelectValue placeholder="اختر المصدر" />
                                 </SelectTrigger>
@@ -191,6 +241,18 @@ export default function StockOutPage() {
                             </Select>
                         </div>
                     </div>
+                     {reason === 'return' && (
+                        <div className="space-y-2">
+                            <Label htmlFor="purchase-return">إذن مرتجع الشراء</Label>
+                            <Combobox
+                                options={purchaseReturnOptions}
+                                value={selectedPurchaseReturn}
+                                onValueChange={setSelectedPurchaseReturn}
+                                placeholder="اختر إذن مرتجع الشراء..."
+                                emptyMessage="لا توجد أذونات مرتجع."
+                            />
+                        </div>
+                    )}
                     
                     <div>
                       <Label>الأصناف المصروفة</Label>
@@ -211,34 +273,36 @@ export default function StockOutPage() {
                                 <TableCell className="text-center">{getUnitLabel(item.unit)}</TableCell>
                                 <TableCell className="text-center">{item.qty}</TableCell>
                                 <TableCell className="text-center no-print">
-                                    <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.uniqueId)}>
+                                    <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.uniqueId)} disabled={reason === 'return'}>
                                     <Trash2 className="h-4 w-4 text-destructive" />
                                     </Button>
                                 </TableCell>
                                 </TableRow>
                             ))}
-                            <TableRow className="no-print bg-muted/30">
-                                <TableCell className="p-2">
-                                    <Select value={newItem.id} onValueChange={handleItemSelect}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="اختر صنفًا" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                        {availableItems.map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
-                                </TableCell>
-                                <TableCell></TableCell>
-                                <TableCell className="p-2">
-                                    <Input type="number" placeholder="الكمية" value={newItem.qty} onChange={e => setNewItem({...newItem, qty: parseInt(e.target.value) || 1})} />
-                                </TableCell>
-                                <TableCell className="text-center p-2">
-                                    <Button onClick={handleAddItem} size="sm">
-                                        <PlusCircle className="ml-2 h-4 w-4" />
-                                        إضافة
-                                    </Button>
-                                </TableCell>
-                            </TableRow>
+                             {reason !== 'return' && (
+                                <TableRow className="no-print bg-muted/30">
+                                    <TableCell className="p-2">
+                                        <Select value={newItem.id} onValueChange={handleItemSelect}>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="اختر صنفًا" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                            {availableItems.map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                    </TableCell>
+                                    <TableCell></TableCell>
+                                    <TableCell className="p-2">
+                                        <Input type="number" placeholder="الكمية" value={newItem.qty} onChange={e => setNewItem({...newItem, qty: parseInt(e.target.value) || 1})} />
+                                    </TableCell>
+                                    <TableCell className="text-center p-2">
+                                        <Button onClick={handleAddItem} size="sm">
+                                            <PlusCircle className="ml-2 h-4 w-4" />
+                                            إضافة
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            )}
                             </TableBody>
                         </Table>
                       </div>
