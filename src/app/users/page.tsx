@@ -65,7 +65,7 @@ const UserForm = ({ user, onSave, onClose, warehouses, roles }: { user?: User, o
   const [formData, setFormData] = useState({
     name: user?.name || "",
     loginName: user?.loginName || "",
-    password: "", // Always initialize password to an empty string
+    password: "", // Always initialize password to an empty string for controlled input
     role: user?.role || "محاسب",
     warehouse: user?.warehouse || ""
   });
@@ -222,25 +222,19 @@ export default function UsersPage() {
   return (
     <>
       <PageHeader title="إدارة المستخدمين">
-        {can('add', moduleName) && !combinedLoading && (
+        {can('add', moduleName) && (
           <AddEntityDialog
             title="إضافة مستخدم جديد"
             description="أدخل تفاصيل المستخدم الجديد وصلاحياته."
             triggerButton={
-              <Button size="sm" className="gap-1">
-                <PlusCircle className="h-4 w-4" />
+              <Button size="sm" className="gap-1" disabled={combinedLoading}>
+                 {combinedLoading ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <PlusCircle className="h-4 w-4" />}
                 إضافة مستخدم
               </Button>
             }
           >
             <UserForm onSave={handleSave} onClose={()=>{}} warehouses={warehouses} roles={roleNames} />
           </AddEntityDialog>
-        )}
-         {combinedLoading && can('add', moduleName) && (
-            <Button size="sm" className="gap-1" disabled>
-                <Loader2 className="h-4 w-4 animate-spin"/>
-                إضافة مستخدم
-            </Button>
         )}
       </PageHeader>
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
