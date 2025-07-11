@@ -21,15 +21,16 @@ import { Loader2 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // Interfaces for Firebase data
 interface Item { id: string; name: string; cost?: number; }
-interface SaleInvoice { id: string; date: string; warehouseId: string; items: { id: string; qty: number; price: number; cost?: number; }[]; }
-interface PurchaseInvoice { id: string; date: string; supplierId: string, total: number; }
+interface SaleInvoice { id: string; date: string; warehouseId: string; total: number; items: { id: string; qty: number; price: number; cost?: number; }[]; }
+interface PurchaseInvoice { id: string; date: string; supplierId: string, warehouseId: string, total: number; }
 interface Supplier { id: string; name: string; openingBalance: number; }
 interface Warehouse { id: string; name: string; }
 interface Customer { id: string; openingBalance: number; }
-interface Expense { id: string; date: string; amount: number; expenseType: string; }
+interface Expense { id: string; date: string; amount: number; expenseType: string; warehouseId?: string; }
 
 const chartConfig = {
   profit: {
@@ -73,6 +74,8 @@ export default function AnalyticsPage() {
       from: '',
       to: ''
     });
+    const [selectedWarehouse, setSelectedWarehouse] = useState('all');
+
 
     useEffect(() => {
         const today = new Date();
@@ -93,9 +96,10 @@ export default function AnalyticsPage() {
             const to = dateRange.to ? new Date(dateRange.to) : null;
             if (from && saleDate < from) return false;
             if (to && saleDate > to) return false;
+            if (selectedWarehouse !== 'all' && sale.warehouseId !== selectedWarehouse) return false;
             return true;
         });
-    }, [sales, dateRange]);
+    }, [sales, dateRange, selectedWarehouse]);
 
     const filteredPurchases = useMemo(() => {
         return purchases.filter(purchase => {
@@ -104,9 +108,10 @@ export default function AnalyticsPage() {
             const to = dateRange.to ? new Date(dateRange.to) : null;
             if (from && purchaseDate < from) return false;
             if (to && purchaseDate > to) return false;
+            if (selectedWarehouse !== 'all' && purchase.warehouseId !== selectedWarehouse) return false;
             return true;
         });
-    }, [purchases, dateRange]);
+    }, [purchases, dateRange, selectedWarehouse]);
 
     const filteredExpenses = useMemo(() => {
         return expenses.filter(expense => {
@@ -115,9 +120,11 @@ export default function AnalyticsPage() {
             const to = dateRange.to ? new Date(dateRange.to) : null;
             if (from && expenseDate < from) return false;
             if (to && expenseDate > to) return false;
+            // Include general expenses (no warehouseId) or expenses for the selected warehouse
+            if (selectedWarehouse !== 'all' && expense.warehouseId && expense.warehouseId !== 'none' && expense.warehouseId !== selectedWarehouse) return false;
             return true;
         });
-    }, [expenses, dateRange]);
+    }, [expenses, dateRange, selectedWarehouse]);
 
 
     const itemProfitData = useMemo(() => {
@@ -204,6 +211,18 @@ export default function AnalyticsPage() {
                      <div className="space-y-2">
                         <Label htmlFor="to-date">إلى تاريخ</Label>
                         <Input type="date" value={dateRange.to} onChange={(e) => setDateRange(prev => ({...prev, to: e.target.value}))} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label>المخزن</Label>
+                        <Select value={selectedWarehouse} onValueChange={setSelectedWarehouse}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="اختر المخزن" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">كل المخازن</SelectItem>
+                                {warehouses.map(w => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
                     </div>
                 </div>
             </CardContent>
