@@ -82,16 +82,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const fetchUserData = async (firebaseUser: FirebaseUser) => {
       const usersRef = ref(database, 'users');
-      const userQuery = query(usersRef, orderByChild('uid'), equalTo(firebaseUser.uid));
-      const snapshot = await get(userQuery);
+      const snapshot = await get(usersRef);
 
       if (snapshot.exists()) {
           const usersData = snapshot.val();
-          const userKey = Object.keys(usersData)[0];
-          const userData = usersData[userKey];
-          setUser({ ...userData, id: userKey });
+          const userEntry = Object.entries(usersData).find(
+              ([key, value]: [string, any]) => value.uid === firebaseUser.uid
+          );
+          
+          if (userEntry) {
+              const [userKey, userData] = userEntry;
+              setUser({ ...(userData as User), id: userKey });
+          } else {
+              console.error("No user data found in Realtime Database for this auth user.");
+              setUser(null);
+          }
       } else {
-          console.error("No user data found in Realtime Database for this auth user.");
+          console.error("No 'users' collection found in Realtime Database.");
           setUser(null);
       }
       setLoading(false);
