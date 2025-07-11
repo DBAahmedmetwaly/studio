@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -10,7 +11,7 @@ interface FirebaseData {
 }
 
 const useFirebase = <T extends object>(path: string) => {
-  const [data, setData] = useState<(T & { id: string })[]>([]);
+  const [data, setData] = useState<(T & { id: string })[] | any>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
@@ -20,12 +21,18 @@ const useFirebase = <T extends object>(path: string) => {
     const unsubscribe = onValue(dbRef, (snapshot) => {
         if (snapshot.exists()) {
             const snapshotData = snapshot.val();
-            // All paths are converted to arrays of objects with IDs.
-            const dataArray = Object.keys(snapshotData).map((key) => ({
-                id: key,
-                ...snapshotData[key],
-            }));
-            setData(dataArray as any);
+            // The 'roles' path has a different structure (object of objects)
+            // where the key is the role name. It should not be converted to an array.
+            if (path === 'roles') {
+                setData(snapshotData);
+            } else {
+                 // All other paths are converted to arrays of objects with IDs.
+                const dataArray = Object.keys(snapshotData).map((key) => ({
+                    id: key,
+                    ...snapshotData[key],
+                }));
+                setData(dataArray as any);
+            }
         } else {
             setData([]);
         }
