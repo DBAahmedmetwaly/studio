@@ -551,7 +551,7 @@ export default function JournalPage() {
                                     <Separator />
                                     <div className="space-y-2">
                                         <h4 className="font-semibold">{entry.debits.length > 1 ? "من مذكورين:" : "من ح/"}</h4>
-                                        <ul className="space-y-1 text-sm pr-4">
+                                        <ul className="space-y-1 text-sm">
                                             {entry.debits.map((d, i) => (
                                                 <li key={i} className="flex justify-between">
                                                     <span>{d.account}</span>
@@ -562,7 +562,7 @@ export default function JournalPage() {
                                     </div>
                                     <div className="space-y-2">
                                          <h4 className="font-semibold">{entry.credits.length > 1 ? "إلى مذكورين:" : "إلى ح/"}</h4>
-                                        <ul className="space-y-1 text-sm pr-4">
+                                        <ul className="space-y-1 text-sm">
                                             {entry.credits.map((c, i) => (
                                                 <li key={i} className="flex justify-between">
                                                     <span>{c.account}</span>
