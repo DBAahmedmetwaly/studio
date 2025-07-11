@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -21,11 +20,17 @@ const useFirebase = <T extends object>(path: string) => {
     const unsubscribe = onValue(dbRef, (snapshot) => {
         if (snapshot.exists()) {
             const snapshotData = snapshot.val();
-             const dataArray = Object.keys(snapshotData).map((key) => ({
-              id: key,
-              ...snapshotData[key],
-            }));
-            setData(dataArray);
+            // Special handling for 'roles' path to return the object as is, which is what the user page expects.
+            // Other paths are converted to arrays of objects with IDs.
+            if (path === 'roles') {
+                setData(snapshotData);
+            } else {
+                const dataArray = Object.keys(snapshotData).map((key) => ({
+                    id: key,
+                    ...snapshotData[key],
+                }));
+                setData(dataArray as any);
+            }
         } else {
             setData([]);
         }

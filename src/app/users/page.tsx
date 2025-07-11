@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState } from "react";
@@ -147,8 +146,7 @@ export default function UsersPage() {
   const { can } = usePermissions();
   const moduleName = 'settings_users';
 
-  // Ensure roles are always read from the object keys if it's an object from Firebase
-  const roleNames = rolesData && typeof rolesData === 'object' && !Array.isArray(rolesData) ? Object.keys(rolesData) : [];
+  const roleNames = rolesData ? Object.keys(rolesData) : [];
   const combinedLoading = loadingUsers || loadingWarehouses || loadingRoles;
 
 
@@ -204,12 +202,7 @@ export default function UsersPage() {
       try {
         const { remove } = useFirebase<User>(`users`);
         await remove(userToDelete.id);
-
-        setUsers(prevUsers => prevUsers.filter(u => u.id !== userToDelete.id));
-
         toast({ title: "تم حذف المستخدم بنجاح" });
-        // For full deletion, you would also need to delete the user from Firebase Authentication,
-        // which requires elevated admin privileges, typically handled via a backend function.
       } catch (error) {
         console.error("Failed to delete user:", error);
         toast({ variant: "destructive", title: "خطأ", description: "فشل حذف المستخدم." });
