@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
@@ -92,7 +93,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
             if (firebaseUser) {
-                await fetchUserData(firebaseUser);
+                // To prevent race conditions, only fetch data if the user is different
+                if (firebaseUser.uid !== user?.uid) {
+                    await fetchUserData(firebaseUser);
+                }
             } else {
                 setUser(null);
             }
@@ -100,7 +104,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
 
         return () => unsubscribe();
-    }, []);
+    }, [user]);
 
     const fetchUserData = async (firebaseUser: FirebaseUser) => {
         setLoading(true);

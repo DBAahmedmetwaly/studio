@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState } from "react";
@@ -43,7 +44,7 @@ import useFirebase from "@/hooks/use-firebase";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/contexts/permissions-context";
 import { auth } from "@/lib/firebase";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithCredential } from "firebase/auth";
 import { Checkbox } from "@/components/ui/checkbox";
 
 
@@ -219,22 +220,38 @@ export default function UsersPage() {
             
             const email = `${user.loginName}@admin.com`;
             
-            const userDataForDb = { 
+            // Keep current user's session to re-login after creating new user
+            const currentUser = auth.currentUser;
+            if (!currentUser) {
+                 toast({ variant: "destructive", title: "خطأ", description: "لا يوجد مستخدم حالي مسجل. يرجى إعادة تسجيل الدخول." });
+                 return;
+            }
+
+            // Step 1: Create the user in Firebase Auth. This will log out the current user.
+            const userCredential = await createUserWithEmailAndPassword(auth, email, user.password);
+            const newAuthUser = userCredential.user;
+
+            // Step 2: Re-login the original admin user to restore session.
+            await signInWithCredential(auth, currentUser.providerData[0]);
+
+             const userDataForDb = { 
                 name: user.name,
                 loginName: user.loginName,
                 role: user.role,
                 warehouse: user.warehouse,
                 isSalesRep: user.isSalesRep,
                 isEmployee: user.isEmployee,
+                uid: newAuthUser.uid, // Link to the auth user
              };
             
+            // Step 3: Create the user record in the Realtime Database.
             const newUserKey = await add(userDataForDb);
 
             if (!newUserKey) {
                 throw new Error("Failed to get new user key from database.");
             }
             
-             // Create employee record if applicable
+             // Step 4: Create employee record if applicable
             if (user.isEmployee) {
                 const employeeRecord = {
                     name: user.name,
@@ -245,13 +262,6 @@ export default function UsersPage() {
                 // Use `update` here to set the employee data with the same key as the user
                 await updateEmployee(newUserKey, employeeRecord);
             }
-
-            // Step 2: Create the user in Firebase Auth.
-            const userCredential = await createUserWithEmailAndPassword(auth, email, user.password);
-            const authUser = userCredential.user;
-            
-            // Step 3: Update the newly created database record with the auth UID.
-            await update(newUserKey, { uid: authUser.uid });
 
             toast({ title: "تمت إضافة المستخدم بنجاح" });
         }
