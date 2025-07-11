@@ -43,12 +43,13 @@ interface Item {
   price: number;
   cost?: number;
   openingStock: number;
+  reorderPoint?: number;
 }
 
 const ItemForm = ({ item, onSave, onClose }: { item?: Item, onSave: (item: Omit<Item, 'id' | 'code'> & { id?: string, code?: string }) => void, onClose: () => void }) => {
   const [formData, setFormData] = useState<Omit<Item, 'id' | 'code'>>(
-    item ? { name: item.name, unit: item.unit, price: item.price, cost: item.cost, openingStock: item.openingStock }
-    : { name: "", unit: "piece", price: 0, cost: 0, openingStock: 0 }
+    item ? { name: item.name, unit: item.unit, price: item.price, cost: item.cost, openingStock: item.openingStock, reorderPoint: item.reorderPoint }
+    : { name: "", unit: "piece", price: 0, cost: 0, openingStock: 0, reorderPoint: 5 }
   );
 
   const handleSubmit = () => {
@@ -57,7 +58,8 @@ const ItemForm = ({ item, onSave, onClose }: { item?: Item, onSave: (item: Omit<
         ...formData,
         price: Number(formData.price),
         cost: Number(formData.cost),
-        openingStock: Number(formData.openingStock)
+        openingStock: Number(formData.openingStock),
+        reorderPoint: Number(formData.reorderPoint)
     });
     onClose();
   };
@@ -113,6 +115,12 @@ const ItemForm = ({ item, onSave, onClose }: { item?: Item, onSave: (item: Omit<
             رصيد أول المدة
             </Label>
             <Input id="opening-stock" type="number" value={formData.openingStock} onChange={(e) => setFormData({...formData, openingStock: e.target.value as any})} className="col-span-3" />
+        </div>
+        <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="reorder-point" className="text-right">
+            حد الطلب
+            </Label>
+            <Input id="reorder-point" type="number" value={formData.reorderPoint} onChange={(e) => setFormData({...formData, reorderPoint: e.target.value as any})} className="col-span-3" />
         </div>
         </div>
          <div className="flex justify-end">
@@ -204,6 +212,7 @@ export default function ItemsPage() {
                                 <TableHead className="text-center">التكلفة</TableHead>
                                 <TableHead className="text-center">السعر</TableHead>
                                 <TableHead className="text-center">رصيد أول المدة</TableHead>
+                                <TableHead className="text-center">حد الطلب</TableHead>
                                 <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -216,6 +225,7 @@ export default function ItemsPage() {
                                     <TableCell className="text-center">{item.cost?.toLocaleString() || '-'}</TableCell>
                                     <TableCell className="text-center">{item.price.toLocaleString()}</TableCell>
                                     <TableCell className="text-center">{item.openingStock}</TableCell>
+                                    <TableCell className="text-center">{item.reorderPoint || 0}</TableCell>
                                     <TableCell className="text-center">
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
