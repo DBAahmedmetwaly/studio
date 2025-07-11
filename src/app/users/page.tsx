@@ -133,7 +133,7 @@ const UserForm = ({ user, onSave, onClose, warehouses, roles }: { user?: User, o
 };
 
 export default function UsersPage() {
-  const { data: users, loading, add, update, remove } = useFirebase<User>('users');
+  const { data: users, loading: loadingUsers } = useFirebase<User>('users');
   const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
   const { data: rolesData, loading: loadingRoles } = useFirebase<any>('roles');
   const { toast } = useToast();
@@ -141,6 +141,8 @@ export default function UsersPage() {
   const moduleName = 'settings_users';
 
   const roleNames = rolesData && typeof rolesData === 'object' ? Object.keys(rolesData) : [];
+  const combinedLoading = loadingUsers || loadingWarehouses || loadingRoles;
+
 
   const handleSave = async (user: Omit<User, 'id'> & { id?: string }) => {
     try {
@@ -178,6 +180,8 @@ export default function UsersPage() {
     }
   }
 
+  const { add, update, remove } = useFirebase<User>('users');
+
   const handleDelete = async (userToDelete: User) => {
     if (!can('delete', moduleName)) {
       toast({ variant: 'destructive', title: 'غير مصرح به' });
@@ -193,7 +197,6 @@ export default function UsersPage() {
       try {
         await remove(userToDelete.id);
         toast({ title: "تم حذف المستخدم بنجاح" });
-        // Note: This only removes the user from the Realtime Database.
         // For full deletion, you would also need to delete the user from Firebase Authentication,
         // which requires elevated admin privileges, typically handled via a backend function.
       } catch (error) {
@@ -212,7 +215,7 @@ export default function UsersPage() {
   return (
     <>
       <PageHeader title="إدارة المستخدمين">
-        {can('add', moduleName) && (
+        {can('add', moduleName) && !combinedLoading && (
           <AddEntityDialog
             title="إضافة مستخدم جديد"
             description="أدخل تفاصيل المستخدم الجديد وصلاحياته."
@@ -226,6 +229,12 @@ export default function UsersPage() {
             <UserForm onSave={handleSave} onClose={()=>{}} warehouses={warehouses} roles={roleNames} />
           </AddEntityDialog>
         )}
+         {combinedLoading && can('add', moduleName) && (
+            <Button size="sm" className="gap-1" disabled>
+                <Loader2 className="h-4 w-4 animate-spin"/>
+                إضافة مستخدم
+            </Button>
+        )}
       </PageHeader>
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
         <Card>
@@ -236,7 +245,7 @@ export default function UsersPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {loading || loadingWarehouses || loadingRoles ? (
+            {combinedLoading ? (
                  <div className="flex justify-center items-center py-10">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
