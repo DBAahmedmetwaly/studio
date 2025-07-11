@@ -83,9 +83,9 @@ const UserForm = ({ user, onSave, onClose, warehouses, roles }: { user?: User, o
         </div>
         <div className="grid grid-cols-4 items-center gap-4">
           <Label htmlFor="user-loginName" className="text-right">
-            البريد الإلكتروني
+            اسم الدخول
           </Label>
-          <Input id="user-loginName" type="email" value={formData.loginName} onChange={e => setFormData({...formData, loginName: e.target.value})} className="col-span-3" />
+          <Input id="user-loginName" type="text" value={formData.loginName} onChange={e => setFormData({...formData, loginName: e.target.value})} className="col-span-3" />
         </div>
          <div className="grid grid-cols-4 items-center gap-4">
           <Label htmlFor="user-password" className="text-right">
@@ -150,13 +150,14 @@ export default function UsersPage() {
             toast({ title: "تم تحديث المستخدم بنجاح" });
         } else {
             if (!can('add', moduleName)) return toast({variant: 'destructive', title: 'غير مصرح به'});
-            if (!user.password) {
-                 toast({ variant: "destructive", title: "خطأ", description: "كلمة المرور مطلوبة للمستخدم الجديد." });
+            if (!user.password || !user.loginName) {
+                 toast({ variant: "destructive", title: "خطأ", description: "اسم الدخول وكلمة المرور مطلوبان للمستخدم الجديد." });
                  return;
             }
             
+            const email = `${user.loginName}@admin.com`;
             // 1. Create user in Firebase Auth
-            const userCredential = await createUserWithEmailAndPassword(auth, user.loginName, user.password);
+            const userCredential = await createUserWithEmailAndPassword(auth, email, user.password);
             
             // 2. Add user to Realtime Database
             const userDataForDb = { ...user, uid: userCredential.user.uid };
@@ -167,7 +168,7 @@ export default function UsersPage() {
         }
     } catch(error: any) {
         if (error.code === 'auth/email-already-in-use') {
-            toast({ variant: "destructive", title: "خطأ", description: "البريد الإلكتروني هذا مستخدم بالفعل." });
+            toast({ variant: "destructive", title: "خطأ", description: "اسم الدخول هذا مستخدم بالفعل." });
         } else if (error.code === 'auth/weak-password') {
             toast({ variant: "destructive", title: "خطأ", description: "كلمة المرور ضعيفة جداً. يجب أن تكون 6 أحرف على الأقل." });
         } else {
@@ -232,7 +233,7 @@ export default function UsersPage() {
                 <TableHeader>
                     <TableRow>
                     <TableHead>المستخدم</TableHead>
-                    <TableHead>البريد الإلكتروني</TableHead>
+                    <TableHead>اسم الدخول</TableHead>
                     <TableHead className="text-center">الوظيفة</TableHead>
                     <TableHead>المخزن</TableHead>
                     <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
