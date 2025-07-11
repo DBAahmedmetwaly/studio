@@ -61,7 +61,7 @@ interface Warehouse {
   name: string;
 }
 
-const UserForm = ({ user, onSave, onClose, warehouses, roles }: { user?: User, onSave: (data: Omit<User, 'id'> & { id?: string }) => void, onClose: () => void, warehouses: Warehouse[], roles: any }) => {
+const UserForm = ({ user, onSave, onClose, warehouses, roles }: { user?: User, onSave: (data: Omit<User, 'id'> & { id?: string }) => void, onClose: () => void, warehouses: Warehouse[], roles: string[] }) => {
   const [formData, setFormData] = useState(user || { name: "", loginName: "", password: "", role: "محاسب", warehouse: "" });
 
   const handleSubmit = () => {
@@ -102,7 +102,7 @@ const UserForm = ({ user, onSave, onClose, warehouses, roles }: { user?: User, o
               <SelectValue placeholder="اختر وظيفة" />
             </SelectTrigger>
             <SelectContent>
-              {Object.keys(roles).map(role => (
+              {roles.map(role => (
                 <SelectItem key={role} value={role}>{role}</SelectItem>
               ))}
             </SelectContent>
@@ -140,11 +140,11 @@ export default function UsersPage() {
   const { can } = usePermissions();
   const moduleName = 'settings_users';
 
+  const roleNames = roles ? Object.keys(roles) : [];
+
   const handleSave = async (user: Omit<User, 'id'> & { id?: string }) => {
     try {
         if (user.id) {
-            // Updating user logic (password change etc.) should be handled here
-            // For now, we just update the RTDB data.
             if (!can('edit', moduleName)) return toast({variant: 'destructive', title: 'غير مصرح به'});
             await update(user.id, user);
             toast({ title: "تم تحديث المستخدم بنجاح" });
@@ -156,16 +156,12 @@ export default function UsersPage() {
             }
             
             const email = `${user.loginName}@admin.com`;
-            // 1. Create user in Firebase Auth
             const userCredential = await createUserWithEmailAndPassword(auth, email, user.password);
             const authUser = userCredential.user;
             
-            // 2. Add user to Realtime Database
             const userDataForDb = { ...user, uid: authUser.uid };
-            delete userDataForDb.password; // Do not store password in RTDB
+            delete userDataForDb.password;
 
-            // Use set with the user's UID as the key for easier lookup later
-            // but our useFirebase hook uses push. Let's use the 'add' from our hook which pushes.
             await add(userDataForDb);
 
             toast({ title: "تمت إضافة المستخدم بنجاح" });
@@ -183,10 +179,8 @@ export default function UsersPage() {
   }
 
   const handleDelete = async (id: string) => {
-    // Note: This only deletes from RTDB, not from Firebase Auth.
-    // A complete solution would require a Cloud Function to delete the auth user.
     if(!can('delete', moduleName)) return toast({variant: 'destructive', title: 'غير مصرح به'});
-    if(confirm('هل أنت متأكد من حذف هذا المستخدم؟ سيتم حذفه من قاعدة البيانات فقط.')) {
+    if(confirm('هل أنت متأكد من حذف هذا المستخدم؟')) {
         try {
             await remove(id);
             toast({ title: "تم حذف المستخدم" });
@@ -215,7 +209,7 @@ export default function UsersPage() {
               </Button>
             }
           >
-            <UserForm onSave={handleSave} onClose={()=>{}} warehouses={warehouses} roles={roles} />
+            <UserForm onSave={handleSave} onClose={()=>{}} warehouses={warehouses} roles={roleNames} />
           </AddEntityDialog>
         )}
       </PageHeader>
@@ -282,7 +276,7 @@ export default function UsersPage() {
                                   </DropdownMenuItem>
                                   }
                               >
-                              <UserForm user={user} onSave={handleSave} onClose={()=>{}} warehouses={warehouses} roles={roles} />
+                              <UserForm user={user} onSave={handleSave} onClose={()=>{}} warehouses={warehouses} roles={roleNames} />
                               </AddEntityDialog>
                             )}
                             {can('delete', moduleName) && (
@@ -305,5 +299,3 @@ export default function UsersPage() {
     </>
   );
 }
-
-    
