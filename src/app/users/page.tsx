@@ -135,12 +135,12 @@ const UserForm = ({ user, onSave, onClose, warehouses, roles }: { user?: User, o
 export default function UsersPage() {
   const { data: users, loading, add, update, remove } = useFirebase<User>('users');
   const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
-  const { data: roles, loading: loadingRoles } = useFirebase<any>('roles');
+  const { data: rolesData, loading: loadingRoles } = useFirebase<any>('roles');
   const { toast } = useToast();
   const { can } = usePermissions();
   const moduleName = 'settings_users';
 
-  const roleNames = roles ? Object.keys(roles) : [];
+  const roleNames = rolesData && typeof rolesData === 'object' ? Object.keys(rolesData) : [];
 
   const handleSave = async (user: Omit<User, 'id'> & { id?: string }) => {
     try {
@@ -180,10 +180,10 @@ export default function UsersPage() {
 
   const handleDelete = async (id: string) => {
     if(!can('delete', moduleName)) return toast({variant: 'destructive', title: 'غير مصرح به'});
-    if(confirm('هل أنت متأكد من حذف هذا المستخدم؟')) {
+    if(confirm('هل أنت متأكد من حذف هذا المستخدم؟ هذا الإجراء سيقوم بحذفه من قاعدة البيانات فقط.')) {
         try {
             await remove(id);
-            toast({ title: "تم حذف المستخدم" });
+            toast({ title: "تم حذف المستخدم من قاعدة البيانات" });
         } catch(error) {
             toast({ variant: "destructive", title: "خطأ", description: "فشل حذف المستخدم." });
         }
