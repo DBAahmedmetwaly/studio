@@ -38,6 +38,7 @@ interface PurchaseInvoice {
     id: string;
     invoiceNumber: string;
     supplierName: string;
+    warehouseId: string;
     items: { id: string; name: string; qty: number; }[];
 }
 
@@ -65,6 +66,7 @@ export default function StockInPage() {
         if(reason === 'purchase' && selectedPurchaseInvoice) {
             const invoice = purchaseInvoices.find(inv => inv.id === selectedPurchaseInvoice);
             if(invoice) {
+                setSelectedWarehouse(invoice.warehouseId); // Automatically select warehouse from invoice
                 const invoiceItems: StockItem[] = invoice.items.map(item => {
                     const availableItem = availableItems.find(i => i.id === item.id);
                     return {
@@ -79,6 +81,9 @@ export default function StockInPage() {
             }
         } else {
             setItems([]);
+             if (reason !== 'purchase') {
+                setSelectedWarehouse(""); // Reset warehouse if reason is not purchase
+            }
         }
     }, [reason, selectedPurchaseInvoice, purchaseInvoices, availableItems]);
 
@@ -219,7 +224,7 @@ export default function StockInPage() {
                     <div className="grid md:grid-cols-2 gap-6">
                         <div className="space-y-2">
                             <Label htmlFor="warehouse">إلى مخزن</Label>
-                            <Select value={selectedWarehouse} onValueChange={setSelectedWarehouse}>
+                            <Select value={selectedWarehouse} onValueChange={setSelectedWarehouse} disabled={reason === 'purchase'}>
                                 <SelectTrigger id="warehouse">
                                     <SelectValue placeholder="اختر المخزن" />
                                 </SelectTrigger>
