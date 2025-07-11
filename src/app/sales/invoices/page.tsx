@@ -17,8 +17,6 @@ import { useRouter } from 'next/navigation';
 import { Switch } from "@/components/ui/switch";
 import { usePermissions } from "@/contexts/permissions-context";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { SalesReturn } from "@/app/sales/returns/page";
-import { PurchaseReturn } from "@/app/purchases/returns/page";
 import { useAuth } from "@/contexts/auth-context";
 
 
@@ -56,14 +54,31 @@ interface CashAccount {
     name: string;
 }
 
+interface IssueToRep {
+    id: string;
+    salesRepId: string;
+    items: { id: string; qty: number; price: number; }[];
+}
+interface ReturnFromRep {
+    id: string;
+    salesRepId: string;
+    items: { id: string; qty: number; price: number; }[];
+}
 
-interface SaleInvoice { id: string; warehouseId: string; items: { id: string; qty: number; }[]; }
+interface SaleInvoice { 
+    id: string; 
+    warehouseId: string; 
+    salesRepId?: string;
+    items: { id: string; qty: number; }[];
+    status?: 'pending' | 'approved';
+}
 interface PurchaseInvoice { id: string; warehouseId: string; items: { id: string; qty: number; }[]; }
 interface StockInRecord { id: string; warehouseId: string; items: { id: string; name: string; qty: number; }[]; }
 interface StockOutRecord { id: string; sourceId: string; items: { id: string; name: string; qty: number; }[]; }
 interface StockTransferRecord { id: string; fromSourceId: string; toSourceId: string; items: { id: string; qty: number; }[]; }
 interface StockAdjustmentRecord { id: string; warehouseId: string; items: { itemId: string; difference: number; }[]; }
-
+interface SalesReturn { id: string; warehouseId: string; items: { id: string; name: string; qty: number; }[]; }
+interface PurchaseReturn { id: string; warehouseId: string; items: { id: string; name: string; qty: number; }[]; }
 
 export default function SalesInvoicePage() {
     const { toast } = useToast();
@@ -101,13 +116,63 @@ export default function SalesInvoicePage() {
     const { data: salesReturns, loading: l9 } = useFirebase<SalesReturn>('salesReturns');
     const { data: purchaseReturns, loading: l10 } = useFirebase<PurchaseReturn>('purchaseReturns');
     const { data: settings, loading: loadingSettings } = useFirebase<any>('settings');
+    const { data: issuesToReps, loading: l11 } = useFirebase<IssueToRep>('stockIssuesToReps');
+    const { data: returnsFromReps, loading: l12 } = useFirebase<ReturnFromRep>('stockReturnsFromReps');
     const { add: addSaleInvoice, getNextId } = useFirebase('salesInvoices');
     const { add: addCustomerPayment } = useFirebase('customerPayments');
 
     
-    const loading = loadingItems || loadingCustomers || loadingWarehouses || l3 || l4 || l5 || l6 || l7 || l8 || loadingCashAccounts || l9 || l10 || loadingSettings;
+    const loading = loadingItems || loadingCustomers || loadingWarehouses || l3 || l4 || l5 || l6 || l7 || l8 || loadingCashAccounts || l9 || l10 || loadingSettings || l11 || l12;
+    const isRep = !!user?.isSalesRep;
+
+    useEffect(() => {
+        // If the user is a rep, automatically select their warehouse and disable changing it.
+        if (isRep && user?.warehouse) {
+            setWarehouseId(user.warehouse);
+        }
+    }, [isRep, user]);
+
+    const itemsInRepCustody = useMemo(() => {
+        if (!isRep || !user?.id || !allItems.length) return [];
+        
+        const repStock = new Map<string, number>();
+
+        // Calculate issued stock
+        issuesToReps
+            .filter(issue => issue.salesRepId === user.id)
+            .forEach(issue => {
+                issue.items.forEach(item => {
+                    repStock.set(item.id, (repStock.get(item.id) || 0) + item.qty);
+                });
+            });
+
+        // Calculate sold stock from invoices
+        sales
+            .filter(sale => sale.salesRepId === user.id)
+            .forEach(sale => {
+                sale.items.forEach(item => {
+                    repStock.set(item.id, (repStock.get(item.id) || 0) - item.qty);
+                });
+            });
+
+        // Calculate returned stock from rep
+        returnsFromReps
+            .filter(ret => ret.salesRepId === user.id)
+            .forEach(ret => {
+                ret.items.forEach(item => {
+                    repStock.set(item.id, (repStock.get(item.id) || 0) - item.qty);
+                });
+            });
+            
+        return allItems
+            .map(item => ({...item, stock: repStock.get(item.id) || 0}))
+            .filter(item => item.stock > 0);
+    }, [isRep, user?.id, allItems, issuesToReps, sales, returnsFromReps]);
+
 
     const availableItemsForWarehouse = useMemo(() => {
+        if (isRep) return itemsInRepCustody;
+
         if (!warehouseId || warehouseId === "all" || !allItems.length) {
             return [];
         }
@@ -117,25 +182,22 @@ export default function SalesInvoicePage() {
         return allItems.map(item => {
             let stock = item.openingStock || 0;
             
-            // Increases
             purchases.filter(p => p.warehouseId === warehouseId).forEach(p => p.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
             stockIns.filter(si => si.warehouseId === warehouseId).forEach(si => si.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
             transfers.filter(t => t.toSourceId === warehouseId).forEach(t => t.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
             adjustments.filter(adj => adj.warehouseId === warehouseId).forEach(adj => adj.items.filter(i => i.itemId === item.id && i.difference > 0).forEach(i => stock += i.difference));
             salesReturns.filter(sr => sr.warehouseId === warehouseId).forEach(sr => sr.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
 
-            // Decreases
             sales.filter(s => s.warehouseId === warehouseId).forEach(s => s.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
             stockOuts.filter(so => so.sourceId === warehouseId).forEach(so => so.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
             transfers.filter(t => t.fromSourceId === warehouseId).forEach(t => t.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
             adjustments.filter(adj => adj.warehouseId === warehouseId).forEach(adj => adj.items.filter(i => i.itemId === item.id && i.difference < 0).forEach(i => stock += i.difference));
             purchaseReturns.filter(pr => pr.warehouseId === warehouseId).forEach(pr => pr.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
 
-
             return { ...item, stock };
         }).filter(item => item.stock > 0 || (mainSettings?.financial?.allowNegativeStock));
 
-    }, [warehouseId, allItems, purchases, sales, stockIns, stockOuts, transfers, adjustments, salesReturns, purchaseReturns, settings]);
+    }, [isRep, warehouseId, allItems, purchases, sales, stockIns, stockOuts, transfers, adjustments, salesReturns, purchaseReturns, settings, itemsInRepCustody]);
 
 
     useEffect(() => {
@@ -159,7 +221,7 @@ export default function SalesInvoicePage() {
         if (!selectedItem) return;
         
         const mainSettings = settings.find((s:any) => s.id === 'main');
-        if(newItem.qty > selectedItem.stock && !mainSettings?.financial?.allowNegativeStock) {
+        if(newItem.qty > selectedItem.stock && (!mainSettings?.financial?.allowNegativeStock || isRep)) {
             toast({
                 variant: 'destructive',
                 title: 'كمية غير متوفرة',
@@ -221,8 +283,7 @@ export default function SalesInvoicePage() {
         try {
             const invoiceNumber = `ف-ب-${await getNextId('salesInvoice')}`;
             const customerName = customers.find(c => c.id === customerId)?.name || '';
-            const isRep = !!user?.isSalesRep;
-
+            
             const invoiceData = {
                 invoiceNumber,
                 date: new Date().toISOString(),
@@ -252,7 +313,6 @@ export default function SalesInvoicePage() {
             
             await addSaleInvoice(invoiceData);
 
-            // Only create payment record if the invoice is approved right away
             if (invoiceData.status === 'approved' && paidAmount > 0) {
                 await addCustomerPayment({
                     date: new Date().toISOString(),
@@ -331,7 +391,7 @@ export default function SalesInvoicePage() {
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="warehouse">من مخزن</Label>
-                            <Select value={warehouseId} onValueChange={setWarehouseId}>
+                            <Select value={warehouseId} onValueChange={setWarehouseId} disabled={isRep}>
                                 <SelectTrigger id="warehouse">
                                     <SelectValue placeholder="اختر مخزنًا" />
                                 </SelectTrigger>
@@ -373,9 +433,9 @@ export default function SalesInvoicePage() {
                             ))}
                             <TableRow className="no-print bg-muted/20">
                                 <TableCell className="p-2">
-                                    <Select value={newItem.id} onValueChange={handleItemSelect} disabled={!warehouseId}>
+                                    <Select value={newItem.id} onValueChange={handleItemSelect} disabled={!isRep && !warehouseId}>
                                         <SelectTrigger>
-                                            <SelectValue placeholder={warehouseId ? "اختر صنفًا" : "اختر المخزن أولاً"} />
+                                            <SelectValue placeholder={(!isRep && !warehouseId) ? "اختر المخزن أولاً" : "اختر صنفًا"} />
                                         </SelectTrigger>
                                         <SelectContent>
                                         {availableItemsForWarehouse.map(item => <SelectItem key={item.id} value={item.id}>{`${item.name} (المتاح: ${item.stock})`}</SelectItem>)}
@@ -387,7 +447,7 @@ export default function SalesInvoicePage() {
                                     <Input type="number" placeholder="الكمية" value={newItem.qty} onChange={e => setNewItem({...newItem, qty: parseInt(e.target.value) || 1})} className="text-center" />
                                 </TableCell>
                                 <TableCell className="p-2">
-                                    <Input type="number" placeholder="السعر" value={newItem.price} onChange={e => setNewItem({...newItem, price: parseFloat(e.target.value) || 0})} className="text-center" readOnly={!can('edit', 'sales')} />
+                                    <Input type="number" placeholder="السعر" value={newItem.price} onChange={e => setNewItem({...newItem, price: parseFloat(e.target.value) || 0})} className="text-center" readOnly={!can('edit', 'sales_invoices')} />
                                 </TableCell>
                                 <TableCell></TableCell>
                                 <TableCell className="p-2 text-center">
