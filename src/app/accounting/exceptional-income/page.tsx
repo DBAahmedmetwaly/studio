@@ -98,7 +98,7 @@ export default function ExceptionalIncomePage() {
 
     const handleSave = async (data: Omit<ExceptionalIncome, 'id' | 'receiptNumber'>) => {
         try {
-            const receiptNumber = `INC-${await getNextId('exceptionalIncome')}`;
+            const receiptNumber = `إ-س-${await getNextId('exceptionalIncome')}`;
             const newIncome = { ...data, receiptNumber };
             await add(newIncome);
             toast({ title: "تمت الإضافة بنجاح", description: `تم تسجيل الدخل برقم إيصال: ${receiptNumber}` });

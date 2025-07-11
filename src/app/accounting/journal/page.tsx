@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from '@/components/ui/separator';
 
 interface SaleInvoice {
   id: string; date: string; customerName: string; total: number; warehouseId: string; discount: number; invoiceNumber?: string;
@@ -185,7 +186,7 @@ export default function JournalPage() {
         sales.forEach(sale => {
             const costOfGoodsSold = sale.items.reduce((acc, item) => acc + (item.qty * (item.cost || item.price * 0.8)), 0);
             const totalBeforeDiscount = sale.total + (sale.discount || 0);
-            const number = sale.invoiceNumber || `INV-${sale.id.slice(-4)}`;
+            const number = sale.invoiceNumber || `ف-ب-${sale.id.slice(-4)}`;
             // Accounts Receivable (Debit) for the final amount owed
             entries.push({ id: `sale-ar-${sale.id}`, date: sale.date, warehouseId: sale.warehouseId, number: number, description: `فاتورة بيع للعميل ${sale.customerName}`, debit: sale.total, credit: 0, account: 'حسابات العملاء' });
             // Sales Discount (Debit) if a discount was given
@@ -202,7 +203,7 @@ export default function JournalPage() {
         // Purchase Invoices
         purchases.forEach(p => {
              const totalBeforeDiscount = p.total + (p.discount || 0);
-             const number = p.invoiceNumber || `PUR-${p.id.slice(-4)}`;
+             const number = p.invoiceNumber || `ف-ش-${p.id.slice(-4)}`;
             // Inventory (Debit) for the full value of goods
             entries.push({ id: `pur-inv-${p.id}`, date: p.date, warehouseId: p.warehouseId, number: number, description: `فاتورة شراء من ${p.supplierName}`, debit: totalBeforeDiscount, credit: 0, account: `مخزون - ${getWarehouseName(p.warehouseId)}` });
             // Accounts Payable (Credit) for the final amount owed
@@ -215,7 +216,7 @@ export default function JournalPage() {
         
         // Sales Returns
         salesReturns.forEach(sr => {
-            const number = sr.receiptNumber || `S-RET-${sr.id.slice(-4)}`;
+            const number = sr.receiptNumber || `م-ب-${sr.id.slice(-4)}`;
             const costOfGoodsReturned = sr.items.reduce((acc, item) => {
                  const itemMaster = itemsMap.get(item.id);
                  const itemCost = itemMaster?.cost || item.price * 0.8; // Fallback
@@ -230,7 +231,7 @@ export default function JournalPage() {
 
         // Purchase Returns
         purchaseReturns.forEach(pr => {
-             const number = pr.receiptNumber || `P-RET-${pr.id.slice(-4)}`;
+             const number = pr.receiptNumber || `م-ش-${pr.id.slice(-4)}`;
              entries.push({ id: `pur-ret-debit-${pr.id}`, date: pr.date, warehouseId: pr.warehouseId, number: number, description: `تخفيض مستحقات المورد ${getSupplierName(pr.supplierId)}`, debit: pr.total, credit: 0, account: 'حسابات الموردين' });
              entries.push({ id: `pur-ret-credit-${pr.id}`, date: pr.date, warehouseId: pr.warehouseId, number: number, description: `مرتجع مشتريات إلى ${getSupplierName(pr.supplierId)}`, debit: 0, credit: pr.total, account: `مخزون - ${getWarehouseName(pr.warehouseId)}` });
         });
@@ -238,7 +239,7 @@ export default function JournalPage() {
 
         // Expenses
         expenses.forEach(e => {
-            const number = e.receiptNumber || `EXP-${e.id.slice(-4)}`;
+            const number = e.receiptNumber || `م-${e.id.slice(-4)}`;
             const expenseAccount = e.warehouseId && e.warehouseId !== 'none'
                 ? `${e.expenseType} - ${getWarehouseName(e.warehouseId)}`
                 : `${e.expenseType} (عام)`;
@@ -249,14 +250,14 @@ export default function JournalPage() {
         
         // Exceptional Incomes
         exceptionalIncomes.forEach(i => {
-            const number = i.receiptNumber || `INC-${i.id.slice(-4)}`;
+            const number = i.receiptNumber || `إ-س-${i.id.slice(-4)}`;
             entries.push({ id: `ex-inc-debit-${i.id}`, date: i.date, warehouseId: i.warehouseId, number: number, description: i.description, debit: i.amount, credit: 0, account: 'النقدية/البنك' });
             entries.push({ id: `ex-inc-credit-${i.id}`, date: i.date, warehouseId: i.warehouseId, number: number, description: i.description, debit: 0, credit: i.amount, account: i.warehouseId ? `دخل استثنائي - ${getWarehouseName(i.warehouseId)}` : 'دخل استثنائي' });
         });
 
         // Stock Transfers
         transfers.forEach(t => {
-            const number = t.receiptNumber || `TRN-${t.id.slice(-4)}`;
+            const number = t.receiptNumber || `إذ-ت-${t.id.slice(-4)}`;
             const transferCost = t.items.reduce((acc, transferItem) => {
                 const itemMaster = itemsMap.get(transferItem.id);
                 // Use a fallback cost if not available
@@ -274,7 +275,7 @@ export default function JournalPage() {
         
         // Treasury Transactions
         treasuryTxs.forEach(tx => {
-            const number = tx.receiptNumber || `TRX-${tx.id.slice(-4)}`;
+            const number = tx.receiptNumber || `ح-خ-${tx.id.slice(-4)}`;
             const accountName = getCashAccountName(tx.accountId);
             if(tx.type === 'deposit') {
                 entries.push({ id: `trx-dep-debit-${tx.id}`, date: tx.date, warehouseId: undefined, number: number, description: `إيداع: ${tx.description}`, debit: tx.amount, credit: 0, account: accountName });
@@ -287,7 +288,7 @@ export default function JournalPage() {
 
         // Employee Advances
         employeeAdvances.forEach(adv => {
-            const number = adv.receiptNumber || `ADV-${adv.id.slice(-4)}`;
+            const number = adv.receiptNumber || `س-م-${adv.id.slice(-4)}`;
             const employeeName = getEmployeeName(adv.employeeId);
             const cashAccountName = getCashAccountName(adv.paidFromAccountId);
             entries.push({ id: `adv-debit-${adv.id}`, date: adv.date, number: number, description: `سلفة للموظف ${employeeName}`, debit: adv.amount, credit: 0, account: 'سلف الموظفين' });
@@ -296,7 +297,7 @@ export default function JournalPage() {
         
         // Employee Adjustments (Rewards/Penalties)
         employeeAdjustments.forEach(adj => {
-             const number = adj.receiptNumber || `ADJ-${adj.id.slice(-4)}`;
+             const number = adj.receiptNumber || `ت-م-${adj.id.slice(-4)}`;
              const employeeName = getEmployeeName(adj.employeeId);
              if (adj.type === 'reward') {
                  entries.push({ id: `adj-rew-debit-${adj.id}`, date: adj.date, number: number, description: `مكافأة لـ ${employeeName}: ${adj.description}`, debit: adj.amount, credit: 0, account: 'مصروف مكافآت' });
@@ -309,14 +310,14 @@ export default function JournalPage() {
 
         // Supplier Payments
         supplierPayments.forEach(p => {
-            const number = p.receiptNumber || `PAY-${p.id.slice(-4)}`;
+            const number = p.receiptNumber || `س-م-${p.id.slice(-4)}`;
             entries.push({ id: `supp-pay-debit-${p.id}`, date: p.date, number: number, description: `سداد للمورد ${getSupplierName(p.supplierId)}`, debit: p.amount, credit: 0, account: 'حسابات الموردين' });
             entries.push({ id: `supp-pay-credit-${p.id}`, date: p.date, number: number, description: `دفع من ${getCashAccountName(p.paidFromAccountId)}`, debit: 0, credit: p.amount, account: getCashAccountName(p.paidFromAccountId) });
         });
 
         // Customer Payments
         customerPayments.forEach(p => {
-            const number = p.receiptNumber || `REC-${p.id.slice(-4)}`;
+            const number = p.receiptNumber || `س-ع-${p.id.slice(-4)}`;
             entries.push({ id: `cust-pay-debit-${p.id}`, date: p.date, number: number, description: `تحصيل من العميل ${getCustomerName(p.customerId)}`, debit: p.amount, credit: 0, account: getCashAccountName(p.paidToAccountId) });
             entries.push({ id: `cust-pay-credit-${p.id}`, date: p.date, number: number, description: `تخفيض مديونية العميل`, debit: 0, credit: p.amount, account: 'حسابات العملاء' });
         });
@@ -472,41 +473,36 @@ export default function JournalPage() {
                     ) : (
                          <div className="space-y-4">
                             {groupedEntries.map(entry => (
-                                <div key={entry.number} className="border rounded-lg p-4">
-                                    <div className="flex justify-between items-center border-b pb-2 mb-2">
-                                        <div className="flex gap-4">
-                                            <span className="font-mono text-sm">#{entry.number}</span>
-                                            <span className="text-sm text-muted-foreground">{new Date(entry.date).toLocaleDateString('ar-EG')}</span>
-                                        </div>
-                                        <div className="font-bold">
-                                            {entry.total.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} ج.م
-                                        </div>
+                                <div key={entry.number} className="border rounded-lg p-4 space-y-2">
+                                    <div className="flex justify-between items-center text-sm text-muted-foreground">
+                                        <span className="font-mono">قيد رقم: #{entry.number}</span>
+                                        <span>التاريخ: {new Date(entry.date).toLocaleDateString('ar-EG')}</span>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <h4 className="font-semibold mb-1">{entry.debits.length > 1 ? "من مذكورين:" : "من ح/"}</h4>
-                                            <ul className="space-y-1 text-sm pr-2">
-                                                {entry.debits.map((d, i) => (
-                                                    <li key={i} className="flex justify-between">
-                                                        <span>{d.account}</span>
-                                                        <span className="font-mono">{d.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </div>
-                                        <div>
-                                            <h4 className="font-semibold mb-1">{entry.credits.length > 1 ? "إلى مذكورين:" : "إلى ح/"}</h4>
-                                            <ul className="space-y-1 text-sm pr-2">
-                                                {entry.credits.map((c, i) => (
-                                                    <li key={i} className="flex justify-between">
-                                                        <span>{c.account}</span>
-                                                        <span className="font-mono">{c.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </div>
+                                    <Separator />
+                                    <div className="space-y-2">
+                                        <h4 className="font-semibold">{entry.debits.length > 1 ? "من مذكورين:" : "من ح/"}</h4>
+                                        <ul className="space-y-1 text-sm pr-4">
+                                            {entry.debits.map((d, i) => (
+                                                <li key={i} className="flex justify-between">
+                                                    <span>{d.account}</span>
+                                                    <span className="font-mono">{d.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
                                     </div>
-                                    <div className="text-xs text-muted-foreground mt-2 pt-2 border-t">
+                                    <div className="space-y-2">
+                                         <h4 className="font-semibold">{entry.credits.length > 1 ? "إلى مذكورين:" : "إلى ح/"}</h4>
+                                        <ul className="space-y-1 text-sm pr-4">
+                                            {entry.credits.map((c, i) => (
+                                                <li key={i} className="flex justify-between">
+                                                    <span>{c.account}</span>
+                                                    <span className="font-mono">{c.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                    <Separator />
+                                    <div className="text-xs text-muted-foreground pt-1">
                                         البيان: {entry.description}
                                     </div>
                                 </div>

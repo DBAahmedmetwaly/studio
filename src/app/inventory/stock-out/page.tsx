@@ -118,7 +118,7 @@ export default function StockOutPage() {
             items: items.map(({id, name, qty}) => ({id, name, qty})), // Remove uniqueId before saving
             reason,
             notes,
-            receiptNumber: `OUT-${nextId}`
+            receiptNumber: `إذ-خ-${nextId}`
         }
 
         try {

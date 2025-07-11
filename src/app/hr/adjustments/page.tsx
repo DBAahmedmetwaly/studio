@@ -118,7 +118,7 @@ export default function EmployeeAdjustmentsPage() {
     const handleSave = async (data: Omit<EmployeeAdjustment, 'id' | 'receiptNumber'>) => {
         try {
             if (!can('add', 'hr')) return toast({ variant: "destructive", title: "غير مصرح به" });
-            const receiptNumber = `ADJ-${await getNextId('employeeAdjustment')}`;
+            const receiptNumber = `ت-م-${await getNextId('employeeAdjustment')}`;
             const newAdjustment = { ...data, receiptNumber };
             await add(newAdjustment);
             toast({ title: "تمت الإضافة بنجاح", description: `تم حفظ الإجراء برقم: ${receiptNumber}` });

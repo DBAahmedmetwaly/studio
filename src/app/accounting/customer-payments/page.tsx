@@ -132,7 +132,7 @@ export default function CustomerPaymentsPage() {
 
     const handleSave = async (data: Omit<CustomerPayment, 'id' | 'receiptNumber'>) => {
         try {
-            const receiptNumber = `REC-${await getNextId('customerPayment')}`;
+            const receiptNumber = `س-ع-${await getNextId('customerPayment')}`;
             const newPayment = { ...data, receiptNumber };
             await add(newPayment);
             toast({ title: "تمت الإضافة بنجاح", description: `تم حفظ الدفعة برقم إيصال: ${receiptNumber}` });

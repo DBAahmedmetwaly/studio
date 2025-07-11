@@ -206,7 +206,7 @@ export default function SalesInvoicePage() {
 
         setIsSaving(true);
         try {
-            const invoiceNumber = `INV-${await getNextId('salesInvoice')}`;
+            const invoiceNumber = `ف-ب-${await getNextId('salesInvoice')}`;
             const customerName = customers.find(c => c.id === customerId)?.name || '';
 
             const invoiceData = {
@@ -243,7 +243,7 @@ export default function SalesInvoicePage() {
                     customerId: customerId,
                     paidToAccountId: paidToAccountId,
                     notes: `دفعة من فاتورة بيع رقم ${invoiceNumber}`,
-                    receiptNumber: `REC-${await getNextId('customerPayment')}`
+                    receiptNumber: `س-ع-${await getNextId('customerPayment')}`
                 });
             }
 

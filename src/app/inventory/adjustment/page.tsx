@@ -144,7 +144,7 @@ export default function StockAdjustmentPage() {
             date: new Date().toISOString(),
             items: items.map(({ uniqueId, itemName, ...rest}) => rest), // Remove client-side fields
             notes,
-            receiptNumber: `ADJ-${nextId}`
+            receiptNumber: `ت-م-${nextId}`
         };
 
         try {

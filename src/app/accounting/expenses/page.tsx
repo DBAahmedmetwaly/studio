@@ -152,7 +152,7 @@ export default function ExpensesPage() {
 
     const handleSave = async (data: Omit<Expense, 'id' | 'receiptNumber'>) => {
         try {
-            const receiptNumber = `EXP-${await getNextId('expense')}`;
+            const receiptNumber = `م-${await getNextId('expense')}`;
             const newExpense = { ...data, receiptNumber };
             await add(newExpense);
             toast({ title: "تمت الإضافة بنجاح", description: `تم تسجيل المصروف برقم إيصال: ${receiptNumber}` });

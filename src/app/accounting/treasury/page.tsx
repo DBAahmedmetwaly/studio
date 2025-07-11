@@ -131,8 +131,8 @@ export default function TreasuryPage() {
     const handleSave = async (data: Omit<TreasuryTransaction, 'id' | 'receiptNumber'>) => {
         try {
             const receiptNumber = data.type === 'deposit' 
-                ? `DEP-${await getNextId('deposit')}` 
-                : `WTH-${await getNextId('withdrawal')}`;
+                ? `إيداع-${await getNextId('deposit')}` 
+                : `سحب-${await getNextId('withdrawal')}`;
             
             const newTransaction = { ...data, receiptNumber };
             await add(newTransaction);

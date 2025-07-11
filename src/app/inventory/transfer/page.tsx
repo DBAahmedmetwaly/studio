@@ -118,7 +118,7 @@ export default function StockTransferPage() {
             toSourceId: toSource,
             date: new Date().toISOString(),
             items: items.map(({id, name, qty}) => ({id, name, qty})), // Remove uniqueId before saving
-            receiptNumber: `TRN-${nextId}`
+            receiptNumber: `إذ-ت-${nextId}`
         }
 
         try {

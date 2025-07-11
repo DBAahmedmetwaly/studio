@@ -125,7 +125,7 @@ export default function StockInPage() {
             items: items.map(({id, name, qty}) => ({id, name, qty})), // Remove uniqueId before saving
             reason,
             notes,
-            receiptNumber: `IN-${nextId}`
+            receiptNumber: `إذ-د-${nextId}`
         };
 
         try {

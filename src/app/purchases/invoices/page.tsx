@@ -149,7 +149,7 @@ export default function PurchaseInvoicePage() {
         }
         setIsSaving(true);
         try {
-            const invoiceNumber = `PUR-${await getNextId('purchaseInvoice')}`;
+            const invoiceNumber = `ف-ش-${await getNextId('purchaseInvoice')}`;
             const supplierName = suppliers.find(s => s.id === supplierId)?.name || '';
 
             const invoiceData = {
@@ -185,7 +185,7 @@ export default function PurchaseInvoicePage() {
                     supplierId: supplierId,
                     paidFromAccountId: paidFromAccountId,
                     notes: `دفعة لفاتورة شراء رقم ${invoiceNumber}`,
-                    receiptNumber: `PAY-${await getNextId('supplierPayment')}`
+                    receiptNumber: `س-م-${await getNextId('supplierPayment')}`
                 });
             }
 
