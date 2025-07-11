@@ -64,17 +64,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   
   const signIn = async (loginName: string, pass: string) => {
     const usersRef = ref(database, 'users');
-    const q = query(usersRef, orderByChild('loginName'), equalTo(loginName));
-    const snapshot = await get(q);
+    const snapshot = await get(usersRef);
     
     if(!snapshot.exists()) {
-        throw new Error("اسم الدخول غير صحيح.");
+        throw new Error("لا يوجد مستخدمون في قاعدة البيانات.");
     }
 
-    const userData = snapshot.val();
-    const userKey = Object.keys(userData)[0];
-    const userEmail = `${loginName}@smart-accountant.app`; // Construct email
+    const allUsers = snapshot.val();
+    const foundUserEntry = Object.entries(allUsers).find(([key, val]: [string, any]) => val.loginName === loginName);
+    
+    if (!foundUserEntry) {
+         throw new Error("اسم الدخول غير صحيح.");
+    }
 
+    const [userKey, userData] = foundUserEntry;
+
+    // This is a workaround for not having a direct email field.
+    // Firebase Auth requires a unique email for each user. We create it from the loginName.
+    const userEmail = `${loginName}@smart-accountant.app`;
     
     const userCredential = await signInWithEmailAndPassword(auth, userEmail, pass);
     await fetchUserAppData(userCredential.user);
