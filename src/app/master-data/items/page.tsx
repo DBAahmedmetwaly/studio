@@ -158,10 +158,18 @@ export default function ItemsPage() {
         }
     };
 
-    const handleDelete = (id: string) => {
-        if (!can('delete', moduleName)) return toast({ variant: "destructive", title: "غير مصرح به" });
+    const handleDelete = async (id: string) => {
+        if (!can('delete', moduleName)) {
+            toast({ variant: "destructive", title: "غير مصرح به" });
+            return;
+        }
         if (confirm("هل أنت متأكد من حذف هذا الصنف؟")) {
-            remove(id);
+            try {
+                await remove(id);
+                toast({ title: "تم الحذف بنجاح" });
+            } catch (error) {
+                toast({ variant: "destructive", title: "خطأ", description: "فشل حذف الصنف." });
+            }
         }
     };
     
