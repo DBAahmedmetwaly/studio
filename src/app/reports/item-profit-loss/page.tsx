@@ -24,15 +24,8 @@ interface SaleInvoice {
     date: string;
     warehouseId: string;
     items: { id: string; qty: number; price: number; cost?: number; }[];
+    status?: 'pending' | 'approved';
 }
-
-interface PurchaseInvoice {
-     id: string;
-    date: string;
-    warehouseId: string;
-    items: { id: string; qty: number; price: number }[];
-}
-
 
 interface Warehouse {
     id: string;
@@ -49,53 +42,63 @@ export default function ItemProfitLossPage() {
 
     const { data: items, loading: loadingItems } = useFirebase<Item>('items');
     const { data: sales, loading: loadingSales } = useFirebase<SaleInvoice>('salesInvoices');
-    const { data: purchases, loading: loadingPurchases } = useFirebase<PurchaseInvoice>('purchaseInvoices');
     const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
 
-    const loading = loadingItems || loadingSales || loadingPurchases || loadingWarehouses;
+    const loading = loadingItems || loadingSales || loadingWarehouses;
 
     const handleFilterChange = (key: keyof typeof filters, value: string) => {
         setFilters(prev => ({...prev, [key]: value}));
     };
     
     const handleGenerateReport = () => {
-        const results = items.map(item => {
-            let totalRevenue = 0;
-            let totalCost = 0;
+        
+        const filteredSales = sales.filter(sale => {
+            if (sale.status !== 'approved') return false; // Only consider approved sales
+            const saleDate = new Date(sale.date);
+            const fromDate = filters.fromDate ? new Date(filters.fromDate) : null;
+            const toDate = filters.toDate ? new Date(toDate) : null;
+            if (fromDate && saleDate < fromDate) return false;
+            if (toDate && saleDate > toDate) return false;
+            if (filters.warehouseId !== 'all' && sale.warehouseId !== filters.warehouseId) return false;
+            return true;
+        });
+        
+        const resultsMap = new Map();
 
-            const relevantSales = sales.filter(sale => {
-                const saleDate = new Date(sale.date);
-                const fromDate = filters.fromDate ? new Date(filters.fromDate) : null;
-                const toDate = filters.toDate ? new Date(filters.toDate) : null;
-                if (fromDate && saleDate < fromDate) return false;
-                if (toDate && saleDate > toDate) return false;
-                if (filters.warehouseId !== 'all' && sale.warehouseId !== filters.warehouseId) return false;
-                return sale.items.some(i => i.id === item.id);
+        filteredSales.forEach(sale => {
+            sale.items.forEach(saleItem => {
+                const itemMaster = items.find(i => i.id === saleItem.id);
+                if (!itemMaster) return;
+
+                const revenue = saleItem.qty * saleItem.price;
+                const cost = saleItem.qty * (saleItem.cost || itemMaster.cost || 0);
+
+                if (resultsMap.has(saleItem.id)) {
+                    const existing = resultsMap.get(saleItem.id);
+                    existing.totalRevenue += revenue;
+                    existing.totalCost += cost;
+                } else {
+                    resultsMap.set(saleItem.id, {
+                        id: saleItem.id,
+                        name: itemMaster.name,
+                        totalRevenue: revenue,
+                        totalCost: cost,
+                    });
+                }
             });
-
-            relevantSales.forEach(sale => {
-                sale.items.forEach(saleItem => {
-                    if (saleItem.id === item.id) {
-                        totalRevenue += saleItem.qty * saleItem.price;
-                        // Use cost from sale invoice if available, otherwise fallback
-                        totalCost += saleItem.qty * (saleItem.cost || item.cost || item.price * 0.8);
-                    }
-                });
-            });
-
-            const profit = totalRevenue - totalCost;
-            const margin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
-
+        });
+        
+        const results = Array.from(resultsMap.values()).map(data => {
+            const profit = data.totalRevenue - data.totalCost;
+            const margin = data.totalRevenue > 0 ? (profit / data.totalRevenue) * 100 : 0;
             return {
-                id: item.id,
-                name: item.name,
-                revenue: totalRevenue,
-                cost: totalCost,
+                ...data,
                 profit: profit,
                 margin: margin.toFixed(2) + '%'
             };
         });
-        setReportData(results.filter(r => r.revenue > 0 || r.cost > 0));
+
+        setReportData(results);
     };
 
     const handlePrint = () => {
@@ -156,14 +159,15 @@ export default function ItemProfitLossPage() {
                 </Button>
             </CardHeader>
             <CardContent>
+                <div className="w-full overflow-auto border rounded-lg">
                 <Table>
                     <TableHeader>
                         <TableRow>
                             <TableHead>الصنف</TableHead>
-                            <TableHead>الإيرادات</TableHead>
-                            <TableHead>التكلفة</TableHead>
-                            <TableHead>الربح / الخسارة</TableHead>
-                            <TableHead>هامش الربح</TableHead>
+                            <TableHead className="text-center">الإيرادات</TableHead>
+                            <TableHead className="text-center">التكلفة</TableHead>
+                            <TableHead className="text-center">الربح / الخسارة</TableHead>
+                            <TableHead className="text-center">هامش الربح</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -173,35 +177,36 @@ export default function ItemProfitLossPage() {
                                     <div className="font-medium">{data.name}</div>
                                     <div className="text-sm text-muted-foreground">{data.id.slice(0, 6).toUpperCase()}</div>
                                 </TableCell>
-                                <TableCell>ج.م {data.revenue.toLocaleString()}</TableCell>
-                                <TableCell>ج.م {data.cost.toLocaleString()}</TableCell>
-                                <TableCell className={data.profit >= 0 ? "text-green-500" : "text-destructive"}>
-                                    ج.م {data.profit.toLocaleString()}
+                                <TableCell className="text-center">ج.م {data.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                                <TableCell className="text-center">ج.م {data.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                                <TableCell className={`text-center font-bold ${data.profit >= 0 ? "text-green-500" : "text-destructive"}`}>
+                                    ج.م {data.profit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </TableCell>
-                                <TableCell className={data.profit >= 0 ? "text-green-500" : "text-destructive"}>
+                                <TableCell className={`text-center font-bold ${data.profit >= 0 ? "text-green-500" : "text-destructive"}`}>
                                     {data.margin}
                                 </TableCell>
                             </TableRow>
                         )) : (
                             <TableRow>
                                 <TableCell colSpan={5} className="text-center text-muted-foreground py-10">
-                                    لا توجد بيانات لعرضها.
+                                    لا توجد بيانات مبيعات لعرضها في الفترة المحددة.
                                 </TableCell>
                             </TableRow>
                         )}
                     </TableBody>
                     {reportData.length > 0 && (
                         <TableFooter>
-                            <TableRow>
+                            <TableRow className="bg-muted/50">
                                 <TableCell className="font-bold">الإجمالي</TableCell>
-                                <TableCell className="font-bold">ج.م {reportData.reduce((acc, item) => acc + item.revenue, 0).toLocaleString()}</TableCell>
-                                <TableCell className="font-bold">ج.م {reportData.reduce((acc, item) => acc + item.cost, 0).toLocaleString()}</TableCell>
-                                <TableCell className="font-bold">ج.م {reportData.reduce((acc, item) => acc + item.profit, 0).toLocaleString()}</TableCell>
+                                <TableCell className="text-center font-bold">ج.م {reportData.reduce((acc, item) => acc + item.totalRevenue, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                                <TableCell className="text-center font-bold">ج.م {reportData.reduce((acc, item) => acc + item.totalCost, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                                <TableCell className="text-center font-bold">ج.م {reportData.reduce((acc, item) => acc + item.profit, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                                 <TableCell></TableCell>
                             </TableRow>
                         </TableFooter>
                     )}
                 </Table>
+                </div>
             </CardContent>
             </Card>
         )}
@@ -209,3 +214,4 @@ export default function ItemProfitLossPage() {
     </>
   );
 }
+
