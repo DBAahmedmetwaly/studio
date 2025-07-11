@@ -47,13 +47,12 @@ interface User {
   name: string;
   loginName: string;
   password?: string; // Optional for security reasons when fetching/displaying
-  email: string;
   role: string;
   warehouse: string;
 }
 
 const UserForm = ({ user, onSave, onClose }: { user?: User, onSave: (data: Omit<User, 'id'> & { id?: string }) => void, onClose: () => void }) => {
-  const [formData, setFormData] = useState(user || { name: "", loginName: "", email: "", password: "", role: "محاسب", warehouse: "" });
+  const [formData, setFormData] = useState(user || { name: "", loginName: "", password: "", role: "محاسب", warehouse: "" });
 
   const handleSubmit = () => {
     onSave({
@@ -83,12 +82,6 @@ const UserForm = ({ user, onSave, onClose }: { user?: User, onSave: (data: Omit<
             كلمة المرور
           </Label>
           <Input id="user-password" type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="col-span-3" placeholder={user ? "اتركه فارغاً لعدم التغيير" : ""} />
-        </div>
-        <div className="grid grid-cols-4 items-center gap-4">
-          <Label htmlFor="user-email" className="text-right">
-            البريد الإلكتروني
-          </Label>
-          <Input id="user-email" type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="col-span-3" />
         </div>
         <div className="grid grid-cols-4 items-center gap-4">
           <Label htmlFor="user-role" className="text-right">
@@ -206,8 +199,7 @@ export default function UsersPage() {
                             <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
                             </Avatar>
                             <div className="font-medium">
-                            <div>{user.name}</div>
-                            <div className="text-sm text-muted-foreground">{user.email}</div>
+                                <div>{user.name}</div>
                             </div>
                         </div>
                         </TableCell>
