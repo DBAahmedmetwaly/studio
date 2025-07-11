@@ -42,6 +42,10 @@ import {
   UserRound,
   Calculator,
   Undo2,
+  Truck,
+  FileUp,
+  FileDown,
+  Coins,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -148,6 +152,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <NavSubLink href="/master-data/suppliers">الموردون</NavSubLink>
                 <NavSubLink href="/master-data/partners">الشركاء</NavSubLink>
                 <NavSubLink href="/master-data/cash-accounts">الخزائن والبنوك</NavSubLink>
+                <NavSubLink href="/master-data/sales-reps">مناديب المبيعات</NavSubLink>
             </NavCollapsible>
 
             <NavCollapsible title="المخزون" icon={<Boxes />} module="inventory">
@@ -161,6 +166,17 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <NavCollapsible title="المبيعات" icon={<ShoppingCart />} module="sales">
                 <NavSubLink href="/sales/invoices/list">فواتير البيع</NavSubLink>
                 <NavSubLink href="/sales/returns">مرتجعات البيع</NavSubLink>
+                 <SidebarMenuSubItem>
+                    <hr className="my-2" />
+                </SidebarMenuSubItem>
+                <SidebarMenuSubButton>
+                    <Truck className="h-4 w-4" />
+                    <span>عمليات المناديب</span>
+                </SidebarMenuSubButton>
+                 <NavSubLink href="/sales/issue-to-rep"><FileUp className="h-3 w-3" />صرف بضاعة لمندوب</NavSubLink>
+                <NavSubLink href="/sales/return-from-rep"><FileDown className="h-3 w-3" />مرتجع بضاعة من مندوب</NavSubLink>
+                <NavSubLink href="/sales/remit-from-rep"><Coins className="h-3 w-3" />توريد نقدية من مندوب</NavSubLink>
+
             </NavCollapsible>
             
             <NavCollapsible title="المشتريات" icon={<ShoppingBag />} module="purchases">
