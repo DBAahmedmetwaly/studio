@@ -3,9 +3,9 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { Loader2, LogIn } from 'lucide-react';
-import { auth, database } from '@/lib/firebase';
+import { auth, database } from "@/lib/firebase";
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut as firebaseSignOut, User as FirebaseUser } from "firebase/auth";
-import { ref, query, orderByChild, equalTo, get } from 'firebase/database';
+import { ref, onValue } from 'firebase/database';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -82,30 +82,37 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const { toast } = useToast();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
-        // User is signed in with Firebase Auth, now fetch app-specific user data
+        // User is signed in with Firebase Auth, now fetch app-specific user data from RTDB
         const usersRef = ref(database, 'users');
-        const userQuery = query(usersRef, orderByChild('loginName'), equalTo(firebaseUser.email?.split('@')[0] || ''));
-        const snapshot = await get(userQuery);
+        // onValue listener will handle setting the user data
+        onValue(usersRef, (snapshot) => {
+            if (snapshot.exists()) {
+                const usersData = snapshot.val();
+                const loginNameToFind = firebaseUser.email?.split('@')[0];
+                const foundUserKey = Object.keys(usersData).find(key => usersData[key].loginName === loginNameToFind);
+                
+                if (foundUserKey) {
+                    const userData = usersData[foundUserKey];
+                    setUser({ ...userData, id: foundUserKey, uid: firebaseUser.uid });
+                } else {
+                     console.error("User exists in Auth but not in Realtime Database.");
+                     setUser(null);
+                }
+            } else {
+                console.error("No users found in Realtime Database.");
+                setUser(null);
+            }
+        }, { onlyOnce: true }); // Fetch user data once after auth state change
 
-        if (snapshot.exists()) {
-            const usersData = snapshot.val();
-            const userId = Object.keys(usersData)[0];
-            const userData = usersData[userId];
-            setUser({ ...userData, id: userId, uid: firebaseUser.uid });
-        } else {
-            // This case should ideally not happen if user creation is handled correctly
-            console.error("User exists in Auth but not in Realtime Database.");
-            setUser(null);
-        }
       } else {
         setUser(null);
       }
       setLoading(false);
     }, (error) => {
         console.error("Auth state change error:", error);
-        if (error.code === 'auth/configuration-not-found') {
+         if (error.code === 'auth/configuration-not-found') {
             setAuthError("خدمة المصادقة غير مفعلة في مشروع Firebase. يرجى تفعيلها من لوحة التحكم.");
         } else {
             setAuthError("حدث خطأ أثناء الاتصال بخدمة المصادقة.");
@@ -120,10 +127,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setLoading(true);
     setAuthError(null);
     try {
-        // We'll use a dummy domain for the email since Firebase Auth requires it.
         const email = `${loginName}@smart-accountant.com`;
         await signInWithEmailAndPassword(auth, email, pass);
-        // onAuthStateChanged will handle setting the user state
     } catch (error: any) {
         console.error("Sign in failed:", error);
         if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found') {
@@ -137,7 +142,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         toast({
             variant: "destructive",
             title: "فشل تسجيل الدخول",
-            description: authError || "يرجى المحاولة مرة أخرى.",
+            description: "يرجى المحاولة مرة أخرى.",
         });
     } finally {
         setLoading(false);
