@@ -22,39 +22,79 @@ interface User {
 interface CashAccount {
     id: string;
     name: string;
+    salesRepId?: string; // To identify rep accounts
 }
 
 export default function RemitFromRepPage() {
     const router = useRouter();
     const { toast } = useToast();
-    const [selectedRep, setSelectedRep] = useState<string>("");
+    const [selectedRepId, setSelectedRepId] = useState<string>("");
     const [amount, setAmount] = useState<number>(0);
     const [toAccountId, setToAccountId] = useState<string>("");
     const [notes, setNotes] = useState("");
     
     const { data: users, loading: loadingUsers } = useFirebase<User>('users');
     const { data: cashAccounts, loading: loadingAccounts } = useFirebase<CashAccount>('cashAccounts');
-    const { add: addRemittance } = useFirebase("repRemittances");
+    const { add: addRemittance, getNextId } = useFirebase("repRemittances");
+    const { add: addTreasuryTransaction } = useFirebase("treasuryTransactions");
+
 
     const reps = users.filter(u => u.isSalesRep);
+    // Exclude rep-specific accounts from the destination list
+    const mainCashAccounts = cashAccounts.filter((acc: CashAccount) => !acc.salesRepId);
+    
     const loading = loadingUsers || loadingAccounts;
 
     const handleConfirm = async () => {
-        if (!selectedRep || amount <= 0 || !toAccountId) {
+        if (!selectedRepId || amount <= 0 || !toAccountId) {
             toast({ variant: "destructive", title: "بيانات غير مكتملة", description: "يرجى اختيار المندوب والحساب وإدخال مبلغ صحيح." });
             return;
         }
 
-        const record = {
-            salesRepId: selectedRep,
-            toAccountId: toAccountId,
-            date: new Date().toISOString(),
-            amount: Number(amount),
-            notes,
-        };
+        const repCashAccount = cashAccounts.find((acc: CashAccount) => acc.salesRepId === selectedRepId);
+        if (!repCashAccount) {
+            toast({ variant: "destructive", title: "خطأ", description: "لم يتم العثور على خزينة المندوب." });
+            return;
+        }
+
+        const repName = users.find(u => u.id === selectedRepId)?.name || 'غير معروف';
 
         try {
-            await addRemittance(record);
+            // Record the remittance itself for reporting
+            const remittanceId = await getNextId('remittance');
+            await addRemittance({
+                salesRepId: selectedRepId,
+                fromAccountId: repCashAccount.id,
+                toAccountId: toAccountId,
+                date: new Date().toISOString(),
+                amount: Number(amount),
+                notes,
+                receiptNumber: `ت-ن-${remittanceId}`,
+            });
+
+            // Create two treasury transactions to reflect the accounting entry
+            // 1. Withdrawal from rep's account
+            const withdrawalId = await getNextId('treasuryTransaction');
+            await addTreasuryTransaction({
+                date: new Date().toISOString(),
+                amount: Number(amount),
+                accountId: repCashAccount.id,
+                type: 'withdrawal',
+                description: `توريد إلى ${cashAccounts.find((c:CashAccount) => c.id === toAccountId)?.name}`,
+                receiptNumber: `ح-خ-${withdrawalId}`,
+            });
+            
+            // 2. Deposit into main account
+             const depositId = await getNextId('treasuryTransaction');
+             await addTreasuryTransaction({
+                date: new Date().toISOString(),
+                amount: Number(amount),
+                accountId: toAccountId,
+                type: 'deposit',
+                description: `توريد من المندوب ${repName}`,
+                receiptNumber: `ح-خ-${depositId}`,
+            });
+
             toast({ title: "تم بنجاح", description: `تم تسجيل توريد النقدية بنجاح.` });
             router.push('/');
         } catch(error) {
@@ -70,7 +110,7 @@ export default function RemitFromRepPage() {
           <CardHeader>
             <CardTitle>إيصال توريد نقدية</CardTitle>
             <CardDescription>
-                استخدم هذه الشاشة لتسجيل المبالغ النقدية التي يقوم المندوب بتوريدها إلى خزينة الشركة.
+                تسجيل المبالغ النقدية المحولة من عهدة المندوب المالية إلى خزينة الشركة الرئيسية أو البنك.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -80,7 +120,7 @@ export default function RemitFromRepPage() {
                 <div className="space-y-4">
                     <div className="space-y-2">
                         <Label htmlFor="rep">من المندوب</Label>
-                        <Select value={selectedRep} onValueChange={setSelectedRep}>
+                        <Select value={selectedRepId} onValueChange={setSelectedRepId}>
                             <SelectTrigger id="rep"><SelectValue placeholder="اختر المندوب" /></SelectTrigger>
                             <SelectContent>
                                 {reps.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
@@ -90,9 +130,9 @@ export default function RemitFromRepPage() {
                     <div className="space-y-2">
                         <Label htmlFor="toAccount">إلى حساب</Label>
                         <Select value={toAccountId} onValueChange={setToAccountId}>
-                            <SelectTrigger id="toAccount"><SelectValue placeholder="اختر حساب الخزينة/البنك" /></SelectTrigger>
+                            <SelectTrigger id="toAccount"><SelectValue placeholder="اختر حساب الخزينة/البنك الرئيسي" /></SelectTrigger>
                             <SelectContent>
-                               {cashAccounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
+                               {mainCashAccounts.map((acc:CashAccount) => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>

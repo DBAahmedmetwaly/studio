@@ -4,7 +4,7 @@
 import React, { useState } from "react";
 import PageHeader from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, MoreHorizontal, Edit, Trash2, Loader2, Landmark, Wallet } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Edit, Trash2, Loader2, Landmark, Wallet, User } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -33,12 +33,18 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
 
 interface CashAccount {
   id?: string;
   name: string;
   type: 'cash' | 'bank';
   openingBalance: number;
+  salesRepId?: string; // To link to a sales rep
+}
+interface SalesRep {
+    id: string;
+    name: string;
 }
 
 const CashAccountForm = ({ account, onSave, onClose }: { account?: CashAccount, onSave: (data: Omit<CashAccount, 'id'> & { id?: string }) => void, onClose: () => void }) => {
@@ -94,11 +100,18 @@ const CashAccountForm = ({ account, onSave, onClose }: { account?: CashAccount, 
 
 
 export default function CashAccountsPage() {
-    const { data: accounts, loading, add, update, remove } = useFirebase<CashAccount>("cashAccounts");
+    const { data: accounts, loading: loadingAccounts, add, update, remove } = useFirebase<CashAccount>("cashAccounts");
+    const { data: salesReps, loading: loadingReps } = useFirebase<SalesRep>("users"); // Fetch users to get rep names
     const { toast } = useToast();
+    
+    const loading = loadingAccounts || loadingReps;
 
     const handleSave = async (account: Omit<CashAccount, 'id'> & { id?: string }) => {
         try {
+            if (account.salesRepId) {
+                toast({ variant: "destructive", title: "غير مسموح", description: "لا يمكن تعديل خزينة المندوب من هنا." });
+                return;
+            }
             if (account.id) {
                 await update(account.id, account);
                 toast({ title: "تم التحديث بنجاح" });
@@ -111,15 +124,26 @@ export default function CashAccountsPage() {
         }
     };
 
-    const handleDelete = (id: string) => {
+    const handleDelete = (account: CashAccount) => {
+        if (account.salesRepId) {
+             toast({ variant: "destructive", title: "غير مسموح", description: "لا يمكن حذف خزينة مندوب. يرجى إلغاء تعيين المستخدم كمندوب أولاً." });
+             return;
+        }
         if (confirm("هل أنت متأكد من حذف هذا الحساب؟")) {
-            remove(id);
+            remove(account.id!);
         }
     };
     
-    const getTypeIcon = (type: string) => {
-        if (type === 'bank') return <Landmark className="h-5 w-5 text-muted-foreground" />;
-        return <Wallet className="h-5 w-5 text-muted-foreground" />;
+    const getTypeAndOwner = (account: CashAccount) => {
+        const typeIcon = account.type === 'bank' ? <Landmark className="h-5 w-5 text-muted-foreground" /> : <Wallet className="h-5 w-5 text-muted-foreground" />;
+        const repName = account.salesRepId ? salesReps.find(r => r.id === account.salesRepId)?.name : null;
+        
+        return (
+            <div className="flex flex-col items-center gap-1">
+                {typeIcon}
+                {repName && <Badge variant="secondary" className="flex items-center gap-1"><User className="h-3 w-3"/>مندوب</Badge>}
+            </div>
+        )
     }
 
   return (
@@ -127,7 +151,7 @@ export default function CashAccountsPage() {
       <PageHeader title="إدارة الخزائن والبنوك">
         <AddEntityDialog
           title="إضافة حساب جديد"
-          description="أدخل تفاصيل الخزينة أو الحساب البنكي."
+          description="أدخل تفاصيل الخزينة أو الحساب البنكي. لإضافة خزينة مندوب، يرجى تحديد المستخدم كمندوب في شاشة المستخدمين."
           triggerButton={
             <Button size="sm" className="gap-1">
               <PlusCircle className="h-4 w-4" />
@@ -143,7 +167,7 @@ export default function CashAccountsPage() {
           <CardHeader>
             <CardTitle>الخزائن والحسابات البنكية</CardTitle>
             <CardDescription>
-              إدارة جميع حساباتك النقدية من خزائن وبنوك وأرصدتها.
+              إدارة جميع حساباتك النقدية من خزائن وبنوك وأرصدتها، بما في ذلك خزائن المناديب.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -164,8 +188,8 @@ export default function CashAccountsPage() {
                         </TableHeader>
                         <TableBody>
                             {accounts.map((account) => (
-                                <TableRow key={account.id}>
-                                    <TableCell className="text-center">{getTypeIcon(account.type)}</TableCell>
+                                <TableRow key={account.id} className={account.salesRepId ? 'bg-muted/30' : ''}>
+                                    <TableCell className="text-center">{getTypeAndOwner(account)}</TableCell>
                                     <TableCell className="font-medium">{account.name}</TableCell>
                                     <TableCell className="text-center">{account.openingBalance.toLocaleString()}</TableCell>
                                     <TableCell className="text-center">
@@ -182,7 +206,7 @@ export default function CashAccountsPage() {
                                                 title="تعديل الحساب"
                                                 description="قم بتحديث تفاصيل الحساب هنا."
                                                 triggerButton={
-                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} disabled={!!account.salesRepId}>
                                                     <Edit className="ml-2 h-4 w-4" />
                                                     تعديل
                                                     </DropdownMenuItem>
@@ -190,7 +214,7 @@ export default function CashAccountsPage() {
                                             >
                                             <CashAccountForm account={account} onSave={handleSave} onClose={()=>{}} />
                                             </AddEntityDialog>
-                                            <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(account.id!)}>
+                                            <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(account)} disabled={!!account.salesRepId}>
                                                 <Trash2 className="ml-2 h-4 w-4" />
                                                 حذف
                                             </DropdownMenuItem>

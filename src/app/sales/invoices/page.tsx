@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import PageHeader from "@/components/page-header";
@@ -52,6 +53,7 @@ interface Warehouse {
 interface CashAccount {
     id: string;
     name: string;
+    salesRepId?: string;
 }
 
 interface IssueToRep {
@@ -126,11 +128,14 @@ export default function SalesInvoicePage() {
     const isRep = !!user?.isSalesRep;
 
     useEffect(() => {
-        // If the user is a rep, automatically select their warehouse and disable changing it.
         if (isRep && user?.warehouse) {
             setWarehouseId(user.warehouse);
+            const repCashAccount = cashAccounts.find((acc: CashAccount) => acc.salesRepId === user.id);
+            if(repCashAccount) {
+                setPaidToAccountId(repCashAccount.id);
+            }
         }
-    }, [isRep, user]);
+    }, [isRep, user, cashAccounts]);
 
     const itemsInRepCustody = useMemo(() => {
         if (!isRep || !user?.id || !allItems.length) return [];
@@ -290,7 +295,7 @@ export default function SalesInvoicePage() {
                 customerId,
                 customerName,
                 warehouseId,
-                salesRepId: isRep ? user?.id : null,
+                salesRepId: isRep ? user?.id : undefined,
                 status: isRep ? 'pending' : 'approved',
                 items: items.map(item => {
                     const originalItemId = item.id.split('-')[0];
@@ -308,6 +313,7 @@ export default function SalesInvoicePage() {
                 tax,
                 total,
                 paidAmount,
+                paidToAccountId, // Save the account ID for approval step
                 notes,
             };
             
@@ -516,12 +522,12 @@ export default function SalesInvoicePage() {
                                 </div>
                                 {paidAmount > 0 && <div className="space-y-2">
                                     <Label htmlFor="paidToAccount">استلام في</Label>
-                                    <Select value={paidToAccountId} onValueChange={setPaidToAccountId}>
+                                    <Select value={paidToAccountId} onValueChange={setPaidToAccountId} disabled={isRep}>
                                         <SelectTrigger id="paidToAccount">
                                             <SelectValue placeholder="اختر حساب الاستلام" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                        {cashAccounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
+                                        {cashAccounts.map((acc:CashAccount) => <SelectItem key={acc.id} value={acc.id} disabled={isRep ? !acc.salesRepId : !!acc.salesRepId}>{acc.name}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
                                 </div>}

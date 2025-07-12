@@ -14,7 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle, Loader2, ArrowUpCircle, ArrowDownCircle, Wallet, Landmark } from "lucide-react";
+import { PlusCircle, Loader2, ArrowUpCircle, ArrowDownCircle, Wallet, Landmark, User } from "lucide-react";
 import useFirebase from '@/hooks/use-firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -29,6 +29,7 @@ interface CashAccount {
     name: string;
     type: 'cash' | 'bank';
     openingBalance: number;
+    salesRepId?: string;
 }
 
 interface TreasuryTransaction {
@@ -43,11 +44,11 @@ interface TreasuryTransaction {
     createdByName?: string;
 }
 
-interface Expense {
-    id: string;
-    amount: number;
-    paidFromAccountId: string;
-}
+interface Expense { id: string; amount: number; paidFromAccountId: string; }
+interface SupplierPayment { id: string; amount: number; paidFromAccountId: string; }
+interface EmployeeAdvance { id: string; amount: number; paidFromAccountId: string; }
+interface CustomerPayment { id: string; amount: number; paidToAccountId: string; }
+
 
 const TransactionForm = ({ onSave, cashAccounts, onClose }: { onSave: (data: Omit<TreasuryTransaction, 'id' | 'receiptNumber'>) => void, cashAccounts: CashAccount[], onClose: () => void }) => {
     const [formData, setFormData] = useState<Omit<TreasuryTransaction, 'id' | 'receiptNumber'>>({
@@ -71,13 +72,17 @@ const TransactionForm = ({ onSave, cashAccounts, onClose }: { onSave: (data: Omi
         });
         onClose();
     };
+    
+    // Filter out rep accounts for direct transactions
+    const filteredAccounts = cashAccounts.filter(acc => !acc.salesRepId);
+
 
     return (
         <form onSubmit={handleSubmit}>
             <Tabs defaultValue="deposit" className="w-full" onValueChange={(v) => setFormData({...formData, type: v as any})}>
                 <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="deposit"><ArrowDownCircle className="ml-2 h-4 w-4" />إيداع</TabsTrigger>
-                    <TabsTrigger value="withdrawal"><ArrowUpCircle className="ml-2 h-4 w-4" />سحب</TabsTrigger>
+                    <TabsTrigger value="deposit"><ArrowDownCircle className="ml-2 h-4 w-4" />إيداع (زيادة رأس مال)</TabsTrigger>
+                    <TabsTrigger value="withdrawal"><ArrowUpCircle className="ml-2 h-4 w-4" />سحب (مسحوبات شخصية)</TabsTrigger>
                 </TabsList>
                  <div className="grid gap-4 py-4 mt-4">
                     <div className="grid grid-cols-4 items-center gap-4">
@@ -91,7 +96,7 @@ const TransactionForm = ({ onSave, cashAccounts, onClose }: { onSave: (data: Omi
                                 <SelectValue placeholder="اختر الحساب" />
                             </SelectTrigger>
                             <SelectContent>
-                            {cashAccounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
+                            {filteredAccounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
@@ -117,26 +122,30 @@ const TransactionForm = ({ onSave, cashAccounts, onClose }: { onSave: (data: Omi
 
 
 export default function TreasuryPage() {
-    const { data: transactions, loading: loadingTxs, add, getNextId, setData } = useFirebase<TreasuryTransaction>('treasuryTransactions');
+    const { data: transactions, loading: loadingTxs, add, getNextId } = useFirebase<TreasuryTransaction>('treasuryTransactions');
     const { data: cashAccounts, loading: loadingAccounts } = useFirebase<CashAccount>('cashAccounts');
-    const { data: expenses, loading: loadingExpenses } = useFirebase<Expense>('expenses');
+    const { data: expenses, loading: l_exp } = useFirebase<Expense>('expenses');
+    const { data: supplierPayments, loading: l_sp } = useFirebase<SupplierPayment>('supplierPayments');
+    const { data: employeeAdvances, loading: l_ea } = useFirebase<EmployeeAdvance>('employeeAdvances');
+    const { data: customerPayments, loading: l_cp } = useFirebase<CustomerPayment>('customerPayments');
+    const { data: salesReps, loading: l_sr } = useFirebase<User>('users');
     const { toast } = useToast();
     const { user } = useAuth();
     
-    const loading = loadingTxs || loadingAccounts || loadingExpenses;
+    const loading = loadingTxs || loadingAccounts || l_exp || l_sp || l_ea || l_cp || l_sr;
     
     const getAccountName = (accountId: string) => cashAccounts.find(acc => acc.id === accountId)?.name || 'غير معروف';
     const getAccountTypeIcon = (accountId: string) => {
-        const type = cashAccounts.find(acc => acc.id === accountId)?.type;
-        if (type === 'bank') return <Landmark className="h-4 w-4 text-muted-foreground" />;
+        const account = cashAccounts.find(acc => acc.id === accountId);
+        if (!account) return null;
+        if (account.salesRepId) return <User className="h-4 w-4 text-muted-foreground" />;
+        if (account.type === 'bank') return <Landmark className="h-4 w-4 text-muted-foreground" />;
         return <Wallet className="h-4 w-4 text-muted-foreground" />;
     };
 
     const handleSave = async (data: Omit<TreasuryTransaction, 'id' | 'receiptNumber'>) => {
         try {
-            const receiptNumber = data.type === 'deposit' 
-                ? `إيداع-${await getNextId('deposit')}` 
-                : `سحب-${await getNextId('withdrawal')}`;
+            const receiptNumber = `ح-خ-${await getNextId('treasuryTransaction')}`;
             
             const newTransaction: TreasuryTransaction = {
                 ...data,
@@ -145,11 +154,6 @@ export default function TreasuryPage() {
                 createdByName: user?.name,
             };
             await add(newTransaction);
-
-            // Optimistically update local state
-            const optimisticId = `temp-${Date.now()}`;
-            setData(prev => [...prev, { ...newTransaction, id: optimisticId }]);
-
             toast({ title: "تمت إضافة الحركة بنجاح" });
         } catch (error) {
             toast({ variant: "destructive", title: "حدث خطأ", description: "فشل حفظ الحركة" });
@@ -160,28 +164,28 @@ export default function TreasuryPage() {
         return cashAccounts.map(account => {
             const openingBalance = account.openingBalance || 0;
 
-            const totalDeposits = transactions
-                .filter(tx => tx.accountId === account.id && tx.type === 'deposit')
-                .reduce((sum, tx) => sum + tx.amount, 0);
+            const totalDeposits = customerPayments
+                .filter(p => p.paidToAccountId === account.id)
+                .reduce((sum, p) => sum + p.amount, 0);
 
-            const totalWithdrawals = transactions
-                .filter(tx => tx.accountId === account.id && tx.type === 'withdrawal')
-                .reduce((sum, tx) => sum + tx.amount, 0);
+            const totalWithdrawals = [
+                ...expenses.filter(ex => ex.paidFromAccountId === account.id),
+                ...supplierPayments.filter(sp => sp.paidFromAccountId === account.id),
+                ...employeeAdvances.filter(ea => ea.paidFromAccountId === account.id)
+            ].reduce((sum, item) => sum + item.amount, 0);
+            
+            // Handle direct treasury transactions
+            const directDeposits = transactions.filter(tx => tx.accountId === account.id && tx.type === 'deposit').reduce((s,tx)=>s+tx.amount,0);
+            const directWithdrawals = transactions.filter(tx => tx.accountId === account.id && tx.type === 'withdrawal').reduce((s,tx)=>s+tx.amount,0);
 
-            const totalExpenses = expenses
-                .filter(ex => ex.paidFromAccountId === account.id)
-                .reduce((sum, ex) => sum + ex.amount, 0);
-            
-            // TODO: Add other outflows like supplier payments, employee advances etc.
-            
-            const currentBalance = openingBalance + totalDeposits - totalWithdrawals - totalExpenses;
+            const currentBalance = openingBalance + totalDeposits + directDeposits - totalWithdrawals - directWithdrawals;
 
             return {
                 ...account,
                 currentBalance
             };
         });
-    }, [cashAccounts, transactions, expenses]);
+    }, [cashAccounts, transactions, expenses, supplierPayments, employeeAdvances, customerPayments]);
     
     const sortedTransactions = useMemo(() => {
         return [...transactions].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -196,7 +200,7 @@ export default function TreasuryPage() {
          <Card>
             <CardHeader>
                 <CardTitle>أرصدة الحسابات</CardTitle>
-                <CardDescription>نظرة سريعة على الأرصدة الحالية في الخزائن والبنوك.</CardDescription>
+                <CardDescription>نظرة سريعة على الأرصدة الحالية في الخزائن والبنوك وعهدات المناديب.</CardDescription>
             </CardHeader>
             <CardContent>
                 {loading ? (
@@ -204,12 +208,12 @@ export default function TreasuryPage() {
                         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                     </div>
                 ) : (
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                         {accountBalances.map(acc => (
-                             <Card key={acc.id}>
+                             <Card key={acc.id} className={acc.salesRepId ? 'bg-muted/50' : ''}>
                                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                      <CardTitle className="text-sm font-medium">{acc.name}</CardTitle>
-                                     {acc.type === 'bank' ? <Landmark className="h-4 w-4 text-muted-foreground" /> : <Wallet className="h-4 w-4 text-muted-foreground" />}
+                                     {getAccountTypeIcon(acc.id)}
                                  </CardHeader>
                                  <CardContent>
                                      <div className="text-2xl font-bold">{acc.currentBalance.toLocaleString()} ج.م</div>
@@ -227,9 +231,9 @@ export default function TreasuryPage() {
         <div className="grid gap-6 lg:grid-cols-5">
             <Card className="lg:col-span-2">
             <CardHeader>
-                <CardTitle>إضافة حركة جديدة</CardTitle>
+                <CardTitle>إضافة حركة جديدة (رأس مال/مسحوبات)</CardTitle>
                 <CardDescription>
-                سجل عمليات الإيداع والسحب من الخزائن والحسابات البنكية.
+                سجل عمليات إيداع رأس المال أو سحب الشركاء من الخزائن الرئيسية فقط.
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -239,7 +243,7 @@ export default function TreasuryPage() {
             
             <Card className="lg:col-span-3">
                 <CardHeader>
-                    <CardTitle>سجل الحركات</CardTitle>
+                    <CardTitle>سجل حركات رأس المال والمسحوبات</CardTitle>
                 </CardHeader>
                 <CardContent>
                     {loading ? (

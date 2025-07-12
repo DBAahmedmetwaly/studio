@@ -203,6 +203,7 @@ const UserForm = ({ user, onSave, onClose, warehouses, roles }: { user?: User, o
 export default function UsersPage() {
   const { data: usersData, loading: loadingUsers, add, update, remove } = useFirebase<User>('users');
   const { add: addEmployee, update: updateEmployee, remove: removeEmployee } = useFirebase<any>('employees');
+  const { data: cashAccountsData, add: addCashAccount, remove: removeCashAccount } = useFirebase<any>('cashAccounts');
   const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
   const { data: rolesData, loading: loadingRoles } = useFirebase<any>('roles');
   const { toast } = useToast();
@@ -215,128 +216,87 @@ export default function UsersPage() {
 
   const handleSave = async (user: Omit<User, 'id'> & { id?: string }) => {
     try {
-        if (user.id) {
-            // This is an update
+        const userId = user.id;
+        if (userId) { // This is an update
             if (!can('edit', moduleName)) return toast({variant: 'destructive', title: 'غير مصرح به'});
             const { id, ...dataToUpdate } = user;
             await update(id, dataToUpdate);
-             if (user.isEmployee) {
-                await updateEmployee(id, {
-                    name: user.name,
-                    jobTitle: user.jobTitle,
-                    basicSalary: user.basicSalary,
-                    hireDate: user.hireDate,
-                    phone: user.phone,
-                });
+            
+            // Sync employee data
+            if (user.isEmployee) {
+                await updateEmployee(id, { name: user.name, jobTitle: user.jobTitle, basicSalary: user.basicSalary, hireDate: user.hireDate, phone: user.phone });
             } else {
-                // If isEmployee is unchecked, remove them from employees collection
                 await removeEmployee(id);
             }
-            toast({ title: "تم تحديث المستخدم بنجاح" });
-        } else {
-            // This is a new user
-            if (!can('add', moduleName)) return toast({variant: 'destructive', title: 'غير مصرح به'});
-            if (!user.password || !user.loginName) {
-                 toast({ variant: "destructive", title: "خطأ", description: "اسم الدخول وكلمة المرور مطلوبان للمستخدم الجديد." });
-                 return;
-            }
             
-            const email = `${user.loginName}@admin.com`;
-            
-            // Keep current user's session to re-login after creating new user
-            const currentUser = auth.currentUser;
-            if (!currentUser || !currentUser.email) {
-                 toast({ variant: "destructive", title: "خطأ", description: "لا يوجد مستخدم حالي مسجل. يرجى إعادة تسجيل الدخول." });
-                 return;
+            // Sync sales rep cash account
+            const existingCashAccount = cashAccountsData.find((acc: any) => acc.salesRepId === id);
+            if (user.isSalesRep && !existingCashAccount) {
+                 await addCashAccount({ name: `خزينة المندوب: ${user.name}`, type: 'cash', openingBalance: 0, salesRepId: id });
+            } else if (!user.isSalesRep && existingCashAccount) {
+                await removeCashAccount(existingCashAccount.id);
             }
 
-            // Step 1: Create the user in Firebase Auth. This will log out the current user.
+            toast({ title: "تم تحديث المستخدم بنجاح" });
+        } else { // This is a new user
+            if (!can('add', moduleName)) return toast({variant: 'destructive', title: 'غير مصرح به'});
+            if (!user.password || !user.loginName) return toast({ variant: "destructive", title: "خطأ", description: "اسم الدخول وكلمة المرور مطلوبان للمستخدم الجديد." });
+            
+            const email = `${user.loginName}@admin.com`;
+            const currentUser = auth.currentUser;
+            if (!currentUser || !currentUser.email) return toast({ variant: "destructive", title: "خطأ", description: "لا يوجد مستخدم حالي مسجل. يرجى إعادة تسجيل الدخول." });
+
             const userCredential = await createUserWithEmailAndPassword(auth, email, user.password);
             const newAuthUser = userCredential.user;
 
-            // Step 2: Re-login the original admin user to restore session.
             const adminPassword = prompt("لأسباب أمنية، يرجى إعادة إدخال كلمة مرور المدير للمتابعة:");
             if (!adminPassword) {
                 toast({ variant: "destructive", title: "تم الإلغاء", description: "تم إلغاء عملية إنشاء المستخدم." });
-                await newAuthUser.delete(); // Clean up the newly created auth user
+                await newAuthUser.delete();
                 return;
             }
             const credential = EmailAuthProvider.credential(currentUser.email, adminPassword);
             await signInWithCredential(auth, credential);
 
-
              const userDataForDb = { 
-                name: user.name,
-                loginName: user.loginName,
-                role: user.role,
-                warehouse: user.warehouse,
-                isSalesRep: user.isSalesRep,
-                isEmployee: user.isEmployee,
-                uid: newAuthUser.uid, // Link to the auth user
-                phone: user.phone,
+                name: user.name, loginName: user.loginName, role: user.role, warehouse: user.warehouse, isSalesRep: user.isSalesRep, isEmployee: user.isEmployee, uid: newAuthUser.uid, phone: user.phone,
              };
             
-            // Step 3: Create the user record in the Realtime Database.
             const newUserKey = await add(userDataForDb);
-
-            if (!newUserKey) {
-                throw new Error("Failed to get new user key from database.");
+            if (!newUserKey) throw new Error("Failed to get new user key from database.");
+            
+            if (user.isEmployee) {
+                const employeeRecord = { name: user.name, jobTitle: user.jobTitle, basicSalary: user.basicSalary, hireDate: user.hireDate, phone: user.phone };
+                await updateEmployee(newUserKey, employeeRecord);
             }
             
-             // Step 4: Create employee record if applicable
-            if (user.isEmployee) {
-                const employeeRecord = {
-                    name: user.name,
-                    jobTitle: user.jobTitle,
-                    basicSalary: user.basicSalary,
-                    hireDate: user.hireDate,
-                    phone: user.phone,
-                };
-                // Use `update` here to set the employee data with the same key as the user
-                await updateEmployee(newUserKey, employeeRecord);
+            if (user.isSalesRep) {
+                await addCashAccount({ name: `خزينة المندوب: ${user.name}`, type: 'cash', openingBalance: 0, salesRepId: newUserKey });
             }
 
             toast({ title: "تمت إضافة المستخدم بنجاح" });
         }
     } catch(error: any) {
-        if (error.code === 'auth/email-already-in-use') {
-            toast({ variant: "destructive", title: "خطأ", description: "اسم الدخول هذا مستخدم بالفعل." });
-        } else if (error.code === 'auth/weak-password') {
-            toast({ variant: "destructive", title: "خطأ", description: "كلمة المرور ضعيفة جداً. يجب أن تكون 6 أحرف على الأقل." });
-        } else if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-            toast({ variant: "destructive", title: "خطأ", description: "كلمة مرور المدير غير صحيحة. فشلت عملية إنشاء المستخدم." });
-        }
-        else {
-            toast({ variant: "destructive", title: "خطأ", description: "فشل حفظ المستخدم." });
-        }
+        if (error.code === 'auth/email-already-in-use') toast({ variant: "destructive", title: "خطأ", description: "اسم الدخول هذا مستخدم بالفعل." });
+        else if (error.code === 'auth/weak-password') toast({ variant: "destructive", title: "خطأ", description: "كلمة المرور ضعيفة جداً. يجب أن تكون 6 أحرف على الأقل." });
+        else if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') toast({ variant: "destructive", title: "خطأ", description: "كلمة مرور المدير غير صحيحة. فشلت عملية إنشاء المستخدم." });
+        else toast({ variant: "destructive", title: "خطأ", description: "فشل حفظ المستخدم." });
         console.error("User save failed:", error);
     }
   }
 
   const handleDelete = async (userToDelete: User) => {
-    if (!can('delete', moduleName)) {
-      toast({ variant: 'destructive', title: 'غير مصرح به' });
-      return;
-    }
-    
-    if (!userToDelete.id) {
-      toast({ variant: 'destructive', title: 'خطأ', description: 'معرف المستخدم غير موجود.' });
-      return;
-    }
+    if (!can('delete', moduleName)) return toast({ variant: 'destructive', title: 'غير مصرح به' });
+    if (!userToDelete.id) return toast({ variant: 'destructive', title: 'خطأ', description: 'معرف المستخدم غير موجود.' });
 
     if (confirm(`هل أنت متأكد من حذف المستخدم "${userToDelete.name}"؟`)) {
       try {
-        // Delete from /users
         await remove(userToDelete.id);
+        if (userToDelete.isEmployee) await removeEmployee(userToDelete.id);
         
-        // Delete from /employees if they exist
-        if (userToDelete.isEmployee) {
-            await removeEmployee(userToDelete.id);
-        }
+        const repCashAccount = cashAccountsData.find((acc: any) => acc.salesRepId === userToDelete.id);
+        if(repCashAccount) await removeCashAccount(repCashAccount.id);
 
-        // Note: Deleting from Firebase Auth from the client is complex and requires re-authentication.
-        // This is typically handled by a backend function with Admin SDK privileges.
-        // For now, we will only delete from the database. The auth user will become an orphan.
         toast({ title: "تم حذف المستخدم بنجاح من قاعدة البيانات", description: "ملاحظة: حساب المصادقة لا يتم حذفه من هنا." });
       } catch (error) {
         console.error("Failed to delete user:", error);
