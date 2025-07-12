@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
 import { Loader2, Printer } from "lucide-react";
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import useFirebase from "@/hooks/use-firebase";
 
 interface Item {
@@ -46,6 +46,18 @@ export default function ItemProfitLossPage() {
 
     const loading = loadingItems || loadingSales || loadingWarehouses;
 
+    useEffect(() => {
+        // Set default date range for the last 30 days
+        const toDate = new Date();
+        const fromDate = new Date();
+        fromDate.setDate(toDate.getDate() - 30);
+        setFilters(prev => ({
+            ...prev,
+            fromDate: fromDate.toISOString().split('T')[0],
+            toDate: toDate.toISOString().split('T')[0]
+        }));
+    }, []);
+
     const handleFilterChange = (key: keyof typeof filters, value: string) => {
         setFilters(prev => ({...prev, [key]: value}));
     };
@@ -54,12 +66,18 @@ export default function ItemProfitLossPage() {
         
         const filteredSales = sales.filter(sale => {
             if (sale.status !== 'approved') return false; // Only consider approved sales
+            
             const saleDate = new Date(sale.date);
             const fromDate = filters.fromDate ? new Date(filters.fromDate) : null;
             const toDate = filters.toDate ? new Date(filters.toDate) : null;
+
+            if(fromDate) fromDate.setHours(0,0,0,0);
+            if(toDate) toDate.setHours(23,59,59,999);
+
             if (fromDate && saleDate < fromDate) return false;
             if (toDate && saleDate > toDate) return false;
             if (filters.warehouseId !== 'all' && sale.warehouseId !== filters.warehouseId) return false;
+            
             return true;
         });
         
@@ -72,7 +90,6 @@ export default function ItemProfitLossPage() {
                 if (!itemMaster) return;
 
                 const revenue = saleItem.qty * saleItem.price;
-                // Use cost from sale item if available, otherwise fallback to item master cost
                 const cost = saleItem.qty * (saleItem.cost || itemMaster.cost || 0);
 
                 if (resultsMap.has(saleItem.id)) {
