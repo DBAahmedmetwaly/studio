@@ -46,6 +46,7 @@ import { usePermissions } from "@/contexts/permissions-context";
 import { auth } from "@/lib/firebase";
 import { createUserWithEmailAndPassword, signInWithCredential, EmailAuthProvider } from "firebase/auth";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
 
 
 interface User {
@@ -95,87 +96,99 @@ const UserForm = ({ user, onSave, onClose, warehouses, roles }: { user?: User, o
   
   return (
     <>
-      <div className="grid gap-4 py-4">
-        <div className="grid grid-cols-4 items-center gap-4">
-          <Label htmlFor="user-name" className="text-right">
-            الاسم الكامل
-          </Label>
-          <Input id="user-name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="col-span-3" />
+      <div className="space-y-4 py-2 pb-4">
+        {/* Account Information */}
+        <div className="space-y-2">
+            <h4 className="font-medium text-sm">معلومات الحساب</h4>
+            <Separator />
         </div>
-        <div className="grid grid-cols-4 items-center gap-4">
-          <Label htmlFor="user-loginName" className="text-right">
-            اسم الدخول
-          </Label>
-          <Input id="user-loginName" type="text" value={formData.loginName} onChange={e => setFormData({...formData, loginName: e.target.value})} className="col-span-3" disabled={!!user?.id} />
-        </div>
-         <div className="grid grid-cols-4 items-center gap-4">
-          <Label htmlFor="user-password" className="text-right">
-            كلمة المرور
-          </Label>
-          <Input id="user-password" type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="col-span-3" placeholder={user ? "اتركه فارغاً لعدم التغيير" : ""} />
-        </div>
-        <div className="grid grid-cols-4 items-center gap-4">
-          <Label htmlFor="user-role" className="text-right">
-            الوظيفة
-          </Label>
-          <Select value={formData.role} onValueChange={(value) => setFormData({...formData, role: value})}>
-            <SelectTrigger className="col-span-3">
-              <SelectValue placeholder="اختر وظيفة" />
-            </SelectTrigger>
-            <SelectContent>
-              {roles.map(role => (
-                <SelectItem key={role} value={role}>{role}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-          <Label htmlFor="user-warehouse" className="text-right">
-            المخزن
-          </Label>
-            <Select value={formData.warehouse} onValueChange={(value) => setFormData({...formData, warehouse: value})}>
-            <SelectTrigger className="col-span-3">
-              <SelectValue placeholder="اختر مخزنًا" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">كل المخازن</SelectItem>
-              {warehouses.map((w) => (
-                <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="is-sales-rep" className="text-right">
-                مندوب مبيعات
-            </Label>
-            <Checkbox id="is-sales-rep" checked={formData.isSalesRep} onCheckedChange={(checked) => setFormData({...formData, isSalesRep: !!checked})} />
-        </div>
-         <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="is-employee" className="text-right">
-                موظف بالشركة
-            </Label>
-            <Checkbox id="is-employee" checked={formData.isEmployee} onCheckedChange={(checked) => setFormData({...formData, isEmployee: !!checked})} />
+        <div className="space-y-4">
+            <div className="space-y-2">
+                <Label htmlFor="user-name">الاسم الكامل</Label>
+                <Input id="user-name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+                 <div className="space-y-2">
+                    <Label htmlFor="user-loginName">اسم الدخول</Label>
+                    <Input id="user-loginName" type="text" value={formData.loginName} onChange={e => setFormData({...formData, loginName: e.target.value})} disabled={!!user?.id} />
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="user-password">كلمة المرور</Label>
+                    <Input id="user-password" type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} placeholder={user ? "اتركه فارغاً لعدم التغيير" : ""} />
+                </div>
+            </div>
         </div>
         
+        {/* Permissions and Access */}
+         <div className="space-y-2 pt-4">
+            <h4 className="font-medium text-sm">الصلاحيات والوصول</h4>
+            <Separator />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+                <Label htmlFor="user-role">الوظيفة</Label>
+                <Select value={formData.role} onValueChange={(value) => setFormData({...formData, role: value})}>
+                    <SelectTrigger><SelectValue placeholder="اختر وظيفة" /></SelectTrigger>
+                    <SelectContent>
+                        {roles.map(role => (<SelectItem key={role} value={role}>{role}</SelectItem>))}
+                    </SelectContent>
+                </Select>
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="user-warehouse">المخزن المرتبط</Label>
+                <Select value={formData.warehouse} onValueChange={(value) => setFormData({...formData, warehouse: value})}>
+                    <SelectTrigger><SelectValue placeholder="اختر مخزنًا" /></SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">كل المخازن</SelectItem>
+                        {warehouses.map((w) => (<SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>))}
+                    </SelectContent>
+                </Select>
+            </div>
+        </div>
+        
+        {/* Additional Classifications */}
+        <div className="space-y-2 pt-4">
+            <h4 className="font-medium text-sm">تصنيفات إضافية</h4>
+            <Separator />
+        </div>
+        <div className="flex items-center space-x-4">
+             <div className="flex items-center space-x-2">
+                <Checkbox id="is-sales-rep" checked={formData.isSalesRep} onCheckedChange={(checked) => setFormData({...formData, isSalesRep: !!checked})} />
+                <Label htmlFor="is-sales-rep" className="cursor-pointer">مندوب مبيعات</Label>
+            </div>
+             <div className="flex items-center space-x-2">
+                <Checkbox id="is-employee" checked={formData.isEmployee} onCheckedChange={(checked) => setFormData({...formData, isEmployee: !!checked})} />
+                <Label htmlFor="is-employee" className="cursor-pointer">موظف بالشركة</Label>
+            </div>
+        </div>
+        
+        {/* Employee Information */}
         {formData.isEmployee && (
-            <div className="col-span-4 space-y-4 pt-4 border-t">
-                <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="job-title" className="text-right">المسمى الوظيفي</Label>
-                    <Input id="job-title" value={formData.jobTitle} onChange={e => setFormData({...formData, jobTitle: e.target.value})} className="col-span-3" required={formData.isEmployee} />
+            <div className="space-y-4 pt-4">
+                 <div className="space-y-2">
+                    <h4 className="font-medium text-sm">بيانات الموظف</h4>
+                    <Separator />
                 </div>
-                 <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="employee-phone" className="text-right">رقم الهاتف</Label>
-                    <Input id="employee-phone" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="col-span-3" />
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="job-title">المسمى الوظيفي</Label>
+                        <Input id="job-title" value={formData.jobTitle} onChange={e => setFormData({...formData, jobTitle: e.target.value})} required={formData.isEmployee} />
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="employee-phone">رقم الهاتف</Label>
+                        <Input id="employee-phone" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
+                    </div>
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="basic-salary" className="text-right">الراتب الأساسي</Label>
-                    <Input id="basic-salary" type="number" value={formData.basicSalary} onChange={e => setFormData({...formData, basicSalary: Number(e.target.value)})} className="col-span-3" required={formData.isEmployee} />
-                </div>
-                 <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="hire-date" className="text-right">تاريخ التعيين</Label>
-                    <Input id="hire-date" type="date" value={formData.hireDate} onChange={e => setFormData({...formData, hireDate: e.target.value})} className="col-span-3" required={formData.isEmployee} />
-                </div>
+                 <div className="grid grid-cols-2 gap-4">
+                     <div className="space-y-2">
+                        <Label htmlFor="basic-salary">الراتب الأساسي</Label>
+                        <Input id="basic-salary" type="number" value={formData.basicSalary} onChange={e => setFormData({...formData, basicSalary: Number(e.target.value)})} required={formData.isEmployee} />
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="hire-date">تاريخ التعيين</Label>
+                        <Input id="hire-date" type="date" value={formData.hireDate} onChange={e => setFormData({...formData, hireDate: e.target.value})} required={formData.isEmployee} />
+                    </div>
+                 </div>
             </div>
         )}
 
@@ -447,5 +460,4 @@ export default function UsersPage() {
     </>
   );
 }
-
     
