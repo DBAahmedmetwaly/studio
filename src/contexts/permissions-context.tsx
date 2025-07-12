@@ -35,7 +35,7 @@ export const permissionsConfig = {
     inventory_adjustment: { label: "تسوية المخزون", group: "inventory", actions: ["view", "add", "delete", "print"] },
     inventory_movements: { label: "حركة المخزون", group: "inventory", actions: ["view"] },
 
-    sales_invoices: { label: "فواتير البيع", group: "sales", actions: ["view", "add", "edit", "delete", "print", "approve"] },
+    sales_invoices: { label: "فواتير البيع", group: "sales", actions: ["view", "add", "edit", "delete", "print"] },
     sales_returns: { label: "مرتجعات البيع", group: "sales", actions: ["view", "add", "edit", "delete", "print"] },
     
     sales_issueToRep: { label: "صرف بضاعة لمندوب", group: "salesReps", actions: ["view", "add", "delete"] },
@@ -106,7 +106,7 @@ export const initialRoles = {
   "محاسب": {
     dashboard: { view: true },
     masterData_items: { view: true, add: true, edit: true, delete: false },
-    sales_invoices: { view: true, add: true, edit: true, delete: false, print: true, approve: true },
+    sales_invoices: { view: true, add: true, edit: true, delete: false, print: true },
     sales_repInvoices: { view: true, approve: true, delete: true },
     purchases_invoices: { view: true, add: true, edit: true, delete: false, print: true },
     accounting_journal: { view: true },
