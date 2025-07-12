@@ -56,6 +56,7 @@ export default function IssueToRepPage() {
     const [notes, setNotes] = useState<string>("");
     const [totalValue, setTotalValue] = useState(0);
     const [totalQty, setTotalQty] = useState(0);
+    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     
     const { data: availableItems, loading: loadingItems } = useFirebase<Item>('items');
     const { data: users, loading: loadingUsers } = useFirebase<User>("users");
@@ -133,7 +134,7 @@ export default function IssueToRepPage() {
         const record = {
             salesRepId: selectedRepId,
             warehouseId: rep.warehouse,
-            date: new Date().toISOString(),
+            date: new Date(date).toISOString(),
             items: items.map(({id, name, qty, price, cost, total}) => ({id, name, qty, price, cost, total})),
             notes,
             receiptNumber: `ص-م-${nextId}`
@@ -168,7 +169,7 @@ export default function IssueToRepPage() {
                  <div className="flex justify-center items-center py-10"><Loader2 className="h-8 w-8 animate-spin" /></div>
             ) : (
                 <>
-                    <div className="grid md:grid-cols-2 gap-6">
+                    <div className="grid md:grid-cols-3 gap-6">
                         <div className="space-y-2">
                             <Label htmlFor="rep">مندوب المبيعات</Label>
                             <Select value={selectedRepId} onValueChange={setSelectedRepId}>
@@ -182,6 +183,10 @@ export default function IssueToRepPage() {
                             <Label>من مخزن</Label>
                             <Input value={warehouses.find(w => w.id === reps.find(r => r.id === selectedRepId)?.warehouse)?.name || 'اختر مندوبًا أولاً'} readOnly disabled />
                          </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="date">تاريخ الصرف</Label>
+                            <Input type="date" id="date" value={date} onChange={e => setDate(e.target.value)} />
+                        </div>
                     </div>
                     
                     <div>

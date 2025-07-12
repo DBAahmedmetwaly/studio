@@ -44,6 +44,7 @@ export default function NewStockOutPage() {
     const [source, setSource] = useState<string>("");
     const [notes, setNotes] = useState<string>("");
     const [reason, setReason] = useState<string>("");
+    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
 
     const { data: availableItems, loading: loadingItems } = useFirebase<Item>('items');
     const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
@@ -104,7 +105,7 @@ export default function NewStockOutPage() {
 
         const record = {
             sourceId: source,
-            date: new Date().toISOString(),
+            date: new Date(date).toISOString(),
             items: items.map(({id, name, qty}) => ({id, name, qty})), // Remove uniqueId before saving
             reason,
             notes,
@@ -139,7 +140,6 @@ export default function NewStockOutPage() {
             <CardTitle>إيصال صرف مخزني</CardTitle>
             <div className="grid md:grid-cols-3 gap-4 text-sm text-muted-foreground">
                 <div>رقم الإيصال: (سيتم إنشاؤه عند الحفظ)</div>
-                <div>تاريخ الصرف: {new Date().toLocaleDateString('ar-EG')}</div>
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -149,7 +149,7 @@ export default function NewStockOutPage() {
                 </div>
             ) : (
                 <>
-                    <div className="grid md:grid-cols-2 gap-6">
+                    <div className="grid md:grid-cols-3 gap-6">
                         <div className="space-y-2">
                             <Label htmlFor="warehouse">من مخزن</Label>
                             <Select value={source} onValueChange={setSource}>
@@ -173,6 +173,10 @@ export default function NewStockOutPage() {
                                    <SelectItem value="other">أخرى</SelectItem>
                                 </SelectContent>
                             </Select>
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="date">تاريخ الصرف</Label>
+                            <Input type="date" id="date" value={date} onChange={e => setDate(e.target.value)} />
                         </div>
                     </div>
                     

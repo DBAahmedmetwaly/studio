@@ -42,6 +42,7 @@ export default function NewStockTransferPage() {
     const [fromSource, setFromSource] = useState<string>("");
     const [toSource, setToSource] = useState<string>("");
     const { user } = useAuth();
+    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
 
     const { data: availableItems, loading: loadingItems } = useFirebase<Item>('items');
     const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
@@ -113,7 +114,7 @@ export default function NewStockTransferPage() {
         const record = {
             fromSourceId: fromSource,
             toSourceId: toSource,
-            date: new Date().toISOString(),
+            date: new Date(date).toISOString(),
             items: items.map(({id, name, qty}) => ({id, name, qty})), // Remove uniqueId before saving
             receiptNumber: `إذ-ت-${nextId}`,
             createdById: user?.id,
@@ -123,7 +124,7 @@ export default function NewStockTransferPage() {
         try {
             await addStockTransferRecord(record);
             toast({ title: "تم بنجاح", description: `تم تأكيد تحويل المخزون بنجاح برقم إيصال: ${record.receiptNumber}`});
-            router.push('/inventory/transfer');
+            router.push('/inventory/movements');
         } catch(error) {
             toast({ variant: "destructive", title: "حدث خطأ", description: "فشل في حفظ إيصال التحويل. يرجى المحاولة مرة أخرى."});
             console.error("Failed to save stock transfer record:", error);
@@ -153,7 +154,6 @@ export default function NewStockTransferPage() {
             <CardTitle>إيصال تحويل مخزني</CardTitle>
             <div className="grid md:grid-cols-3 gap-4 text-sm text-muted-foreground">
                 <div>رقم الإيصال: (سيتم إنشاؤه عند الحفظ)</div>
-                <div>تاريخ التحويل: {new Date().toLocaleDateString('ar-EG')}</div>
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -163,7 +163,7 @@ export default function NewStockTransferPage() {
                 </div>
             ) : (
             <>
-                <div className="grid md:grid-cols-2 gap-6">
+                <div className="grid md:grid-cols-3 gap-6">
                     <div className="space-y-2">
                         <Label htmlFor="from-warehouse">من مخزن</Label>
                         <Select value={fromSource} onValueChange={setFromSource}>
@@ -185,6 +185,10 @@ export default function NewStockTransferPage() {
                                {warehouses.map(w => <SelectItem key={`to-wh-${w.id}`} value={w.id}>{w.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="date">تاريخ التحويل</Label>
+                        <Input type="date" id="date" value={date} onChange={e => setDate(e.target.value)} />
                     </div>
                 </div>
                 

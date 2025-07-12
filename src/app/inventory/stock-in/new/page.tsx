@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Combobox } from "@/components/ui/combobox";
 import { useRouter } from 'next/navigation';
 import { useAuth } from "@/contexts/auth-context";
+import { Input } from "@/components/ui/input";
 
 interface StockItem {
   id: string; // The database ID of the item
@@ -59,6 +60,7 @@ export default function NewStockInPage() {
     const [notes, setNotes] = useState<string>("");
     const [reason, setReason] = useState<string>("");
     const [selectedPurchaseInvoice, setSelectedPurchaseInvoice] = useState<string>("");
+    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     
     const { data: availableItems, loading: loadingItems } = useFirebase<Item>('items');
     const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
@@ -123,7 +125,7 @@ export default function NewStockInPage() {
 
         const record: any = {
             warehouseId: selectedWarehouse,
-            date: new Date().toISOString(),
+            date: new Date(date).toISOString(),
             items: items.map(({id, name, qty}) => ({id, name, qty})),
             reason,
             notes,
@@ -169,7 +171,6 @@ export default function NewStockInPage() {
             <CardTitle>إيصال استلام مخزني</CardTitle>
             <div className="grid md:grid-cols-3 gap-4 text-sm text-muted-foreground">
                 <div>رقم الإيصال: (سيتم إنشاؤه عند الحفظ)</div>
-                <div>تاريخ الاستلام: {new Date().toLocaleDateString('ar-EG')}</div>
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -179,7 +180,7 @@ export default function NewStockInPage() {
                 </div>
             ) : (
                 <>
-                    <div className="grid md:grid-cols-2 gap-6">
+                    <div className="grid md:grid-cols-3 gap-6">
                          <div className="space-y-2">
                             <Label htmlFor="reason">سبب الاستلام</Label>
                             <Select value={reason} onValueChange={setReason}>
@@ -202,6 +203,10 @@ export default function NewStockInPage() {
                                    {warehouses.map(w => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
                                 </SelectContent>
                             </Select>
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="date">تاريخ الاستلام</Label>
+                            <Input type="date" id="date" value={date} onChange={e => setDate(e.target.value)} />
                         </div>
                     </div>
                      {reason === 'purchase' && (
