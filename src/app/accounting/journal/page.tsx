@@ -33,8 +33,9 @@ interface SaleInvoice {
   id: string; date: string; customerName: string; total: number; warehouseId: string; discount: number; invoiceNumber?: string;
   items: { qty: number; cost?: number; price: number }[];
   status?: 'pending' | 'approved';
+  paidAmount?: number;
 }
-interface PurchaseInvoice { id: string; date: string; supplierName: string; total: number; warehouseId: string; discount: number; invoiceNumber?: string; }
+interface PurchaseInvoice { id: string; date: string; supplierName: string; total: number; warehouseId: string; discount: number; invoiceNumber?: string; paidAmount?: number;}
 interface Expense { id: string; date: string; description: string; amount: number; warehouseId?: string; expenseType: string; paidFromAccountId: string; receiptNumber?: string;}
 interface ExceptionalIncome { id: string; date: string; description: string; amount: number; warehouseId?: string; receiptNumber?: string; }
 interface Warehouse { id: string; name: string; autoStockUpdate?: boolean; }
@@ -191,13 +192,20 @@ export default function JournalPage() {
             const totalBeforeDiscount = sale.total + (sale.discount || 0);
             const number = sale.invoiceNumber || `ف-ب-${sale.id.slice(-4)}`;
             const warehouse = getWarehouse(sale.warehouseId);
-            // Accounts Receivable (Debit) for the final amount owed
-            entries.push({ id: `sale-ar-${sale.id}`, date: sale.date, warehouseId: sale.warehouseId, number: number, description: `فاتورة بيع للعميل ${sale.customerName}`, debit: sale.total, credit: 0, account: 'حسابات العملاء' });
-            // Sales Discount (Debit) if a discount was given
+            const amountDue = sale.total - (sale.paidAmount || 0);
+
+            // Create debits
+            if (sale.paidAmount && sale.paidAmount > 0) {
+                 entries.push({ id: `sale-cash-${sale.id}`, date: sale.date, warehouseId: sale.warehouseId, number: number, description: `فاتورة بيع للعميل ${sale.customerName}`, debit: sale.paidAmount, credit: 0, account: 'النقدية' });
+            }
+             if (amountDue > 0) {
+                 entries.push({ id: `sale-ar-${sale.id}`, date: sale.date, warehouseId: sale.warehouseId, number: number, description: `فاتورة بيع للعميل ${sale.customerName}`, debit: amountDue, credit: 0, account: 'حسابات العملاء' });
+            }
             if (sale.discount > 0) {
                  entries.push({ id: `sale-discount-${sale.id}`, date: sale.date, warehouseId: sale.warehouseId, number: number, description: `خصم مسموح به على فاتورة بيع`, debit: sale.discount, credit: 0, account: 'خصم مسموح به' });
             }
-            // Sales Revenue (Credit) for the full amount before discount
+            
+            // Create credit
             entries.push({ id: `sale-rev-${sale.id}`, date: sale.date, warehouseId: sale.warehouseId, number: number, description: `إيرادات من فاتورة بيع`, debit: 0, credit: totalBeforeDiscount, account: 'إيرادات المبيعات' });
             
             // COGS entry only if warehouse is set to auto-update
@@ -212,17 +220,22 @@ export default function JournalPage() {
              const totalBeforeDiscount = p.total + (p.discount || 0);
              const number = p.invoiceNumber || `ف-ش-${p.id.slice(-4)}`;
              const warehouse = getWarehouse(p.warehouseId);
+             const amountDue = p.total - (p.paidAmount || 0);
 
-             // Inventory entry only if warehouse is set to auto-update
+             // Debit inventory
              if(warehouse?.autoStockUpdate) {
                 entries.push({ id: `pur-inv-${p.id}`, date: p.date, warehouseId: p.warehouseId, number: number, description: `فاتورة شراء من ${p.supplierName}`, debit: totalBeforeDiscount, credit: 0, account: `مخزون - ${warehouse.name}` });
              } else {
                  entries.push({ id: `pur-inv-generic-${p.id}`, date: p.date, warehouseId: p.warehouseId, number: number, description: `مشتريات لصالح مخزن ${warehouse?.name}`, debit: totalBeforeDiscount, credit: 0, account: 'المشتريات' });
              }
 
-            // Accounts Payable (Credit) for the final amount owed
-            entries.push({ id: `pur-ap-${p.id}`, date: p.date, warehouseId: p.warehouseId, number: number, description: `مستحقات للمورد ${p.supplierName}`, debit: 0, credit: p.total, account: 'حسابات الموردين' });
-             // Purchase Discount (Credit) if a discount was received
+            // Create Credits
+            if (p.paidAmount && p.paidAmount > 0) {
+                 entries.push({ id: `pur-cash-${p.id}`, date: p.date, warehouseId: p.warehouseId, number: number, description: `دفع للمورد ${p.supplierName}`, debit: 0, credit: p.paidAmount, account: 'النقدية' });
+            }
+            if (amountDue > 0) {
+                 entries.push({ id: `pur-ap-${p.id}`, date: p.date, warehouseId: p.warehouseId, number: number, description: `مستحقات للمورد ${p.supplierName}`, debit: 0, credit: amountDue, account: 'حسابات الموردين' });
+            }
             if (p.discount > 0) {
                  entries.push({ id: `pur-discount-${p.id}`, date: p.date, warehouseId: p.warehouseId, number: number, description: `خصم مكتسب على فاتورة شراء`, debit: 0, credit: p.discount, account: 'خصم مكتسب' });
             }
@@ -555,32 +568,26 @@ export default function JournalPage() {
                                         </div>
                                     </CardHeader>
                                     <CardContent className='p-0'>
-                                        <div className="border-y">
-                                            <Table>
-                                                <TableHeader>
-                                                    <TableRow>
-                                                        <TableHead>الحساب</TableHead>
-                                                        <TableHead className="text-center">مدين</TableHead>
-                                                        <TableHead className="text-center">دائن</TableHead>
-                                                    </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
-                                                    {entry.debits.map((d, i) => (
-                                                        <TableRow key={`d-${i}`} className='bg-muted/20'>
-                                                            <TableCell className="font-medium pr-8">{d.account}</TableCell>
-                                                            <TableCell className="text-center font-mono">{d.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</TableCell>
-                                                            <TableCell className="text-center font-mono">-</TableCell>
-                                                        </TableRow>
-                                                    ))}
-                                                    {entry.credits.map((c, i) => (
-                                                        <TableRow key={`c-${i}`}>
-                                                            <TableCell className="font-medium pr-12 text-muted-foreground">{c.account}</TableCell>
-                                                            <TableCell className="text-center font-mono">-</TableCell>
-                                                            <TableCell className="text-center font-mono">{c.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</TableCell>
-                                                        </TableRow>
-                                                    ))}
-                                                </TableBody>
-                                            </Table>
+                                        <div className="border-y p-4 space-y-2">
+                                           {entry.debits.length > 1 ? (
+                                                <p className="font-semibold">من مذكورين</p>
+                                            ) : null}
+                                            {entry.debits.map((d, i) => (
+                                                <div key={`d-${i}`} className="flex justify-between">
+                                                    <p className="pr-4">{entry.debits.length === 1 ? 'من ح/' : ''} {d.account}</p>
+                                                    <p className="font-mono">{d.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                                                </div>
+                                            ))}
+                                            <Separator className="my-2" />
+                                            {entry.credits.length > 1 ? (
+                                                <p className="font-semibold text-muted-foreground">إلى مذكورين</p>
+                                            ) : null}
+                                            {entry.credits.map((c, i) => (
+                                                <div key={`c-${i}`} className="flex justify-between">
+                                                    <p className="pr-4 text-muted-foreground">{entry.credits.length === 1 ? 'إلى ح/' : ''} {c.account}</p>
+                                                    <p className="font-mono text-muted-foreground">{c.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                                                </div>
+                                            ))}
                                         </div>
                                     </CardContent>
                                     <CardFooter className='pt-4'>
