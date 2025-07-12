@@ -93,7 +93,6 @@ const NavCollapsible = ({ title, icon, children, modules }: { title: string; ico
     const pathname = usePathname();
     const { can } = usePermissions();
     
-    // Show the collapsible menu if the user can view at least one of its sub-modules
     const canViewCollapsible = modules.some(module => can('view', module));
 
     if (!canViewCollapsible) {
@@ -179,27 +178,23 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <NavSubLink href="/inventory/movements" module="inventory_movements">حركة المخزون</NavSubLink>
             </NavCollapsible>
 
-            <NavCollapsible title="المبيعات" icon={<ShoppingCart />} modules={['sales_invoices', 'sales_returns', 'sales_repInvoices', 'sales_issueToRep', 'sales_returnFromRep', 'sales_remitFromRep', 'sales_repOperations']}>
+            <NavCollapsible title="المبيعات" icon={<ShoppingCart />} modules={['sales_invoices', 'sales_returns']}>
                 <NavSubLink href="/sales/invoices" module="sales_invoices">إنشاء فاتورة بيع</NavSubLink>
-                <NavSubLink href="/sales/invoices/list" module="sales_invoices"><List className="h-4 w-4" />سجل فواتير البيع</NavSubLink>
-                <NavSubLink href="/sales/rep-invoices" module="sales_repInvoices"><FileCheck className="h-4 w-4" />اعتماد فواتير المناديب</NavSubLink>
+                <NavSubLink href="/sales/invoices/list" module="sales_invoices">سجل فواتير البيع</NavSubLink>
                 <NavSubLink href="/sales/returns/new" module="sales_returns">مرتجعات البيع</NavSubLink>
-                 <SidebarMenuSubItem>
-                    <hr className="my-2" />
-                </SidebarMenuSubItem>
-                <SidebarMenuSubButton>
-                    <Truck className="h-4 w-4" />
-                    <span>عمليات المناديب</span>
-                </SidebarMenuSubButton>
-                 <NavSubLink href="/sales/issue-to-rep/list" module="sales_issueToRep"><FileUp className="h-3 w-3" />صرف بضاعة لمندوب</NavSubLink>
-                <NavSubLink href="/sales/return-from-rep/list" module="sales_returnFromRep"><FileDown className="h-3 w-3" />مرتجع بضاعة من مندوب</NavSubLink>
-                <NavSubLink href="/sales/remit-from-rep" module="sales_remitFromRep"><Coins className="h-3 w-3" />توريد نقدية من مندوب</NavSubLink>
-                <NavSubLink href="/sales/rep-operations" module="sales_repOperations"><Monitor className="h-3 w-3" />مراقبة أداء المناديب</NavSubLink>
+            </NavCollapsible>
+
+            <NavCollapsible title="عمليات المناديب" icon={<Truck />} modules={['sales_issueToRep', 'sales_returnFromRep', 'sales_remitFromRep', 'sales_repInvoices', 'sales_repOperations']}>
+                <NavSubLink href="/sales/issue-to-rep/list" module="sales_issueToRep">صرف بضاعة لمندوب</NavSubLink>
+                <NavSubLink href="/sales/return-from-rep/list" module="sales_returnFromRep">مرتجع بضاعة من مندوب</NavSubLink>
+                <NavSubLink href="/sales/remit-from-rep" module="sales_remitFromRep">توريد نقدية من مندوب</NavSubLink>
+                <NavSubLink href="/sales/rep-invoices" module="sales_repInvoices">اعتماد فواتير المناديب</NavSubLink>
+                <NavSubLink href="/sales/rep-operations" module="sales_repOperations">مراقبة أداء المناديب</NavSubLink>
             </NavCollapsible>
             
             <NavCollapsible title="المشتريات" icon={<ShoppingBag />} modules={['purchases_invoices', 'purchases_returns']}>
                 <NavSubLink href="/purchases/invoices" module="purchases_invoices">إنشاء فاتورة شراء</NavSubLink>
-                <NavSubLink href="/purchases/invoices/list" module="purchases_invoices"><List className="h-4 w-4" />سجل فواتير الشراء</NavSubLink>
+                <NavSubLink href="/purchases/invoices/list" module="purchases_invoices">سجل فواتير الشراء</NavSubLink>
                 <NavSubLink href="/purchases/returns/new" module="purchases_returns">مرتجعات الشراء</NavSubLink>
             </NavCollapsible>
 

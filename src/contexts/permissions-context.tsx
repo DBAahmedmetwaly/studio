@@ -36,12 +36,13 @@ export const permissionsConfig = {
     inventory_movements: { label: "حركة المخزون", group: "inventory", actions: ["view"] },
 
     sales_invoices: { label: "فواتير البيع", group: "sales", actions: ["view", "add", "edit", "delete", "print", "approve"] },
-    sales_repInvoices: { label: "فواتير المناديب", group: "sales", actions: ["view", "approve", "delete"] },
     sales_returns: { label: "مرتجعات البيع", group: "sales", actions: ["view", "add", "edit", "delete", "print"] },
-    sales_issueToRep: { label: "صرف بضاعة لمندوب", group: "sales", actions: ["view", "add", "delete"] },
-    sales_returnFromRep: { label: "مرتجع بضاعة من مندوب", group: "sales", actions: ["view", "add", "delete"] },
-    sales_remitFromRep: { label: "توريد نقدية من مندوب", group: "sales", actions: ["view", "add", "delete"] },
-    sales_repOperations: { label: "مراقبة أداء المناديب", group: "sales", actions: ["view"] },
+    
+    sales_issueToRep: { label: "صرف بضاعة لمندوب", group: "salesReps", actions: ["view", "add", "delete"] },
+    sales_returnFromRep: { label: "مرتجع بضاعة من مندوب", group: "salesReps", actions: ["view", "add", "delete"] },
+    sales_remitFromRep: { label: "توريد نقدية من مندوب", group: "salesReps", actions: ["view", "add", "delete"] },
+    sales_repInvoices: { label: "اعتماد فواتير المناديب", group: "salesReps", actions: ["view", "approve", "delete"] },
+    sales_repOperations: { label: "مراقبة أداء المناديب", group: "salesReps", actions: ["view"] },
 
     purchases_invoices: { label: "فواتير الشراء", group: "purchases", actions: ["view", "add", "edit", "delete", "print"] },
     purchases_returns: { label: "مرتجعات الشراء", group: "purchases", actions: ["view", "add", "edit", "delete", "print"] },
@@ -77,6 +78,7 @@ const moduleGroupLabels: Record<string, string> = {
     masterData: "البيانات الرئيسية",
     inventory: "المخزون",
     sales: "المبيعات",
+    salesReps: "عمليات المناديب",
     purchases: "المشتريات",
     accounting: "المحاسبة",
     hr: "الموارد البشرية",
