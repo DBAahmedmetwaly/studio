@@ -9,11 +9,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle, Trash2, Printer, Save, Loader2 } from "lucide-react";
+import { PlusCircle, Trash2, Save, Loader2 } from "lucide-react";
 import React, { useState, useEffect, useMemo } from "react";
 import useFirebase from "@/hooks/use-firebase";
 import { useToast } from "@/hooks/use-toast";
-import { Combobox } from "@/components/ui/combobox";
 import { useRouter } from 'next/navigation';
 import { useAuth } from "@/contexts/auth-context";
 
@@ -36,69 +35,19 @@ interface Warehouse {
     name: string;
 }
 
-interface PurchaseReturn {
-    id: string;
-    receiptNumber?: string;
-    supplierId: string;
-    warehouseId: string;
-    items: { id: string; name: string; qty: number; }[];
-}
-
-interface Supplier {
-    id: string;
-    name: string;
-}
-
 export default function NewStockOutPage() {
     const router = useRouter();
     const { toast } = useToast();
+    const { user } = useAuth();
     const [items, setItems] = useState<StockItem[]>([]);
     const [newItem, setNewItem] = useState({ id: "", name: "", qty: 1, unit: "" });
     const [source, setSource] = useState<string>("");
     const [notes, setNotes] = useState<string>("");
     const [reason, setReason] = useState<string>("");
-    const [selectedPurchaseReturn, setSelectedPurchaseReturn] = useState<string>("");
-    const { user } = useAuth();
 
     const { data: availableItems, loading: loadingItems } = useFirebase<Item>('items');
     const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
-    const { data: purchaseReturns, loading: loadingReturns } = useFirebase<PurchaseReturn>('purchaseReturns');
-    const { data: suppliers, loading: loadingSuppliers } = useFirebase<Supplier>('suppliers');
     const { add: addStockOutRecord, getNextId } = useFirebase("stockOutRecords");
-
-    const getSupplierName = (supplierId: string) => suppliers.find(s => s.id === supplierId)?.name || 'غير معروف';
-
-    const purchaseReturnOptions = useMemo(() => 
-        purchaseReturns.map(pr => ({
-            value: pr.id,
-            label: `${pr.receiptNumber || pr.id} - ${getSupplierName(pr.supplierId)}`
-        })), [purchaseReturns, suppliers]);
-
-    useEffect(() => {
-        if(reason === 'return' && selectedPurchaseReturn) {
-            const preturn = purchaseReturns.find(pr => pr.id === selectedPurchaseReturn);
-            if(preturn) {
-                setSource(preturn.warehouseId); // Automatically select warehouse from return document
-                const returnItems: StockItem[] = preturn.items.map(item => {
-                    const availableItem = availableItems.find(i => i.id === item.id);
-                    return {
-                        id: item.id,
-                        name: item.name,
-                        qty: item.qty,
-                        unit: availableItem?.unit || 'قطعة',
-                        uniqueId: `${item.id}-${Date.now()}`
-                    }
-                })
-                setItems(returnItems);
-            }
-        } else {
-            setItems([]);
-             if (reason !== 'return') {
-                setSource(""); // Reset warehouse if reason is not purchase return
-            }
-        }
-    }, [reason, selectedPurchaseReturn, purchaseReturns, availableItems]);
-
 
     const handleAddItem = () => {
         if (!newItem.id || newItem.qty <= 0) {
@@ -137,10 +86,6 @@ export default function NewStockOutPage() {
         setItems(items.filter((item) => item.uniqueId !== uniqueId));
     };
 
-    const handlePrint = () => {
-        window.print();
-    };
-
     const handleConfirm = async () => {
         if (!source || items.length === 0) {
             toast({ variant: "destructive", title: "بيانات غير مكتملة", description: "يرجى اختيار المصدر وإضافة صنف واحد على الأقل."});
@@ -171,14 +116,14 @@ export default function NewStockOutPage() {
         try {
             await addStockOutRecord(record);
             toast({ title: "تم بنجاح", description: `تم تأكيد صرف المخزون بنجاح برقم إيصال: ${record.receiptNumber}`});
-            router.push('/inventory/stock-out');
+            router.push('/inventory/movements');
         } catch(error) {
             toast({ variant: "destructive", title: "حدث خطأ", description: "فشل في حفظ إيصال الصرف. يرجى المحاولة مرة أخرى."});
             console.error("Failed to save stock out record:", error);
         }
     };
 
-    const loading = loadingItems || loadingWarehouses || loadingReturns || loadingSuppliers;
+    const loading = loadingItems || loadingWarehouses;
     const getUnitLabel = (unit: string) => {
         const units = { piece: "قطعة", weight: "وزن", meter: "متر", kilo: "كيلو", gram: "جرام" };
         return units[unit as keyof typeof units] || unit;
@@ -187,15 +132,8 @@ export default function NewStockOutPage() {
 
   return (
     <>
-      <PageHeader title="إذن صرف مخزون جديد">
-        <div className="flex gap-2 no-print">
-            <Button onClick={handlePrint} variant="outline">
-                <Printer className="ml-2 h-4 w-4" />
-                طباعة
-            </Button>
-        </div>
-      </PageHeader>
-      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6 printable-area">
+      <PageHeader title="إذن صرف مخزون جديد" />
+      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
         <Card>
           <CardHeader>
             <CardTitle>إيصال صرف مخزني</CardTitle>
@@ -214,7 +152,7 @@ export default function NewStockOutPage() {
                     <div className="grid md:grid-cols-2 gap-6">
                         <div className="space-y-2">
                             <Label htmlFor="warehouse">من مخزن</Label>
-                            <Select value={source} onValueChange={setSource} disabled={reason === 'return'}>
+                            <Select value={source} onValueChange={setSource}>
                                 <SelectTrigger id="warehouse">
                                     <SelectValue placeholder="اختر المصدر" />
                                 </SelectTrigger>
@@ -232,24 +170,11 @@ export default function NewStockOutPage() {
                                 <SelectContent>
                                    <SelectItem value="damaged">تالف</SelectItem>
                                    <SelectItem value="samples">عينات</SelectItem>
-                                   <SelectItem value="return">مرتجع لمورد</SelectItem>
                                    <SelectItem value="other">أخرى</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
                     </div>
-                     {reason === 'return' && (
-                        <div className="space-y-2">
-                            <Label htmlFor="purchase-return">إذن مرتجع الشراء</Label>
-                            <Combobox
-                                options={purchaseReturnOptions}
-                                value={selectedPurchaseReturn}
-                                onValueChange={setSelectedPurchaseReturn}
-                                placeholder="اختر إذن مرتجع الشراء..."
-                                emptyMessage="لا توجد أذونات مرتجع."
-                            />
-                        </div>
-                    )}
                     
                     <div>
                       <Label>الأصناف المصروفة</Label>
@@ -260,7 +185,7 @@ export default function NewStockOutPage() {
                                 <TableHead className="w-[50%]">الصنف</TableHead>
                                 <TableHead className="text-center">الوحدة</TableHead>
                                 <TableHead className="text-center">الكمية</TableHead>
-                                <TableHead className="text-center w-[100px] no-print">الإجراء</TableHead>
+                                <TableHead className="text-center w-[100px]">الإجراء</TableHead>
                             </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -269,15 +194,14 @@ export default function NewStockOutPage() {
                                 <TableCell>{item.name}</TableCell>
                                 <TableCell className="text-center">{getUnitLabel(item.unit)}</TableCell>
                                 <TableCell className="text-center">{item.qty}</TableCell>
-                                <TableCell className="text-center no-print">
-                                    <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.uniqueId)} disabled={reason === 'return'}>
+                                <TableCell className="text-center">
+                                    <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.uniqueId)}>
                                     <Trash2 className="h-4 w-4 text-destructive" />
                                     </Button>
                                 </TableCell>
                                 </TableRow>
                             ))}
-                             {reason !== 'return' && (
-                                <TableRow className="no-print bg-muted/30">
+                                <TableRow className="bg-muted/30">
                                     <TableCell className="p-2">
                                         <Select value={newItem.id} onValueChange={handleItemSelect}>
                                             <SelectTrigger>
@@ -299,7 +223,6 @@ export default function NewStockOutPage() {
                                         </Button>
                                     </TableCell>
                                 </TableRow>
-                            )}
                             </TableBody>
                         </Table>
                       </div>
@@ -311,8 +234,11 @@ export default function NewStockOutPage() {
                 </>
             )}
           </CardContent>
-          <CardFooter className="flex justify-end no-print">
-            <Button size="lg" disabled={loading} onClick={handleConfirm}>تأكيد الصرف</Button>
+          <CardFooter className="flex justify-end">
+            <Button size="lg" disabled={loading} onClick={handleConfirm}>
+                 <Save className="ml-2 h-4 w-4" />
+                تأكيد الصرف
+            </Button>
           </CardFooter>
         </Card>
       </main>

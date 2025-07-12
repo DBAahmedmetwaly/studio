@@ -4,12 +4,11 @@
 import PageHeader from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle, Trash2, Printer, Save, Loader2 } from "lucide-react";
+import { Save, Loader2 } from "lucide-react";
 import React, { useState, useEffect, useMemo } from "react";
 import useFirebase from "@/hooks/use-firebase";
 import { useToast } from "@/hooks/use-toast";
@@ -48,21 +47,18 @@ interface StockInRecord {
     id: string;
     purchaseInvoiceId?: string;
     reason?: string;
-    createdById?: string;
-    createdByName?: string;
 }
 
 
 export default function NewStockInPage() {
     const router = useRouter();
     const { toast } = useToast();
+    const { user } = useAuth();
     const [items, setItems] = useState<StockItem[]>([]);
-    const [newItem, setNewItem] = useState({ id: "", name: "", qty: 1, unit: "" });
     const [selectedWarehouse, setSelectedWarehouse] = useState<string>("");
     const [notes, setNotes] = useState<string>("");
     const [reason, setReason] = useState<string>("");
     const [selectedPurchaseInvoice, setSelectedPurchaseInvoice] = useState<string>("");
-    const { user } = useAuth();
     
     const { data: availableItems, loading: loadingItems } = useFirebase<Item>('items');
     const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
@@ -105,52 +101,6 @@ export default function NewStockInPage() {
         }
     }, [reason, selectedPurchaseInvoice, purchaseInvoices, availableItems]);
 
-
-    const handleAddItem = () => {
-        if (!newItem.id || newItem.qty <= 0) {
-            toast({
-                variant: "destructive",
-                title: "خطأ",
-                description: "يرجى اختيار صنف وكمية صالحة.",
-            });
-            return;
-        }
-        const selectedItem = availableItems.find(i => i.id === newItem.id);
-        if (!selectedItem) return;
-
-        setItems([
-        ...items,
-        { 
-            id: selectedItem.id,
-            name: selectedItem.name,
-            qty: newItem.qty,
-            unit: selectedItem.unit,
-            uniqueId: `${selectedItem.id}-${Date.now()}` // Create a unique ID for the key
-        },
-        ]);
-        setNewItem({ id: "", name: "", qty: 1, unit: "" });
-    };
-
-    const handleItemSelect = (itemId: string) => {
-        const selectedItem = availableItems.find(i => i.id === itemId);
-        if (selectedItem) {
-            setNewItem({
-                ...newItem,
-                id: itemId,
-                unit: selectedItem.unit,
-            });
-        }
-    }
-
-
-    const handleRemoveItem = (uniqueId: string) => {
-        setItems(items.filter((item) => item.uniqueId !== uniqueId));
-    };
-
-    const handlePrint = () => {
-        window.print();
-    };
-
     const handleConfirm = async () => {
         if (!selectedWarehouse || items.length === 0) {
             toast({
@@ -174,7 +124,7 @@ export default function NewStockInPage() {
         const record: any = {
             warehouseId: selectedWarehouse,
             date: new Date().toISOString(),
-            items: items.map(({id, name, qty}) => ({id, name, qty})), // Remove uniqueId before saving
+            items: items.map(({id, name, qty}) => ({id, name, qty})),
             reason,
             notes,
             receiptNumber: `إذ-د-${nextId}`,
@@ -192,7 +142,7 @@ export default function NewStockInPage() {
                 title: "تم بنجاح",
                 description: `تم تأكيد استلام المخزون بنجاح برقم إيصال: ${record.receiptNumber}`,
             });
-            router.push('/inventory/stock-in');
+            router.push('/inventory/movements');
         } catch(error) {
              toast({
                 variant: "destructive",
@@ -212,15 +162,8 @@ export default function NewStockInPage() {
 
   return (
     <>
-      <PageHeader title="إذن استلام مخزون جديد">
-        <div className="flex gap-2 no-print">
-            <Button onClick={handlePrint}>
-                <Printer className="ml-2 h-4 w-4" />
-                طباعة
-            </Button>
-        </div>
-      </PageHeader>
-      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6 printable-area">
+      <PageHeader title="إذن استلام مخزون جديد" />
+      <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
         <Card>
           <CardHeader>
             <CardTitle>إيصال استلام مخزني</CardTitle>
@@ -237,6 +180,18 @@ export default function NewStockInPage() {
             ) : (
                 <>
                     <div className="grid md:grid-cols-2 gap-6">
+                         <div className="space-y-2">
+                            <Label htmlFor="reason">سبب الاستلام</Label>
+                            <Select value={reason} onValueChange={setReason}>
+                                <SelectTrigger id="reason">
+                                    <SelectValue placeholder="اختر سبب الاستلام" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                   <SelectItem value="purchase">مشتريات (من فاتورة)</SelectItem>
+                                   <SelectItem value="opening_stock">رصيد افتتاحي</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
                         <div className="space-y-2">
                             <Label htmlFor="warehouse">إلى مخزن</Label>
                             <Select value={selectedWarehouse} onValueChange={setSelectedWarehouse} disabled={reason === 'purchase'}>
@@ -245,20 +200,6 @@ export default function NewStockInPage() {
                                 </SelectTrigger>
                                 <SelectContent>
                                    {warehouses.map(w => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="reason">سبب الاستلام</Label>
-                            <Select value={reason} onValueChange={setReason}>
-                                <SelectTrigger id="reason">
-                                    <SelectValue placeholder="اختر سبب الاستلام" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                   <SelectItem value="purchase">مشتريات</SelectItem>
-                                   <SelectItem value="opening_stock">رصيد افتتاحي</SelectItem>
-                                   <SelectItem value="transfer_in">محول من جهة أخرى</SelectItem>
-                                   <SelectItem value="other">أخرى</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -285,7 +226,6 @@ export default function NewStockInPage() {
                                 <TableHead className="w-[50%]">الصنف</TableHead>
                                 <TableHead className="text-center">الوحدة</TableHead>
                                 <TableHead className="text-center">الكمية</TableHead>
-                                <TableHead className="text-center w-[100px] no-print">الإجراء</TableHead>
                             </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -294,37 +234,8 @@ export default function NewStockInPage() {
                                 <TableCell>{item.name}</TableCell>
                                 <TableCell className="text-center">{getUnitLabel(item.unit)}</TableCell>
                                 <TableCell className="text-center">{item.qty}</TableCell>
-                                <TableCell className="text-center no-print">
-                                    <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.uniqueId)} disabled={reason === 'purchase'}>
-                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                    </Button>
-                                </TableCell>
                                 </TableRow>
                             ))}
-                            {reason !== 'purchase' && (
-                                <TableRow className="no-print bg-muted/30">
-                                    <TableCell className='p-2'>
-                                        <Select value={newItem.id} onValueChange={handleItemSelect}>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="اختر صنفًا" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                            {availableItems.map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
-                                            </SelectContent>
-                                        </Select>
-                                    </TableCell>
-                                    <TableCell></TableCell>
-                                    <TableCell className='p-2'>
-                                        <Input type="number" placeholder="الكمية" value={newItem.qty} onChange={e => setNewItem({...newItem, qty: parseInt(e.target.value) || 1})} />
-                                    </TableCell>
-                                    <TableCell className="text-center p-2">
-                                        <Button onClick={handleAddItem} size="sm">
-                                            <PlusCircle className="ml-2 h-4 w-4" />
-                                            إضافة
-                                        </Button>
-                                    </TableCell>
-                                </TableRow>
-                            )}
                             </TableBody>
                         </Table>
                        </div>
@@ -336,8 +247,11 @@ export default function NewStockInPage() {
                 </>
             )}
           </CardContent>
-          <CardFooter className="flex justify-end no-print">
-            <Button size="lg" disabled={loading} onClick={handleConfirm}>تأكيد الاستلام</Button>
+          <CardFooter className="flex justify-end">
+            <Button size="lg" disabled={loading} onClick={handleConfirm}>
+                 <Save className="ml-2 h-4 w-4" />
+                تأكيد الاستلام
+            </Button>
           </CardFooter>
         </Card>
       </main>

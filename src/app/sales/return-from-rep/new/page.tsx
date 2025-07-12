@@ -15,6 +15,7 @@ import useFirebase from "@/hooks/use-firebase";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from 'next/navigation';
 import { Combobox } from "@/components/ui/combobox";
+import { useAuth } from "@/contexts/auth-context";
 
 interface ReturnItem {
   id: string; // The database ID of the item
@@ -45,6 +46,7 @@ interface Warehouse {
 export default function ReturnFromRepPage() {
     const router = useRouter();
     const { toast } = useToast();
+    const { user } = useAuth();
     const [items, setItems] = useState<ReturnItem[]>([]);
     const [newItem, setNewItem] = useState({ id: "", qty: 1 });
     const [selectedRep, setSelectedRep] = useState<string>("");
@@ -101,7 +103,9 @@ export default function ReturnFromRepPage() {
             date: new Date().toISOString(),
             items: items.map(({id, name, qty}) => ({id, name, qty})),
             notes,
-            receiptNumber: `م-ع-${nextId}`
+            receiptNumber: `م-ع-${nextId}`,
+            createdById: user?.id,
+            createdByName: user?.name,
         };
 
         try {
