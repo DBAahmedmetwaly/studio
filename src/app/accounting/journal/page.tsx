@@ -10,6 +10,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
 import {
   Table,
@@ -535,48 +536,57 @@ export default function JournalPage() {
                     ) : (
                          <div className="space-y-4 max-w-4xl mx-auto">
                             {groupedEntries.map(entry => (
-                                <div key={entry.number} className="border rounded-lg p-4 space-y-2">
-                                    <div className="flex justify-between items-center text-sm text-muted-foreground">
-                                        <span className="font-mono">
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <span>قيد رقم: #{entry.number}</span>
-                                                </TooltipTrigger>
-                                                <TooltipContent>
-                                                    <p>{getReceiptTooltip(entry.number)}</p>
-                                                </TooltipContent>
-                                            </Tooltip>
-                                        </span>
-                                        <span>التاريخ: {new Date(entry.date).toLocaleDateString('ar-EG')}</span>
-                                    </div>
-                                    <Separator />
-                                    <div className="space-y-2">
-                                        <h4 className="font-semibold">{entry.debits.length > 1 ? "من مذكورين:" : "من ح/"}</h4>
-                                        <ul className="space-y-1 text-sm">
-                                            {entry.debits.map((d, i) => (
-                                                <li key={i} className="flex justify-between">
-                                                    <span>{d.account}</span>
-                                                    <span className="font-mono">{d.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                    <div className="space-y-2">
-                                         <h4 className="font-semibold">{entry.credits.length > 1 ? "إلى مذكورين:" : "إلى ح/"}</h4>
-                                        <ul className="space-y-1 text-sm">
-                                            {entry.credits.map((c, i) => (
-                                                <li key={i} className="flex justify-between">
-                                                    <span>{c.account}</span>
-                                                    <span className="font-mono">{c.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                    <Separator />
-                                    <div className="text-xs text-muted-foreground pt-1">
-                                        البيان: {entry.description}
-                                    </div>
-                                </div>
+                                <Card key={entry.number} className="w-full">
+                                    <CardHeader className='pb-4'>
+                                        <div className="flex justify-between items-baseline">
+                                            <CardTitle className="text-base">
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <span className='font-mono'>قيد رقم: #{entry.number}</span>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                        <p>{getReceiptTooltip(entry.number)}</p>
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </CardTitle>
+                                            <span className='text-sm text-muted-foreground'>
+                                                التاريخ: {new Date(entry.date).toLocaleDateString('ar-EG')}
+                                            </span>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className='p-0'>
+                                        <div className="border-y">
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>الحساب</TableHead>
+                                                        <TableHead className="text-center">مدين</TableHead>
+                                                        <TableHead className="text-center">دائن</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {entry.debits.map((d, i) => (
+                                                        <TableRow key={`d-${i}`} className='bg-muted/20'>
+                                                            <TableCell className="font-medium pr-8">{d.account}</TableCell>
+                                                            <TableCell className="text-center font-mono">{d.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</TableCell>
+                                                            <TableCell className="text-center font-mono">-</TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                    {entry.credits.map((c, i) => (
+                                                        <TableRow key={`c-${i}`}>
+                                                            <TableCell className="font-medium pr-12 text-muted-foreground">{c.account}</TableCell>
+                                                            <TableCell className="text-center font-mono">-</TableCell>
+                                                            <TableCell className="text-center font-mono">{c.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
+                                    </CardContent>
+                                    <CardFooter className='pt-4'>
+                                        <p className="text-xs text-muted-foreground">البيان: {entry.description}</p>
+                                    </CardFooter>
+                                </Card>
                             ))}
                              {groupedEntries.length === 0 && (
                                 <div className="text-center text-muted-foreground py-10">
