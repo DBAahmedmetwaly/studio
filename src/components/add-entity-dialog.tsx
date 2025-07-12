@@ -26,24 +26,30 @@ export function AddEntityDialog({
 }: AddEntityDialogProps) {
   const [isOpen, setIsOpen] = React.useState(false);
 
-  // Wrap children in a function to pass down close function
-  const childrenWithProps = React.Children.map(children, (child) => {
-    if (React.isValidElement(child)) {
-      // @ts-ignore
-      return React.cloneElement(child, { onClose: () => setIsOpen(false), ...child.props });
-    }
-    return child;
+  // Wrap the trigger button to manually control the dialog state
+  const Trigger = React.cloneElement(triggerButton as React.ReactElement, {
+    onClick: (e: MouseEvent) => {
+        e.stopPropagation();
+        e.preventDefault();
+        setIsOpen(true);
+        // If the original trigger has an onClick, call it
+        if ((triggerButton as React.ReactElement).props.onClick) {
+            (triggerButton as React.ReactElement).props.onClick(e);
+        }
+    },
   });
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>{triggerButton}</DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]" onInteractOutside={(e) => {
-         // This prevents closing the dialog when interacting with select/dropdown menus
-        if ((e.target as HTMLElement).closest('[data-radix-popper-content-wrapper]')) {
-          e.preventDefault();
-        }
-      }}>
+      <DialogTrigger asChild>{Trigger}</DialogTrigger>
+      <DialogContent 
+        className="sm:max-w-[425px]"
+        onInteractOutside={(e) => {
+          // This prevents closing the dialog when interacting with select/dropdown menus
+          if ((e.target as HTMLElement).closest('[data-radix-popper-content-wrapper]')) {
+            e.preventDefault();
+          }
+        }}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
