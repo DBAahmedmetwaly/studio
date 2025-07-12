@@ -56,7 +56,7 @@ export default function ItemProfitLossPage() {
             if (sale.status !== 'approved') return false; // Only consider approved sales
             const saleDate = new Date(sale.date);
             const fromDate = filters.fromDate ? new Date(filters.fromDate) : null;
-            const toDate = filters.toDate ? new Date(toDate) : null;
+            const toDate = filters.toDate ? new Date(filters.toDate) : null;
             if (fromDate && saleDate < fromDate) return false;
             if (toDate && saleDate > toDate) return false;
             if (filters.warehouseId !== 'all' && sale.warehouseId !== filters.warehouseId) return false;
@@ -66,21 +66,25 @@ export default function ItemProfitLossPage() {
         const resultsMap = new Map();
 
         filteredSales.forEach(sale => {
+            if (!sale.items) return;
             sale.items.forEach(saleItem => {
                 const itemMaster = items.find(i => i.id === saleItem.id);
                 if (!itemMaster) return;
 
                 const revenue = saleItem.qty * saleItem.price;
+                // Use cost from sale item if available, otherwise fallback to item master cost
                 const cost = saleItem.qty * (saleItem.cost || itemMaster.cost || 0);
 
                 if (resultsMap.has(saleItem.id)) {
                     const existing = resultsMap.get(saleItem.id);
+                    existing.totalQty += saleItem.qty;
                     existing.totalRevenue += revenue;
                     existing.totalCost += cost;
                 } else {
                     resultsMap.set(saleItem.id, {
                         id: saleItem.id,
                         name: itemMaster.name,
+                        totalQty: saleItem.qty,
                         totalRevenue: revenue,
                         totalCost: cost,
                     });
@@ -164,6 +168,7 @@ export default function ItemProfitLossPage() {
                     <TableHeader>
                         <TableRow>
                             <TableHead>الصنف</TableHead>
+                            <TableHead className="text-center">الكمية المباعة</TableHead>
                             <TableHead className="text-center">الإيرادات</TableHead>
                             <TableHead className="text-center">التكلفة</TableHead>
                             <TableHead className="text-center">الربح / الخسارة</TableHead>
@@ -177,6 +182,7 @@ export default function ItemProfitLossPage() {
                                     <div className="font-medium">{data.name}</div>
                                     <div className="text-sm text-muted-foreground">{data.id.slice(0, 6).toUpperCase()}</div>
                                 </TableCell>
+                                <TableCell className="text-center">{data.totalQty.toLocaleString()}</TableCell>
                                 <TableCell className="text-center">ج.م {data.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                                 <TableCell className="text-center">ج.م {data.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                                 <TableCell className={`text-center font-bold ${data.profit >= 0 ? "text-green-500" : "text-destructive"}`}>
@@ -188,7 +194,7 @@ export default function ItemProfitLossPage() {
                             </TableRow>
                         )) : (
                             <TableRow>
-                                <TableCell colSpan={5} className="text-center text-muted-foreground py-10">
+                                <TableCell colSpan={6} className="text-center text-muted-foreground py-10">
                                     لا توجد بيانات مبيعات لعرضها في الفترة المحددة.
                                 </TableCell>
                             </TableRow>
@@ -198,6 +204,7 @@ export default function ItemProfitLossPage() {
                         <TableFooter>
                             <TableRow className="bg-muted/50">
                                 <TableCell className="font-bold">الإجمالي</TableCell>
+                                <TableCell className="text-center font-bold">{reportData.reduce((acc, item) => acc + item.totalQty, 0).toLocaleString()}</TableCell>
                                 <TableCell className="text-center font-bold">ج.م {reportData.reduce((acc, item) => acc + item.totalRevenue, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                                 <TableCell className="text-center font-bold">ج.م {reportData.reduce((acc, item) => acc + item.totalCost, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                                 <TableCell className="text-center font-bold">ج.م {reportData.reduce((acc, item) => acc + item.profit, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
@@ -214,4 +221,3 @@ export default function ItemProfitLossPage() {
     </>
   );
 }
-
