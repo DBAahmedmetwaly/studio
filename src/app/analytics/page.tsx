@@ -25,12 +25,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 // Interfaces for Firebase data
 interface Item { id: string; name: string; cost?: number; }
-interface SaleInvoice { id: string; date: string; warehouseId: string; total: number; items: { id: string; qty: number; price: number; cost?: number; }[]; }
+interface SaleInvoice { id: string; date: string; warehouseId: string; total: number; salesRepId?: string; status?: string; items: { id: string; qty: number; price: number; cost?: number; }[]; }
 interface PurchaseInvoice { id: string; date: string; supplierId: string, warehouseId: string, total: number; }
 interface Supplier { id: string; name: string; openingBalance: number; }
 interface Warehouse { id: string; name: string; }
 interface Customer { id: string; openingBalance: number; }
 interface Expense { id: string; date: string; amount: number; expenseType: string; warehouseId?: string; }
+interface User { id: string; name: string; isSalesRep?: boolean; }
 
 const chartConfig = {
   profit: {
@@ -69,6 +70,8 @@ export default function AnalyticsPage() {
     const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
     const { data: customers, loading: loadingCustomers } = useFirebase<Customer>('customers');
     const { data: expenses, loading: loadingExpenses } = useFirebase<Expense>('expenses');
+    const { data: users, loading: loadingUsers } = useFirebase<User>('users');
+
 
     const [dateRange, setDateRange] = useState({
       from: '',
@@ -87,10 +90,11 @@ export default function AnalyticsPage() {
         });
     }, []);
 
-    const loading = loadingItems || loadingSales || loadingPurchases || loadingSuppliers || loadingWarehouses || loadingCustomers || loadingExpenses;
+    const loading = loadingItems || loadingSales || loadingPurchases || loadingSuppliers || loadingWarehouses || loadingCustomers || loadingExpenses || loadingUsers;
 
     const filteredSales = useMemo(() => {
         return sales.filter(sale => {
+            if (sale.status && sale.status !== 'approved') return false;
             const saleDate = new Date(sale.date);
             const from = dateRange.from ? new Date(dateRange.from) : null;
             const to = dateRange.to ? new Date(dateRange.to) : null;
@@ -183,6 +187,17 @@ export default function AnalyticsPage() {
         });
         return Object.entries(expenseTotals).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value);
     }, [filteredExpenses]);
+    
+    const salesRepPerformanceData = useMemo(() => {
+        const repTotals: { [key: string]: number } = {};
+        filteredSales.forEach(sale => {
+            if (sale.salesRepId) {
+                const repName = users.find(u => u.id === sale.salesRepId)?.name || 'مندوب غير معروف';
+                repTotals[repName] = (repTotals[repName] || 0) + sale.total;
+            }
+        });
+        return Object.entries(repTotals).map(([name, sales]) => ({ name, sales })).sort((a,b) => b.sales - a.sales);
+    }, [filteredSales, users]);
 
 
     if (loading) {
@@ -351,6 +366,41 @@ export default function AnalyticsPage() {
                     </ChartContainer>
                 </CardContent>
             </Card>
+            
+             <Card className="lg:col-span-2">
+                <CardHeader>
+                    <CardTitle>أداء المناديب</CardTitle>
+                    <CardDescription>
+                        إجمالي المبيعات المعتمدة لكل مندوب في الفترة المحددة
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                     <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                        <RechartsBarChart data={salesRepPerformanceData}>
+                            <CartesianGrid vertical={false} />
+                            <XAxis
+                            dataKey="name"
+                            tickLine={false}
+                            tickMargin={10}
+                            axisLine={false}
+                            />
+                            <YAxis />
+                            <ChartTooltip
+                            cursor={false}
+                            content={<ChartTooltipContent />}
+                            />
+                            <Bar dataKey="sales" fill="var(--color-sales)" radius={8}>
+                                <LabelList
+                                    position="top"
+                                    offset={12}
+                                    className="fill-foreground"
+                                    fontSize={12}
+                                />
+                            </Bar>
+                        </RechartsBarChart>
+                    </ChartContainer>
+                </CardContent>
+            </Card>
 
              <Card className="lg:col-span-2">
                 <CardHeader>
@@ -388,3 +438,5 @@ export default function AnalyticsPage() {
     </>
   )
 }
+
+    
