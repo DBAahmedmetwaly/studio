@@ -32,6 +32,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+
 
 interface Customer {
   id?: string;
@@ -110,9 +112,7 @@ export default function CustomersPage() {
   };
 
   const handleDelete = (id: string) => {
-    if (confirm("هل أنت متأكد من حذف هذا العميل؟")) {
-      remove(id);
-    }
+    remove(id);
   };
 
   return (
@@ -150,8 +150,8 @@ export default function CustomersPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>اسم العميل</TableHead>
-                                <TableHead className="text-center">رصيد أول المدة</TableHead>
-                                <TableHead className="text-center">حد الائتمان</TableHead>
+                                <TableHead className="text-center hidden sm:table-cell">رصيد أول المدة</TableHead>
+                                <TableHead className="text-center hidden md:table-cell">حد الائتمان</TableHead>
                                 <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -159,36 +159,52 @@ export default function CustomersPage() {
                             {customers.map((customer) => (
                                 <TableRow key={customer.id}>
                                     <TableCell className="font-medium">{customer.name}</TableCell>
-                                    <TableCell className="text-center">{customer.openingBalance}</TableCell>
-                                    <TableCell className="text-center">{customer.creditLimit}</TableCell>
+                                    <TableCell className="text-center hidden sm:table-cell">{customer.openingBalance}</TableCell>
+                                    <TableCell className="text-center hidden md:table-cell">{customer.creditLimit}</TableCell>
                                     <TableCell className="text-center">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                            <Button aria-haspopup="true" size="icon" variant="ghost">
-                                                <MoreHorizontal className="h-4 w-4" />
-                                                <span className="sr-only">تبديل القائمة</span>
-                                            </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                            <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                                            <AddEntityDialog
-                                                title="تعديل العميل"
-                                                description="قم بتحديث تفاصيل العميل هنا."
-                                                triggerButton={
-                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                                    <Edit className="ml-2 h-4 w-4" />
-                                                    تعديل
-                                                    </DropdownMenuItem>
-                                                }
-                                            >
-                                               <CustomerForm customer={customer} onSave={handleSave} onClose={() => {}}/>
-                                            </AddEntityDialog>
-                                            <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(customer.id!)}>
-                                                <Trash2 className="ml-2 h-4 w-4" />
-                                                حذف
-                                            </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
+                                         <AlertDialog>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                <Button aria-haspopup="true" size="icon" variant="ghost">
+                                                    <MoreHorizontal className="h-4 w-4" />
+                                                    <span className="sr-only">تبديل القائمة</span>
+                                                </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+                                                    <AddEntityDialog
+                                                        title="تعديل العميل"
+                                                        description="قم بتحديث تفاصيل العميل هنا."
+                                                        triggerButton={
+                                                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                            <Edit className="ml-2 h-4 w-4" />
+                                                            تعديل
+                                                            </DropdownMenuItem>
+                                                        }
+                                                    >
+                                                    <CustomerForm customer={customer} onSave={handleSave} onClose={() => {}}/>
+                                                    </AddEntityDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}>
+                                                            <Trash2 className="ml-2 h-4 w-4" />
+                                                            حذف
+                                                        </DropdownMenuItem>
+                                                    </AlertDialogTrigger>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                <AlertDialogTitle>هل أنت متأكد تمامًا؟</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    هذا الإجراء سيحذف العميل بشكل دائم. لا يمكن التراجع عن هذا الإجراء.
+                                                </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handleDelete(customer.id!)}>متابعة</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
                                     </TableCell>
                                 </TableRow>
                             ))}

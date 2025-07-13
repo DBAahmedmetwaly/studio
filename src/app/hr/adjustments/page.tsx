@@ -24,6 +24,8 @@ import { usePermissions } from '@/contexts/permissions-context';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/auth-context';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+
 
 interface EmployeeAdjustment {
     id?: string;
@@ -137,13 +139,11 @@ export default function EmployeeAdjustmentsPage() {
     
     const handleDelete = async (id: string) => {
         if(!can('delete', 'hr')) return toast({ variant: "destructive", title: "غير مصرح به" });
-        if(confirm('هل أنت متأكد من حذف هذا السجل؟')) {
-            try {
-                await remove(id);
-                toast({ title: "تم الحذف بنجاح" });
-            } catch (error) {
-                toast({ variant: "destructive", title: "حدث خطأ", description: "فشل الحذف" });
-            }
+        try {
+            await remove(id);
+            toast({ title: "تم الحذف بنجاح" });
+        } catch (error) {
+            toast({ variant: "destructive", title: "حدث خطأ", description: "فشل الحذف" });
         }
     };
 
@@ -191,7 +191,7 @@ export default function EmployeeAdjustmentsPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {adjustments.map(adj => (
+                                    {adjustments.map((adj : EmployeeAdjustment) => (
                                         <TableRow key={adj.id}>
                                             <TableCell>{new Date(adj.date).toLocaleDateString('ar-EG')}</TableCell>
                                             <TableCell>{getEmployeeName(adj.employeeId)}</TableCell>
@@ -206,37 +206,39 @@ export default function EmployeeAdjustmentsPage() {
                                                 {adj.amount.toLocaleString()}
                                             </TableCell>
                                             <TableCell className="text-center">
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button aria-haspopup="true" size="icon" variant="ghost">
-                                                            <MoreHorizontal className="h-4 w-4" />
-                                                            <span className="sr-only">قائمة</span>
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                                                        {/* {can('edit', 'hr') && (
-                                                            <AddEntityDialog
-                                                                title="تعديل البند"
-                                                                description="تحديث تفاصيل البند."
-                                                                triggerButton={
-                                                                    <DropdownMenuItem onSelect={e => e.preventDefault()}>
-                                                                        <Edit className="ml-2 h-4 w-4" />
-                                                                        تعديل
+                                                <AlertDialog>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button aria-haspopup="true" size="icon" variant="ghost">
+                                                                <MoreHorizontal className="h-4 w-4" />
+                                                                <span className="sr-only">قائمة</span>
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+                                                            {can('delete', 'hr') && (
+                                                                <AlertDialogTrigger asChild>
+                                                                    <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}>
+                                                                        <Trash2 className="ml-2 h-4 w-4" />
+                                                                        حذف
                                                                     </DropdownMenuItem>
-                                                                }
-                                                            >
-                                                                <AdjustmentForm adjustment={adj} onSave={handleSave} onClose={() => {}} employees={employees} />
-                                                            </AddEntityDialog>
-                                                        )} */}
-                                                        {can('delete', 'hr') && (
-                                                            <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(adj.id!)}>
-                                                                <Trash2 className="ml-2 h-4 w-4" />
-                                                                حذف
-                                                            </DropdownMenuItem>
-                                                        )}
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
+                                                                </AlertDialogTrigger>
+                                                            )}
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                     <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle>هل أنت متأكد تمامًا؟</AlertDialogTitle>
+                                                            <AlertDialogDescription>
+                                                                هذا الإجراء سيحذف السجل بشكل دائم. لا يمكن التراجع عن هذا الإجراء.
+                                                            </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={() => handleDelete(adj.id!)}>متابعة</AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
                                             </TableCell>
                                         </TableRow>
                                     ))}

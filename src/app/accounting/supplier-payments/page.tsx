@@ -21,9 +21,10 @@ import { useToast } from '@/hooks/use-toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AddEntityDialog } from '@/components/add-entity-dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/auth-context';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+
 
 interface SupplierPayment {
     id?: string;
@@ -151,13 +152,11 @@ export default function SupplierPaymentsPage() {
     };
     
     const handleDelete = async (id: string) => {
-        if(confirm('هل أنت متأكد من حذف هذه الدفعة؟')) {
-            try {
-                await remove(id);
-                toast({ title: "تم الحذف بنجاح" });
-            } catch (error) {
-                toast({ variant: "destructive", title: "حدث خطأ", description: "فشل الحذف" });
-            }
+        try {
+            await remove(id);
+            toast({ title: "تم الحذف بنجاح" });
+        } catch (error) {
+            toast({ variant: "destructive", title: "حدث خطأ", description: "فشل الحذف" });
         }
     };
 
@@ -189,57 +188,63 @@ export default function SupplierPaymentsPage() {
                             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                         </div>
                     ) : (
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>المورد</TableHead>
-                                    <TableHead>مدفوعة من</TableHead>
-                                    <TableHead className="text-center">المبلغ</TableHead>
-                                    <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {payments.map(payment => (
-                                    <TableRow key={payment.id}>
-                                            <TableCell>
-                                            <div className="font-medium">{getSupplierName(payment.supplierId)}</div>
-                                            <div className="text-sm text-muted-foreground">{new Date(payment.date).toLocaleDateString('ar-EG')}</div>
-                                        </TableCell>
-                                        <TableCell>{getCashAccountName(payment.paidFromAccountId)}</TableCell>
-                                        <TableCell className="text-center">{payment.amount.toLocaleString()}</TableCell>
-                                        <TableCell className="text-center">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button aria-haspopup="true" size="icon" variant="ghost">
-                                                        <MoreHorizontal className="h-4 w-4" />
-                                                        <span className="sr-only">قائمة</span>
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                                                    {/* <AddEntityDialog
-                                                        title="تعديل الدفعة"
-                                                        description="تحديث تفاصيل الدفعة."
-                                                        triggerButton={
-                                                            <DropdownMenuItem onSelect={e => e.preventDefault()}>
-                                                                <Edit className="ml-2 h-4 w-4" />
-                                                                تعديل
-                                                            </DropdownMenuItem>
-                                                        }
-                                                    >
-                                                        <PaymentForm payment={payment} onSave={handleSave} onClose={() => {}} suppliers={suppliers} cashAccounts={cashAccounts} />
-                                                    </AddEntityDialog> */}
-                                                    <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(payment.id!)}>
-                                                        <Trash2 className="ml-2 h-4 w-4" />
-                                                        حذف
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </TableCell>
+                        <div className="w-full overflow-auto">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>المورد</TableHead>
+                                        <TableHead className="hidden sm:table-cell">مدفوعة من</TableHead>
+                                        <TableHead className="text-center">المبلغ</TableHead>
+                                        <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                                </TableHeader>
+                                <TableBody>
+                                    {payments.map((payment: SupplierPayment) => (
+                                        <TableRow key={payment.id}>
+                                            <TableCell>
+                                                <div className="font-medium">{getSupplierName(payment.supplierId)}</div>
+                                                <div className="text-sm text-muted-foreground">{new Date(payment.date).toLocaleDateString('ar-EG')}</div>
+                                            </TableCell>
+                                            <TableCell className="hidden sm:table-cell">{getCashAccountName(payment.paidFromAccountId)}</TableCell>
+                                            <TableCell className="text-center">{payment.amount.toLocaleString()}</TableCell>
+                                            <TableCell className="text-center">
+                                                <AlertDialog>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button aria-haspopup="true" size="icon" variant="ghost">
+                                                                <MoreHorizontal className="h-4 w-4" />
+                                                                <span className="sr-only">قائمة</span>
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+                                                            <AlertDialogTrigger asChild>
+                                                                <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}>
+                                                                    <Trash2 className="ml-2 h-4 w-4" />
+                                                                    حذف
+                                                                </DropdownMenuItem>
+                                                            </AlertDialogTrigger>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle>هل أنت متأكد تمامًا؟</AlertDialogTitle>
+                                                            <AlertDialogDescription>
+                                                                هذا الإجراء سيحذف الدفعة بشكل دائم. لا يمكن التراجع عن هذا الإجراء.
+                                                            </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={() => handleDelete(payment.id!)}>متابعة</AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
                     )}
                 </CardContent>
             </Card>

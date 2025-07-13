@@ -32,6 +32,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+
 
 interface Supplier {
   id?: string;
@@ -95,9 +97,7 @@ export default function SuppliersPage() {
   };
 
   const handleDelete = (id: string) => {
-    if (confirm("هل أنت متأكد من حذف هذا المورد؟")) {
-      remove(id);
-    }
+    remove(id);
   };
 
   return (
@@ -135,8 +135,8 @@ export default function SuppliersPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>اسم المورد</TableHead>
-                                <TableHead>جهة الاتصال</TableHead>
-                                <TableHead className="text-center">رصيد أول المدة</TableHead>
+                                <TableHead className="hidden sm:table-cell">جهة الاتصال</TableHead>
+                                <TableHead className="text-center hidden md:table-cell">رصيد أول المدة</TableHead>
                                 <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -144,36 +144,52 @@ export default function SuppliersPage() {
                             {suppliers.map((supplier) => (
                                 <TableRow key={supplier.id}>
                                     <TableCell className="font-medium">{supplier.name}</TableCell>
-                                    <TableCell>{supplier.contact}</TableCell>
-                                    <TableCell className="text-center">{supplier.openingBalance}</TableCell>
+                                    <TableCell className="hidden sm:table-cell">{supplier.contact}</TableCell>
+                                    <TableCell className="text-center hidden md:table-cell">{supplier.openingBalance}</TableCell>
                                     <TableCell className="text-center">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                            <Button aria-haspopup="true" size="icon" variant="ghost">
-                                                <MoreHorizontal className="h-4 w-4" />
-                                                <span className="sr-only">تبديل القائمة</span>
-                                            </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                            <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                                            <AddEntityDialog
-                                                title="تعديل المورد"
-                                                description="قم بتحديث تفاصيل المورد هنا."
-                                                triggerButton={
-                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                                    <Edit className="ml-2 h-4 w-4" />
-                                                    تعديل
-                                                    </DropdownMenuItem>
-                                                }
-                                            >
-                                               <SupplierForm supplier={supplier} onSave={handleSave} onClose={()=>{}}/>
-                                            </AddEntityDialog>
-                                            <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(supplier.id!)}>
-                                                <Trash2 className="ml-2 h-4 w-4" />
-                                                حذف
-                                            </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
+                                        <AlertDialog>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                <Button aria-haspopup="true" size="icon" variant="ghost">
+                                                    <MoreHorizontal className="h-4 w-4" />
+                                                    <span className="sr-only">تبديل القائمة</span>
+                                                </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+                                                    <AddEntityDialog
+                                                        title="تعديل المورد"
+                                                        description="قم بتحديث تفاصيل المورد هنا."
+                                                        triggerButton={
+                                                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                            <Edit className="ml-2 h-4 w-4" />
+                                                            تعديل
+                                                            </DropdownMenuItem>
+                                                        }
+                                                    >
+                                                    <SupplierForm supplier={supplier} onSave={handleSave} onClose={()=>{}}/>
+                                                    </AddEntityDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}>
+                                                            <Trash2 className="ml-2 h-4 w-4" />
+                                                            حذف
+                                                        </DropdownMenuItem>
+                                                    </AlertDialogTrigger>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>هل أنت متأكد تمامًا؟</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        هذا الإجراء سيحذف المورد بشكل دائم. لا يمكن التراجع عن هذا الإجراء.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDelete(supplier.id!)}>متابعة</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
                                     </TableCell>
                                 </TableRow>
                             ))}

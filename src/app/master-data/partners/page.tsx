@@ -33,6 +33,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+
 
 interface Partner {
   id?: string;
@@ -119,9 +121,7 @@ export default function PartnersPage() {
     };
 
     const handleDelete = (id: string) => {
-        if (confirm("هل أنت متأكد من حذف هذا الشريك؟")) {
-            remove(id);
-        }
+        remove(id);
     };
     
     const getWarehouseName = (warehouseId: string) => {
@@ -164,8 +164,8 @@ export default function PartnersPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>اسم الشريك</TableHead>
-                                <TableHead className="text-center">رأس المال</TableHead>
-                                <TableHead className="text-center">حصة الأرباح (%)</TableHead>
+                                <TableHead className="text-center hidden sm:table-cell">رأس المال</TableHead>
+                                <TableHead className="text-center hidden sm:table-cell">حصة الأرباح (%)</TableHead>
                                 <TableHead>المخزن</TableHead>
                                 <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
                             </TableRow>
@@ -174,37 +174,53 @@ export default function PartnersPage() {
                             {partners.map((partner) => (
                                 <TableRow key={partner.id}>
                                     <TableCell className="font-medium">{partner.name}</TableCell>
-                                    <TableCell className="text-center">{partner.capital}</TableCell>
-                                    <TableCell className="text-center">{partner.profitShare}%</TableCell>
+                                    <TableCell className="text-center hidden sm:table-cell">{partner.capital}</TableCell>
+                                    <TableCell className="text-center hidden sm:table-cell">{partner.profitShare}%</TableCell>
                                     <TableCell>{getWarehouseName(partner.warehouseId)}</TableCell>
                                     <TableCell className="text-center">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                            <Button aria-haspopup="true" size="icon" variant="ghost">
-                                                <MoreHorizontal className="h-4 w-4" />
-                                                <span className="sr-only">تبديل القائمة</span>
-                                            </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                            <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                                            <AddEntityDialog
-                                                title="تعديل الشريك"
-                                                description="قم بتحديث تفاصيل الشريك هنا."
-                                                triggerButton={
-                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                                    <Edit className="ml-2 h-4 w-4" />
-                                                    تعديل
-                                                    </DropdownMenuItem>
-                                                }
-                                            >
-                                               <PartnerForm partner={partner} onSave={handleSave} onClose={() => {}} warehouses={warehouses} />
-                                            </AddEntityDialog>
-                                            <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(partner.id!)}>
-                                                <Trash2 className="ml-2 h-4 w-4" />
-                                                حذف
-                                            </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
+                                        <AlertDialog>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                <Button aria-haspopup="true" size="icon" variant="ghost">
+                                                    <MoreHorizontal className="h-4 w-4" />
+                                                    <span className="sr-only">تبديل القائمة</span>
+                                                </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+                                                    <AddEntityDialog
+                                                        title="تعديل الشريك"
+                                                        description="قم بتحديث تفاصيل الشريك هنا."
+                                                        triggerButton={
+                                                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                            <Edit className="ml-2 h-4 w-4" />
+                                                            تعديل
+                                                            </DropdownMenuItem>
+                                                        }
+                                                    >
+                                                    <PartnerForm partner={partner} onSave={handleSave} onClose={() => {}} warehouses={warehouses} />
+                                                    </AddEntityDialog>
+                                                     <AlertDialogTrigger asChild>
+                                                        <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}>
+                                                            <Trash2 className="ml-2 h-4 w-4" />
+                                                            حذف
+                                                        </DropdownMenuItem>
+                                                    </AlertDialogTrigger>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                <AlertDialogTitle>هل أنت متأكد تمامًا؟</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    هذا الإجراء سيحذف الشريك بشكل دائم. لا يمكن التراجع عن هذا الإجراء.
+                                                </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handleDelete(partner.id!)}>متابعة</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
                                     </TableCell>
                                 </TableRow>
                             ))}

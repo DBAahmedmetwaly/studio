@@ -35,6 +35,8 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+
 
 interface Warehouse {
   id?: string;
@@ -102,9 +104,7 @@ export default function WarehousesPage() {
   };
 
   const handleDelete = (id: string) => {
-    if (confirm("هل أنت متأكد من حذف هذا المخزن؟")) {
-      remove(id);
-    }
+    remove(id);
   };
 
   const loading = loadingWarehouses;
@@ -144,7 +144,7 @@ export default function WarehousesPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>اسم المخزن</TableHead>
-                                <TableHead>العنوان</TableHead>
+                                <TableHead className="hidden sm:table-cell">العنوان</TableHead>
                                 <TableHead className="text-center">تحديث تلقائي</TableHead>
                                 <TableHead className="text-center w-[100px]">
                                     <span className="sr-only">الإجراءات</span>
@@ -155,40 +155,56 @@ export default function WarehousesPage() {
                             {warehouses.map((warehouse) => (
                                 <TableRow key={warehouse.id}>
                                     <TableCell className="font-medium">{warehouse.name}</TableCell>
-                                    <TableCell>{warehouse.address}</TableCell>
+                                    <TableCell className="hidden sm:table-cell">{warehouse.address}</TableCell>
                                     <TableCell className="text-center">
                                         <Badge variant={warehouse.autoStockUpdate ? 'default' : 'outline'}>
                                             {warehouse.autoStockUpdate ? 'مفعل' : 'غير مفعل'}
                                         </Badge>
                                     </TableCell>
                                     <TableCell className="text-center">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                            <Button aria-haspopup="true" size="icon" variant="ghost">
-                                                <MoreHorizontal className="h-4 w-4" />
-                                                <span className="sr-only">تبديل القائمة</span>
-                                            </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                            <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                                            <AddEntityDialog
-                                                title="تعديل المخزن"
-                                                description="قم بتحديث تفاصيل المخزن هنا."
-                                                triggerButton={
-                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                                    <Edit className="ml-2 h-4 w-4" />
-                                                    تعديل
-                                                    </DropdownMenuItem>
-                                                }
-                                            >
-                                                <WarehouseForm warehouse={warehouse} onSave={handleSave} onClose={() => {}} />
-                                            </AddEntityDialog>
-                                            <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(warehouse.id!)}>
-                                                <Trash2 className="ml-2 h-4 w-4" />
-                                                حذف
-                                            </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
+                                        <AlertDialog>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                <Button aria-haspopup="true" size="icon" variant="ghost">
+                                                    <MoreHorizontal className="h-4 w-4" />
+                                                    <span className="sr-only">تبديل القائمة</span>
+                                                </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+                                                    <AddEntityDialog
+                                                        title="تعديل المخزن"
+                                                        description="قم بتحديث تفاصيل المخزن هنا."
+                                                        triggerButton={
+                                                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                            <Edit className="ml-2 h-4 w-4" />
+                                                            تعديل
+                                                            </DropdownMenuItem>
+                                                        }
+                                                    >
+                                                        <WarehouseForm warehouse={warehouse} onSave={handleSave} onClose={() => {}} />
+                                                    </AddEntityDialog>
+                                                     <AlertDialogTrigger asChild>
+                                                        <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}>
+                                                            <Trash2 className="ml-2 h-4 w-4" />
+                                                            حذف
+                                                        </DropdownMenuItem>
+                                                    </AlertDialogTrigger>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>هل أنت متأكد تمامًا؟</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        هذا الإجراء سيحذف المخزن بشكل دائم. لا يمكن التراجع عن هذا الإجراء.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDelete(warehouse.id!)}>متابعة</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
                                     </TableCell>
                                 </TableRow>
                             ))}

@@ -24,6 +24,8 @@ import { AddEntityDialog } from '@/components/add-entity-dialog';
 import { usePermissions } from '@/contexts/permissions-context';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/contexts/auth-context';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+
 
 interface EmployeeAdvance {
     id?: string;
@@ -147,13 +149,11 @@ export default function EmployeeAdvancesPage() {
     
     const handleDelete = async (id: string) => {
         if(!can('delete', 'hr')) return toast({ variant: "destructive", title: "غير مصرح به" });
-        if(confirm('هل أنت متأكد من حذف هذه السلفة؟')) {
-            try {
-                await remove(id);
-                toast({ title: "تم الحذف بنجاح" });
-            } catch (error) {
-                toast({ variant: "destructive", title: "حدث خطأ", description: "فشل الحذف" });
-            }
+        try {
+            await remove(id);
+            toast({ title: "تم الحذف بنجاح" });
+        } catch (error) {
+            toast({ variant: "destructive", title: "حدث خطأ", description: "فشل الحذف" });
         }
     };
 
@@ -200,44 +200,46 @@ export default function EmployeeAdvancesPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {advances.map(advance => (
+                                    {advances.map((advance: EmployeeAdvance) => (
                                         <TableRow key={advance.id}>
                                             <TableCell>{new Date(advance.date).toLocaleDateString('ar-EG')}</TableCell>
                                             <TableCell>{getEmployeeName(advance.employeeId)}</TableCell>
                                             <TableCell>{getCashAccountName(advance.paidFromAccountId)}</TableCell>
                                             <TableCell className="text-center">{advance.amount.toLocaleString()}</TableCell>
                                             <TableCell className="text-center">
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button aria-haspopup="true" size="icon" variant="ghost">
-                                                            <MoreHorizontal className="h-4 w-4" />
-                                                            <span className="sr-only">قائمة</span>
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                                                        {/* {can('edit', 'hr') && (
-                                                            <AddEntityDialog
-                                                                title="تعديل السلفة"
-                                                                description="تحديث تفاصيل السلفة."
-                                                                triggerButton={
-                                                                    <DropdownMenuItem onSelect={e => e.preventDefault()}>
-                                                                        <Edit className="ml-2 h-4 w-4" />
-                                                                        تعديل
+                                                <AlertDialog>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button aria-haspopup="true" size="icon" variant="ghost">
+                                                                <MoreHorizontal className="h-4 w-4" />
+                                                                <span className="sr-only">قائمة</span>
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+                                                            {can('delete', 'hr') && (
+                                                                <AlertDialogTrigger asChild>
+                                                                    <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}>
+                                                                        <Trash2 className="ml-2 h-4 w-4" />
+                                                                        حذف
                                                                     </DropdownMenuItem>
-                                                                }
-                                                            >
-                                                                <AdvanceForm advance={advance} onSave={handleSave} onClose={() => {}} employees={employees} cashAccounts={cashAccounts} />
-                                                            </AddEntityDialog>
-                                                        )} */}
-                                                        {can('delete', 'hr') && (
-                                                            <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(advance.id!)}>
-                                                                <Trash2 className="ml-2 h-4 w-4" />
-                                                                حذف
-                                                            </DropdownMenuItem>
-                                                        )}
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
+                                                                </AlertDialogTrigger>
+                                                            )}
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle>هل أنت متأكد تمامًا؟</AlertDialogTitle>
+                                                            <AlertDialogDescription>
+                                                                هذا الإجراء سيحذف السلفة بشكل دائم. لا يمكن التراجع عن هذا الإجراء.
+                                                            </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={() => handleDelete(advance.id!)}>متابعة</AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
                                             </TableCell>
                                         </TableRow>
                                     ))}

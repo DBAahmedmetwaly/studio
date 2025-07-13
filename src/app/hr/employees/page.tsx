@@ -34,6 +34,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/contexts/permissions-context";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+
 
 interface Employee {
   id?: string;
@@ -124,9 +126,7 @@ export default function EmployeesPage() {
 
     const handleDelete = (id: string) => {
         if (!can('delete', moduleName)) return toast({ variant: "destructive", title: "غير مصرح به" });
-        if (confirm("هل أنت متأكد من حذف هذا الموظف؟")) {
-            remove(id);
-        }
+        remove(id);
     };
     
   return (
@@ -161,62 +161,80 @@ export default function EmployeesPage() {
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
             ) : (
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>اسم الموظف</TableHead>
-                            <TableHead>المسمى الوظيفي</TableHead>
-                            <TableHead>رقم الهاتف</TableHead>
-                            <TableHead className="text-center">الراتب الأساسي</TableHead>
-                            <TableHead className="text-center">تاريخ التعيين</TableHead>
-                            <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {employees.map((employee) => (
-                            <TableRow key={employee.id}>
-                                <TableCell className="font-medium">{employee.name}</TableCell>
-                                <TableCell>{employee.jobTitle}</TableCell>
-                                <TableCell>{employee.phone || '-'}</TableCell>
-                                <TableCell className="text-center">{employee.basicSalary.toLocaleString()} ج.م</TableCell>
-                                <TableCell className="text-center">{new Date(employee.hireDate).toLocaleDateString('ar-EG')}</TableCell>
-                                <TableCell className="text-center">
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button aria-haspopup="true" size="icon" variant="ghost">
-                                                <MoreHorizontal className="h-4 w-4" />
-                                                <span className="sr-only">قائمة الإجراءات</span>
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                        <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                                        {can('edit', moduleName) && (
-                                            <AddEntityDialog
-                                                title="تعديل بيانات الموظف"
-                                                description="قم بتحديث بيانات الموظف هنا."
-                                                triggerButton={
-                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                                    <Edit className="ml-2 h-4 w-4" />
-                                                    تعديل
-                                                    </DropdownMenuItem>
-                                                }
-                                            >
-                                                <EmployeeForm employee={employee} onSave={handleSave} onClose={()=>{}} />
-                                            </AddEntityDialog>
-                                        )}
-                                        {can('delete', moduleName) && (
-                                            <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(employee.id!)}>
-                                                <Trash2 className="ml-2 h-4 w-4" />
-                                                حذف
-                                            </DropdownMenuItem>
-                                        )}
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </TableCell>
+                <div className="w-full overflow-auto">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>اسم الموظف</TableHead>
+                                <TableHead className="hidden sm:table-cell">المسمى الوظيفي</TableHead>
+                                <TableHead className="hidden md:table-cell">رقم الهاتف</TableHead>
+                                <TableHead className="text-center">الراتب الأساسي</TableHead>
+                                <TableHead className="hidden lg:table-cell text-center">تاريخ التعيين</TableHead>
+                                <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
                             </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
+                        </TableHeader>
+                        <TableBody>
+                            {employees.map((employee) => (
+                                <TableRow key={employee.id}>
+                                    <TableCell className="font-medium">{employee.name}</TableCell>
+                                    <TableCell className="hidden sm:table-cell">{employee.jobTitle}</TableCell>
+                                    <TableCell className="hidden md:table-cell">{employee.phone || '-'}</TableCell>
+                                    <TableCell className="text-center">{employee.basicSalary.toLocaleString()} ج.م</TableCell>
+                                    <TableCell className="hidden lg:table-cell text-center">{new Date(employee.hireDate).toLocaleDateString('ar-EG')}</TableCell>
+                                    <TableCell className="text-center">
+                                        <AlertDialog>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button aria-haspopup="true" size="icon" variant="ghost">
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                        <span className="sr-only">قائمة الإجراءات</span>
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+                                                {can('edit', moduleName) && (
+                                                    <AddEntityDialog
+                                                        title="تعديل بيانات الموظف"
+                                                        description="قم بتحديث بيانات الموظف هنا."
+                                                        triggerButton={
+                                                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                            <Edit className="ml-2 h-4 w-4" />
+                                                            تعديل
+                                                            </DropdownMenuItem>
+                                                        }
+                                                    >
+                                                        <EmployeeForm employee={employee} onSave={handleSave} onClose={()=>{}} />
+                                                    </AddEntityDialog>
+                                                )}
+                                                {can('delete', moduleName) && (
+                                                    <AlertDialogTrigger asChild>
+                                                        <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}>
+                                                            <Trash2 className="ml-2 h-4 w-4" />
+                                                            حذف
+                                                        </DropdownMenuItem>
+                                                    </AlertDialogTrigger>
+                                                )}
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                             <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>هل أنت متأكد تمامًا؟</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        هذا الإجراء سيحذف الموظف بشكل دائم. لا يمكن التراجع عن هذا الإجراء.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDelete(employee.id!)}>متابعة</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
             )}
           </CardContent>
         </Card>
