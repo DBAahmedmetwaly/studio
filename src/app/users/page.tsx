@@ -343,76 +343,78 @@ export default function UsersPage() {
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
             ) : (
-                <Table>
-                <TableHeader>
-                    <TableRow>
-                    <TableHead>المستخدم</TableHead>
-                    <TableHead>اسم الدخول</TableHead>
-                    <TableHead className="text-center">مندوب</TableHead>
-                    <TableHead className="text-center">الوظيفة</TableHead>
-                    <TableHead>المخزن</TableHead>
-                    <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {usersData.map((user) => (
-                    <TableRow key={user.id}>
-                        <TableCell>
-                        <div className="flex items-center gap-3">
-                            <Avatar className="hidden h-9 w-9 sm:flex">
-                            <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            <div className="font-medium">
-                                <div>{user.name}</div>
-                                <div className="text-xs text-muted-foreground">{user.phone}</div>
+                <div className="w-full overflow-auto">
+                    <Table>
+                    <TableHeader>
+                        <TableRow>
+                        <TableHead>المستخدم</TableHead>
+                        <TableHead>اسم الدخول</TableHead>
+                        <TableHead className="text-center">مندوب</TableHead>
+                        <TableHead className="text-center">الوظيفة</TableHead>
+                        <TableHead>المخزن</TableHead>
+                        <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {usersData.map((user) => (
+                        <TableRow key={user.id}>
+                            <TableCell>
+                            <div className="flex items-center gap-3">
+                                <Avatar className="h-9 w-9">
+                                <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <div className="font-medium">
+                                    <div>{user.name}</div>
+                                    <div className="text-xs text-muted-foreground">{user.phone}</div>
+                                </div>
                             </div>
-                        </div>
-                        </TableCell>
-                        <TableCell className="font-mono">{user.loginName}</TableCell>
-                        <TableCell className="text-center">
-                            {user.isSalesRep && <CheckCircle className="h-5 w-5 text-green-500 mx-auto" />}
-                        </TableCell>
-                        <TableCell className="text-center">
-                        <Badge variant="outline">{user.role}</Badge>
-                        </TableCell>
-                        <TableCell>{getWarehouseName(user.warehouse)}</TableCell>
-                        <TableCell className="text-center">
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                            <Button aria-haspopup="true" size="icon" variant="ghost" disabled={combinedLoading}>
-                                <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">تبديل القائمة</span>
-                            </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                            {can('edit', moduleName) && (
-                              <AddEntityDialog
-                                  title="تعديل المستخدم"
-                                  description="قم بتحديث تفاصيل المستخدم هنا."
-                                  triggerButton={
-                                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                      <Edit className="ml-2 h-4 w-4" />
-                                      تعديل
+                            </TableCell>
+                            <TableCell className="font-mono">{user.loginName}</TableCell>
+                            <TableCell className="text-center">
+                                {user.isSalesRep && <CheckCircle className="h-5 w-5 text-green-500 mx-auto" />}
+                            </TableCell>
+                            <TableCell className="text-center">
+                            <Badge variant="outline">{user.role}</Badge>
+                            </TableCell>
+                            <TableCell>{getWarehouseName(user.warehouse)}</TableCell>
+                            <TableCell className="text-center">
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                <Button aria-haspopup="true" size="icon" variant="ghost" disabled={combinedLoading}>
+                                    <MoreHorizontal className="h-4 w-4" />
+                                    <span className="sr-only">تبديل القائمة</span>
+                                </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+                                {can('edit', moduleName) && (
+                                  <AddEntityDialog
+                                      title="تعديل المستخدم"
+                                      description="قم بتحديث تفاصيل المستخدم هنا."
+                                      triggerButton={
+                                      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                          <Edit className="ml-2 h-4 w-4" />
+                                          تعديل
+                                      </DropdownMenuItem>
+                                      }
+                                  >
+                                  <UserForm user={user} onSave={handleSave} onClose={()=>{}} warehouses={warehouses} roles={roleNames} />
+                                  </AddEntityDialog>
+                                )}
+                                {can('delete', moduleName) && (
+                                  <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(user)}>
+                                      <Trash2 className="ml-2 h-4 w-4" />
+                                      حذف
                                   </DropdownMenuItem>
-                                  }
-                              >
-                              <UserForm user={user} onSave={handleSave} onClose={()=>{}} warehouses={warehouses} roles={roleNames} />
-                              </AddEntityDialog>
-                            )}
-                            {can('delete', moduleName) && (
-                              <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(user)}>
-                                  <Trash2 className="ml-2 h-4 w-4" />
-                                  حذف
-                              </DropdownMenuItem>
-                            )}
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                        </TableCell>
-                    </TableRow>
-                    ))}
-                </TableBody>
-                </Table>
+                                )}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                            </TableCell>
+                        </TableRow>
+                        ))}
+                    </TableBody>
+                    </Table>
+                </div>
             )}
           </CardContent>
         </Card>

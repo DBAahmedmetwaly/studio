@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React from 'react';
@@ -93,9 +94,9 @@ export default function StockInListPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>رقم الإيصال</TableHead>
-                      <TableHead className="hidden sm:table-cell">التاريخ</TableHead>
+                      <TableHead>التاريخ</TableHead>
                       <TableHead>المخزن</TableHead>
-                      <TableHead className="hidden md:table-cell">السبب</TableHead>
+                      <TableHead>السبب</TableHead>
                       <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -104,9 +105,9 @@ export default function StockInListPage() {
                       stockInRecords.map((record) => (
                         <TableRow key={record.id}>
                           <TableCell className="font-mono">{record.receiptNumber}</TableCell>
-                          <TableCell className="hidden sm:table-cell">{new Date(record.date).toLocaleDateString('ar-EG')}</TableCell>
+                          <TableCell>{new Date(record.date).toLocaleDateString('ar-EG')}</TableCell>
                           <TableCell>{getWarehouseName(record.warehouseId)}</TableCell>
-                          <TableCell className="hidden md:table-cell">{getReasonLabel(record.reason)}</TableCell>
+                          <TableCell>{getReasonLabel(record.reason)}</TableCell>
                            <TableCell className="text-center">
                              <DropdownMenu>
                                 <DropdownMenuTrigger asChild>

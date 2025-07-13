@@ -567,27 +567,33 @@ export default function JournalPage() {
                                             </span>
                                         </div>
                                     </CardHeader>
-                                    <CardContent className='p-0'>
-                                        <div className="border-y p-4 space-y-2">
-                                           {entry.debits.length > 1 ? (
-                                                <p className="font-semibold">من مذكورين</p>
-                                            ) : null}
-                                            {entry.debits.map((d, i) => (
-                                                <div key={`d-${i}`} className="flex justify-between">
-                                                    <p className="pr-4">{entry.debits.length === 1 ? 'من ح/' : ''} {d.account}</p>
-                                                    <p className="font-mono">{d.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
-                                                </div>
-                                            ))}
-                                            <Separator className="my-2" />
-                                            {entry.credits.length > 1 ? (
-                                                <p className="font-semibold text-muted-foreground">إلى مذكورين</p>
-                                            ) : null}
-                                            {entry.credits.map((c, i) => (
-                                                <div key={`c-${i}`} className="flex justify-between">
-                                                    <p className="pr-4 text-muted-foreground">{entry.credits.length === 1 ? 'إلى ح/' : ''} {c.account}</p>
-                                                    <p className="font-mono text-muted-foreground">{c.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
-                                                </div>
-                                            ))}
+                                    <CardContent className="p-0">
+                                         <div className="w-full overflow-auto">
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>الحساب</TableHead>
+                                                        <TableHead className="w-[150px] text-center">مدين</TableHead>
+                                                        <TableHead className="w-[150px] text-center">دائن</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {entry.debits.map((d, i) => (
+                                                        <TableRow key={`d-${i}`}>
+                                                            <TableCell className="font-medium pr-6">{d.account}</TableCell>
+                                                            <TableCell className="text-center font-mono">{d.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</TableCell>
+                                                            <TableCell className="text-center">-</TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                     {entry.credits.map((c, i) => (
+                                                        <TableRow key={`c-${i}`}>
+                                                            <TableCell className="text-muted-foreground pr-10">{c.account}</TableCell>
+                                                            <TableCell className="text-center">-</TableCell>
+                                                            <TableCell className="text-center font-mono text-muted-foreground">{c.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
                                         </div>
                                     </CardContent>
                                     <CardFooter className='pt-4'>
@@ -611,5 +617,3 @@ export default function JournalPage() {
     </TooltipProvider>
   );
 }
-
-    

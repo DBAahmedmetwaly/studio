@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState } from "react";
@@ -143,7 +144,7 @@ export default function WarehousesPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>اسم المخزن</TableHead>
-                                <TableHead className="hidden sm:table-cell">العنوان</TableHead>
+                                <TableHead>العنوان</TableHead>
                                 <TableHead className="text-center">تحديث تلقائي</TableHead>
                                 <TableHead className="text-center w-[100px]">
                                     <span className="sr-only">الإجراءات</span>
@@ -154,7 +155,7 @@ export default function WarehousesPage() {
                             {warehouses.map((warehouse) => (
                                 <TableRow key={warehouse.id}>
                                     <TableCell className="font-medium">{warehouse.name}</TableCell>
-                                    <TableCell className="hidden sm:table-cell">{warehouse.address}</TableCell>
+                                    <TableCell>{warehouse.address}</TableCell>
                                     <TableCell className="text-center">
                                         <Badge variant={warehouse.autoStockUpdate ? 'default' : 'outline'}>
                                             {warehouse.autoStockUpdate ? 'مفعل' : 'غير مفعل'}

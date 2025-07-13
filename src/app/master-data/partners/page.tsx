@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState } from "react";
@@ -158,56 +159,58 @@ export default function PartnersPage() {
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
             ) : (
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>اسم الشريك</TableHead>
-                            <TableHead className="text-center">رأس المال</TableHead>
-                            <TableHead className="text-center">حصة الأرباح (%)</TableHead>
-                            <TableHead>المخزن</TableHead>
-                            <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {partners.map((partner) => (
-                            <TableRow key={partner.id}>
-                                <TableCell className="font-medium">{partner.name}</TableCell>
-                                <TableCell className="text-center">{partner.capital}</TableCell>
-                                <TableCell className="text-center">{partner.profitShare}%</TableCell>
-                                <TableCell>{getWarehouseName(partner.warehouseId)}</TableCell>
-                                <TableCell className="text-center">
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                        <Button aria-haspopup="true" size="icon" variant="ghost">
-                                            <MoreHorizontal className="h-4 w-4" />
-                                            <span className="sr-only">تبديل القائمة</span>
-                                        </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                        <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                                        <AddEntityDialog
-                                            title="تعديل الشريك"
-                                            description="قم بتحديث تفاصيل الشريك هنا."
-                                            triggerButton={
-                                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                                <Edit className="ml-2 h-4 w-4" />
-                                                تعديل
-                                                </DropdownMenuItem>
-                                            }
-                                        >
-                                           <PartnerForm partner={partner} onSave={handleSave} onClose={() => {}} warehouses={warehouses} />
-                                        </AddEntityDialog>
-                                        <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(partner.id!)}>
-                                            <Trash2 className="ml-2 h-4 w-4" />
-                                            حذف
-                                        </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </TableCell>
+                <div className="w-full overflow-auto">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>اسم الشريك</TableHead>
+                                <TableHead className="text-center">رأس المال</TableHead>
+                                <TableHead className="text-center">حصة الأرباح (%)</TableHead>
+                                <TableHead>المخزن</TableHead>
+                                <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
                             </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
+                        </TableHeader>
+                        <TableBody>
+                            {partners.map((partner) => (
+                                <TableRow key={partner.id}>
+                                    <TableCell className="font-medium">{partner.name}</TableCell>
+                                    <TableCell className="text-center">{partner.capital}</TableCell>
+                                    <TableCell className="text-center">{partner.profitShare}%</TableCell>
+                                    <TableCell>{getWarehouseName(partner.warehouseId)}</TableCell>
+                                    <TableCell className="text-center">
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                            <Button aria-haspopup="true" size="icon" variant="ghost">
+                                                <MoreHorizontal className="h-4 w-4" />
+                                                <span className="sr-only">تبديل القائمة</span>
+                                            </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                            <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+                                            <AddEntityDialog
+                                                title="تعديل الشريك"
+                                                description="قم بتحديث تفاصيل الشريك هنا."
+                                                triggerButton={
+                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                    <Edit className="ml-2 h-4 w-4" />
+                                                    تعديل
+                                                    </DropdownMenuItem>
+                                                }
+                                            >
+                                               <PartnerForm partner={partner} onSave={handleSave} onClose={() => {}} warehouses={warehouses} />
+                                            </AddEntityDialog>
+                                            <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(partner.id!)}>
+                                                <Trash2 className="ml-2 h-4 w-4" />
+                                                حذف
+                                            </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
             )}
           </CardContent>
         </Card>

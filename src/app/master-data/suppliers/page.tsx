@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState } from "react";
@@ -129,54 +130,56 @@ export default function SuppliersPage() {
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
             ) : (
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>اسم المورد</TableHead>
-                            <TableHead>جهة الاتصال</TableHead>
-                            <TableHead className="text-center">رصيد أول المدة</TableHead>
-                            <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {suppliers.map((supplier) => (
-                            <TableRow key={supplier.id}>
-                                <TableCell className="font-medium">{supplier.name}</TableCell>
-                                <TableCell>{supplier.contact}</TableCell>
-                                <TableCell className="text-center">{supplier.openingBalance}</TableCell>
-                                <TableCell className="text-center">
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                        <Button aria-haspopup="true" size="icon" variant="ghost">
-                                            <MoreHorizontal className="h-4 w-4" />
-                                            <span className="sr-only">تبديل القائمة</span>
-                                        </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                        <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                                        <AddEntityDialog
-                                            title="تعديل المورد"
-                                            description="قم بتحديث تفاصيل المورد هنا."
-                                            triggerButton={
-                                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                                <Edit className="ml-2 h-4 w-4" />
-                                                تعديل
-                                                </DropdownMenuItem>
-                                            }
-                                        >
-                                           <SupplierForm supplier={supplier} onSave={handleSave} onClose={()=>{}}/>
-                                        </AddEntityDialog>
-                                        <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(supplier.id!)}>
-                                            <Trash2 className="ml-2 h-4 w-4" />
-                                            حذف
-                                        </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </TableCell>
+                <div className="w-full overflow-auto">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>اسم المورد</TableHead>
+                                <TableHead>جهة الاتصال</TableHead>
+                                <TableHead className="text-center">رصيد أول المدة</TableHead>
+                                <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
                             </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
+                        </TableHeader>
+                        <TableBody>
+                            {suppliers.map((supplier) => (
+                                <TableRow key={supplier.id}>
+                                    <TableCell className="font-medium">{supplier.name}</TableCell>
+                                    <TableCell>{supplier.contact}</TableCell>
+                                    <TableCell className="text-center">{supplier.openingBalance}</TableCell>
+                                    <TableCell className="text-center">
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                            <Button aria-haspopup="true" size="icon" variant="ghost">
+                                                <MoreHorizontal className="h-4 w-4" />
+                                                <span className="sr-only">تبديل القائمة</span>
+                                            </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                            <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+                                            <AddEntityDialog
+                                                title="تعديل المورد"
+                                                description="قم بتحديث تفاصيل المورد هنا."
+                                                triggerButton={
+                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                    <Edit className="ml-2 h-4 w-4" />
+                                                    تعديل
+                                                    </DropdownMenuItem>
+                                                }
+                                            >
+                                               <SupplierForm supplier={supplier} onSave={handleSave} onClose={()=>{}}/>
+                                            </AddEntityDialog>
+                                            <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(supplier.id!)}>
+                                                <Trash2 className="ml-2 h-4 w-4" />
+                                                حذف
+                                            </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
             )}
           </CardContent>
         </Card>

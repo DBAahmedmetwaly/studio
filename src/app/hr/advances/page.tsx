@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState } from 'react';
@@ -95,7 +96,7 @@ const AdvanceForm = ({ advance, onSave, onClose, employees, cashAccounts }: { ad
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="advance-notes" className="text-right">ملاحظات</Label>
-                    <Textarea id="advance-notes" value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} className="col-span-3" placeholder="أدخل أي ملاحظات (اختياري)" />
+                    <Textarea id="advance-notes" value={formData.notes || ''} onChange={e => setFormData({...formData, notes: e.target.value})} className="col-span-3" placeholder="أدخل أي ملاحظات (اختياري)" />
                 </div>
             </div>
             <div className="flex justify-end">

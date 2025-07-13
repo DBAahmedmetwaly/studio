@@ -96,7 +96,7 @@ const PaymentForm = ({ payment, onSave, onClose, suppliers, cashAccounts }: { pa
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="payment-notes" className="text-right">ملاحظات</Label>
-                    <Textarea id="payment-notes" value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} className="col-span-3" placeholder="أدخل أي ملاحظات (اختياري)" />
+                    <Textarea id="payment-notes" value={formData.notes || ''} onChange={e => setFormData({...formData, notes: e.target.value})} className="col-span-3" placeholder="أدخل أي ملاحظات (اختياري)" />
                 </div>
             </div>
              <Alert className="mt-4">
@@ -194,7 +194,7 @@ export default function SupplierPaymentsPage() {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>المورد</TableHead>
-                                        <TableHead className="hidden md:table-cell">مدفوعة من</TableHead>
+                                        <TableHead>مدفوعة من</TableHead>
                                         <TableHead className="text-center">المبلغ</TableHead>
                                         <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
                                     </TableRow>
@@ -204,9 +204,9 @@ export default function SupplierPaymentsPage() {
                                         <TableRow key={payment.id}>
                                              <TableCell>
                                                 <div className="font-medium">{getSupplierName(payment.supplierId)}</div>
-                                                <div className="text-sm text-muted-foreground md:hidden">{new Date(payment.date).toLocaleDateString('ar-EG')}</div>
+                                                <div className="text-sm text-muted-foreground">{new Date(payment.date).toLocaleDateString('ar-EG')}</div>
                                             </TableCell>
-                                            <TableCell className="hidden md:table-cell">{getCashAccountName(payment.paidFromAccountId)}</TableCell>
+                                            <TableCell>{getCashAccountName(payment.paidFromAccountId)}</TableCell>
                                             <TableCell className="text-center">{payment.amount.toLocaleString()}</TableCell>
                                             <TableCell className="text-center">
                                                 <DropdownMenu>

@@ -301,10 +301,10 @@ export default function Dashboard() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>العميل</TableHead>
-                      <TableHead className="hidden sm:table-cell">
+                      <TableHead>
                         الحالة
                       </TableHead>
-                      <TableHead className="hidden md:table-cell">
+                      <TableHead>
                         التاريخ
                       </TableHead>
                       <TableHead className="text-left">المبلغ</TableHead>
@@ -316,12 +316,12 @@ export default function Dashboard() {
                         <TableCell>
                           <div className="font-medium">{sale.customerName || 'عميل غير محدد'}</div>
                         </TableCell>
-                        <TableCell className="hidden sm:table-cell">
+                        <TableCell>
                           <Badge className="text-xs" variant="outline">
                             موافق عليه
                           </Badge>
                         </TableCell>
-                        <TableCell className="hidden md:table-cell">
+                        <TableCell>
                           {new Date(sale.date).toLocaleDateString()}
                         </TableCell>
                         <TableCell className="text-left">ج.م {sale.total.toLocaleString()}</TableCell>

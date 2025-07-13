@@ -160,7 +160,7 @@ export default function ExceptionalIncomePage() {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>الوصف</TableHead>
-                                    <TableHead className="hidden sm:table-cell">المخزن/الجهة</TableHead>
+                                    <TableHead>المخزن/الجهة</TableHead>
                                     <TableHead className="text-center">المبلغ</TableHead>
                                     <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
                                 </TableRow>
@@ -170,9 +170,9 @@ export default function ExceptionalIncomePage() {
                                     <TableRow key={income.id}>
                                         <TableCell>
                                             <div className="font-medium">{income.description}</div>
-                                            <div className="text-sm text-muted-foreground sm:hidden">{new Date(income.date).toLocaleDateString('ar-EG')}</div>
+                                            <div className="text-sm text-muted-foreground">{new Date(income.date).toLocaleDateString('ar-EG')}</div>
                                         </TableCell>
-                                        <TableCell className="hidden sm:table-cell">{getWarehouseName(income.warehouseId)}</TableCell>
+                                        <TableCell>{getWarehouseName(income.warehouseId)}</TableCell>
                                         <TableCell className="text-center">{income.amount.toLocaleString()}</TableCell>
                                         <TableCell className="text-center">
                                             <DropdownMenu>

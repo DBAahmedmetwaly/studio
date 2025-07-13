@@ -128,7 +128,7 @@ export default function TreasuryPage() {
     const { data: supplierPayments, loading: l_sp } = useFirebase<SupplierPayment>('supplierPayments');
     const { data: employeeAdvances, loading: l_ea } = useFirebase<EmployeeAdvance>('employeeAdvances');
     const { data: customerPayments, loading: l_cp } = useFirebase<CustomerPayment>('customerPayments');
-    const { data: salesReps, loading: l_sr } = useFirebase<User>('users');
+    const { data: salesReps, loading: l_sr } = useFirebase<any>('users');
     const { toast } = useToast();
     const { user } = useAuth();
     
@@ -256,8 +256,8 @@ export default function TreasuryPage() {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>الحساب</TableHead>
-                                        <TableHead className="hidden md:table-cell">البيان</TableHead>
-                                        <TableHead className="text-center hidden sm:table-cell">النوع</TableHead>
+                                        <TableHead>البيان</TableHead>
+                                        <TableHead className="text-center">النوع</TableHead>
                                         <TableHead className="text-center">المبلغ</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -269,10 +269,10 @@ export default function TreasuryPage() {
                                                     {getAccountTypeIcon(tx.accountId)}
                                                     <span>{getAccountName(tx.accountId)}</span>
                                                 </div>
-                                                <div className="text-xs text-muted-foreground md:hidden">{tx.description}</div>
+                                                <div className="text-xs text-muted-foreground">{tx.description}</div>
                                             </TableCell>
-                                            <TableCell className="hidden md:table-cell">{tx.description}</TableCell>
-                                            <TableCell className="text-center hidden sm:table-cell">
+                                            <TableCell>{tx.description}</TableCell>
+                                            <TableCell className="text-center">
                                                 <Badge variant={tx.type === 'deposit' ? 'default' : 'destructive'}>
                                                     {tx.type === 'deposit' ? 'إيداع' : 'سحب'}
                                                 </Badge>

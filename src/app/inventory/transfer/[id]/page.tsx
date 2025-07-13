@@ -84,22 +84,24 @@ export default function StockTransferDetailsPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead>الصنف</TableHead>
-                        <TableHead className="text-center">الكمية المحولة</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {record.items.map(item => (
-                        <TableRow key={item.id}>
-                            <TableCell>{item.name}</TableCell>
-                            <TableCell className="text-center">{item.qty}</TableCell>
-                        </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
+             <div className="w-full overflow-auto">
+              <Table>
+                  <TableHeader>
+                      <TableRow>
+                          <TableHead>الصنف</TableHead>
+                          <TableHead className="text-center">الكمية المحولة</TableHead>
+                      </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                      {record.items.map(item => (
+                          <TableRow key={item.id}>
+                              <TableCell>{item.name}</TableCell>
+                              <TableCell className="text-center">{item.qty}</TableCell>
+                          </TableRow>
+                      ))}
+                  </TableBody>
+              </Table>
+            </div>
             {record.notes && (
                 <div className="mt-4 border-t pt-4">
                     <h4 className="font-semibold">ملاحظات:</h4>

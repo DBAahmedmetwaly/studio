@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React from 'react';
@@ -82,7 +83,7 @@ export default function StockTransferListPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>رقم الإيصال</TableHead>
-                      <TableHead className="hidden sm:table-cell">التاريخ</TableHead>
+                      <TableHead>التاريخ</TableHead>
                       <TableHead>من مخزن</TableHead>
                       <TableHead>إلى مخزن</TableHead>
                       <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
@@ -93,7 +94,7 @@ export default function StockTransferListPage() {
                       stockTransferRecords.map((record) => (
                         <TableRow key={record.id}>
                           <TableCell className="font-mono">{record.receiptNumber}</TableCell>
-                          <TableCell className="hidden sm:table-cell">{new Date(record.date).toLocaleDateString('ar-EG')}</TableCell>
+                          <TableCell>{new Date(record.date).toLocaleDateString('ar-EG')}</TableCell>
                           <TableCell>{getWarehouseName(record.fromSourceId)}</TableCell>
                           <TableCell>{getWarehouseName(record.toSourceId)}</TableCell>
                            <TableCell className="text-center">
