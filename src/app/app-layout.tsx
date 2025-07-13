@@ -170,12 +170,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <NavSubLink href="/master-data/sales-reps" module="masterData_salesReps">مناديب المبيعات</NavSubLink>
             </NavCollapsible>
 
-            <NavCollapsible title="المخزون" icon={<Boxes />} modules={['inventory_stockIn', 'inventory_stockOut', 'inventory_transfer', 'inventory_adjustment', 'inventory_movements']}>
+            <NavCollapsible title="المخزون" icon={<Boxes />} modules={['inventory_stockIn', 'inventory_stockOut', 'inventory_transfer', 'inventory_adjustment', 'inventory_movements', 'inventory_stockStatus']}>
                 <NavSubLink href="/inventory/stock-in/new" module="inventory_stockIn">استلام مخزون</NavSubLink>
                 <NavSubLink href="/inventory/stock-out/new" module="inventory_stockOut">صرف مخزون</NavSubLink>
                 <NavSubLink href="/inventory/transfer/new" module="inventory_transfer">تحويل مخزون</NavSubLink>
                 <NavSubLink href="/inventory/adjustment" module="inventory_adjustment">تسوية المخزون</NavSubLink>
                 <NavSubLink href="/inventory/movements" module="inventory_movements">حركة المخزون</NavSubLink>
+                <NavSubLink href="/inventory/stock-status" module="inventory_stockStatus">أرصدة المخزون</NavSubLink>
             </NavCollapsible>
 
             <NavCollapsible title="المبيعات" icon={<ShoppingCart />} modules={['sales_invoices', 'sales_returns']}>
