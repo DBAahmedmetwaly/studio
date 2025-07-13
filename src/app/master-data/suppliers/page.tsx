@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import PageHeader from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, MoreHorizontal, Edit, Trash2, Loader2 } from "lucide-react";
@@ -41,6 +41,11 @@ interface Supplier {
   contact: string;
   openingBalance: number;
 }
+
+// Interfaces for balance calculation
+interface PurchaseInvoice { id: string; supplierId: string; total: number; paidAmount?: number; }
+interface SupplierPayment { id: string; supplierId: string; amount: number; }
+interface PurchaseReturn { id: string; supplierId: string; total: number; }
 
 const SupplierForm = ({ supplier, onSave, onClose }: { supplier?: Supplier, onSave: (supplier: Supplier) => void, onClose: () => void }) => {
   const [formData, setFormData] = useState<Supplier>(
@@ -86,7 +91,28 @@ const SupplierForm = ({ supplier, onSave, onClose }: { supplier?: Supplier, onSa
 
 
 export default function SuppliersPage() {
-  const { data: suppliers, loading, add, update, remove } = useFirebase<Supplier>("suppliers");
+  const { data: suppliers, loading: loadingSuppliers, add, update, remove } = useFirebase<Supplier>("suppliers");
+  const { data: purchases, loading: loadingPurchases } = useFirebase<PurchaseInvoice>('purchaseInvoices');
+  const { data: payments, loading: loadingPayments } = useFirebase<SupplierPayment>('supplierPayments');
+  const { data: returns, loading: loadingReturns } = useFirebase<PurchaseReturn>('purchaseReturns');
+
+  const loading = loadingSuppliers || loadingPurchases || loadingPayments || loadingReturns;
+  
+  const suppliersWithBalance = useMemo(() => {
+    return suppliers.map((supplier: Supplier) => {
+        const supplierPurchases = purchases.filter((p: PurchaseInvoice) => p.supplierId === supplier.id);
+        const supplierPayments = payments.filter((p: SupplierPayment) => p.supplierId === supplier.id);
+        const supplierReturns = returns.filter((r: PurchaseReturn) => r.supplierId === supplier.id);
+
+        const totalPurchases = supplierPurchases.reduce((acc: number, p: PurchaseInvoice) => acc + p.total, 0);
+        const totalPaidOnInvoice = supplierPurchases.reduce((acc: number, p: PurchaseInvoice) => acc + (p.paidAmount || 0), 0);
+        const totalSeparatePayments = supplierPayments.reduce((acc: number, p: SupplierPayment) => acc + p.amount, 0);
+        const totalReturns = supplierReturns.reduce((acc: number, r: PurchaseReturn) => acc + r.total, 0);
+
+        const currentBalance = (supplier.openingBalance || 0) + totalPurchases - totalPaidOnInvoice - totalSeparatePayments - totalReturns;
+        return { ...supplier, currentBalance };
+    });
+  }, [suppliers, purchases, payments, returns]);
 
   const handleSave = (supplier: Supplier) => {
     if (supplier.id) {
@@ -130,22 +156,24 @@ export default function SuppliersPage() {
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
             ) : (
-                <div className="w-full overflow-auto">
+                <div className="w-full overflow-auto border rounded-lg">
                     <Table>
                         <TableHeader>
                             <TableRow>
                                 <TableHead>اسم المورد</TableHead>
-                                <TableHead className="hidden sm:table-cell">جهة الاتصال</TableHead>
-                                <TableHead className="text-center hidden md:table-cell">رصيد أول المدة</TableHead>
+                                <TableHead className="text-center">جهة الاتصال</TableHead>
+                                <TableHead className="text-center">رصيد أول المدة</TableHead>
+                                <TableHead className="text-center">الرصيد الحالي</TableHead>
                                 <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {suppliers.map((supplier) => (
+                            {suppliersWithBalance.map((supplier) => (
                                 <TableRow key={supplier.id}>
                                     <TableCell className="font-medium">{supplier.name}</TableCell>
-                                    <TableCell className="hidden sm:table-cell">{supplier.contact}</TableCell>
-                                    <TableCell className="text-center hidden md:table-cell">{supplier.openingBalance}</TableCell>
+                                    <TableCell className="text-center">{supplier.contact}</TableCell>
+                                    <TableCell className="text-center">{supplier.openingBalance.toLocaleString()}</TableCell>
+                                    <TableCell className="text-center font-bold text-primary">{supplier.currentBalance.toLocaleString()}</TableCell>
                                     <TableCell className="text-center">
                                         <AlertDialog>
                                             <DropdownMenu>

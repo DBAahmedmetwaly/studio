@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import PageHeader from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, MoreHorizontal, Edit, Trash2, Loader2 } from "lucide-react";
@@ -43,6 +43,12 @@ interface Customer {
   phone?: string;
   address?: string;
 }
+
+// Interfaces for balance calculation
+interface SaleInvoice { id: string; customerId: string; total: number; paidAmount?: number; status?: 'pending' | 'approved'; }
+interface CustomerPayment { id: string; customerId: string; amount: number; }
+interface SalesReturn { id: string; customerId: string; total: number; }
+
 
 const CustomerForm = ({ customer, onSave, onClose }: { customer?: Customer, onSave: (customer: Customer) => void, onClose: () => void }) => {
   const [formData, setFormData] = useState<Customer>(
@@ -101,7 +107,29 @@ const CustomerForm = ({ customer, onSave, onClose }: { customer?: Customer, onSa
 
 
 export default function CustomersPage() {
-  const { data: customers, loading, add, update, remove } = useFirebase<Customer>("customers");
+  const { data: customers, loading: loadingCustomers, add, update, remove } = useFirebase<Customer>("customers");
+  const { data: sales, loading: loadingSales } = useFirebase<SaleInvoice>('salesInvoices');
+  const { data: payments, loading: loadingPayments } = useFirebase<CustomerPayment>('customerPayments');
+  const { data: returns, loading: loadingReturns } = useFirebase<SalesReturn>('salesReturns');
+
+  const loading = loadingCustomers || loadingSales || loadingPayments || loadingReturns;
+  
+  const customersWithBalance = useMemo(() => {
+    return customers.map((customer: Customer) => {
+        const customerSales = sales.filter((s: SaleInvoice) => s.customerId === customer.id && s.status === 'approved');
+        const customerPayments = payments.filter((p: CustomerPayment) => p.customerId === customer.id);
+        const customerReturns = returns.filter((r: SalesReturn) => r.customerId === customer.id);
+
+        const totalSales = customerSales.reduce((acc: number, s: SaleInvoice) => acc + s.total, 0);
+        const totalPaidOnInvoice = customerSales.reduce((acc: number, s: SaleInvoice) => acc + (s.paidAmount || 0), 0);
+        const totalSeparatePayments = customerPayments.reduce((acc: number, p: CustomerPayment) => acc + p.amount, 0);
+        const totalReturns = customerReturns.reduce((acc: number, r: SalesReturn) => acc + r.total, 0);
+
+        const currentBalance = (customer.openingBalance || 0) + totalSales - totalPaidOnInvoice - totalSeparatePayments - totalReturns;
+        return { ...customer, currentBalance };
+    });
+  }, [customers, sales, payments, returns]);
+
 
   const handleSave = (customer: Customer) => {
     if (customer.id) {
@@ -136,7 +164,7 @@ export default function CustomersPage() {
           <CardHeader>
             <CardTitle>العملاء</CardTitle>
             <CardDescription>
-              إدارة العملاء مع حدود الائتمان والأرصدة الافتتاحية.
+              إدارة العملاء مع حدود الائتمان والأرصدة الافتتاحية والحالية.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -145,22 +173,24 @@ export default function CustomersPage() {
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
             ) : (
-                <div className="w-full overflow-auto">
+                <div className="w-full overflow-auto border rounded-lg">
                     <Table>
                         <TableHeader>
                             <TableRow>
                                 <TableHead>اسم العميل</TableHead>
-                                <TableHead className="text-center hidden sm:table-cell">رصيد أول المدة</TableHead>
-                                <TableHead className="text-center hidden md:table-cell">حد الائتمان</TableHead>
+                                <TableHead className="text-center">رصيد أول المدة</TableHead>
+                                <TableHead className="text-center">الرصيد الحالي</TableHead>
+                                <TableHead className="text-center">حد الائتمان</TableHead>
                                 <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {customers.map((customer) => (
+                            {customersWithBalance.map((customer) => (
                                 <TableRow key={customer.id}>
                                     <TableCell className="font-medium">{customer.name}</TableCell>
-                                    <TableCell className="text-center hidden sm:table-cell">{customer.openingBalance}</TableCell>
-                                    <TableCell className="text-center hidden md:table-cell">{customer.creditLimit}</TableCell>
+                                    <TableCell className="text-center">{customer.openingBalance.toLocaleString()}</TableCell>
+                                    <TableCell className={`text-center font-bold ${customer.currentBalance > customer.creditLimit ? 'text-destructive' : 'text-primary'}`}>{customer.currentBalance.toLocaleString()}</TableCell>
+                                    <TableCell className="text-center">{customer.creditLimit.toLocaleString()}</TableCell>
                                     <TableCell className="text-center">
                                          <AlertDialog>
                                             <DropdownMenu>
@@ -218,3 +248,4 @@ export default function CustomersPage() {
     </>
   );
 }
+
