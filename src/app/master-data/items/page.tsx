@@ -35,6 +35,8 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/contexts/permissions-context";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+
 
 interface Item {
   id?: string;
@@ -164,13 +166,11 @@ export default function ItemsPage() {
             toast({ variant: "destructive", title: "غير مصرح به" });
             return;
         }
-        if (confirm("هل أنت متأكد من حذف هذا الصنف؟")) {
-            try {
-                await remove(id);
-                toast({ title: "تم الحذف بنجاح" });
-            } catch (error) {
-                toast({ variant: "destructive", title: "خطأ", description: "فشل حذف الصنف." });
-            }
+        try {
+            await remove(id);
+            toast({ title: "تم الحذف بنجاح" });
+        } catch (error) {
+            toast({ variant: "destructive", title: "خطأ", description: "فشل حذف الصنف." });
         }
     };
     
@@ -232,37 +232,53 @@ export default function ItemsPage() {
                                     <TableCell className="text-center">{item.cost?.toLocaleString() || '-'}</TableCell>
                                     <TableCell className="text-center">{item.price.toLocaleString()}</TableCell>
                                     <TableCell className="text-center">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button aria-haspopup="true" size="icon" variant="ghost">
-                                                    <MoreHorizontal className="h-4 w-4" />
-                                                    <span className="sr-only">تبديل القائمة</span>
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                            <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                                            {can('edit', moduleName) && (
-                                                <AddEntityDialog
-                                                    title="تعديل الصنف"
-                                                    description="قم بتحديث تفاصيل الصنف هنا."
-                                                    triggerButton={
-                                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                                        <Edit className="ml-2 h-4 w-4" />
-                                                        تعديل
+                                       <AlertDialog>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button aria-haspopup="true" size="icon" variant="ghost">
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                        <span className="sr-only">تبديل القائمة</span>
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+                                                {can('edit', moduleName) && (
+                                                    <AddEntityDialog
+                                                        title="تعديل الصنف"
+                                                        description="قم بتحديث تفاصيل الصنف هنا."
+                                                        triggerButton={
+                                                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                            <Edit className="ml-2 h-4 w-4" />
+                                                            تعديل
+                                                            </DropdownMenuItem>
+                                                        }
+                                                    >
+                                                    <ItemForm item={item} onSave={handleSave} onClose={()=>{}} />
+                                                    </AddEntityDialog>
+                                                )}
+                                                {can('delete', moduleName) && (
+                                                     <AlertDialogTrigger asChild>
+                                                        <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}>
+                                                            <Trash2 className="ml-2 h-4 w-4" />
+                                                            حذف
                                                         </DropdownMenuItem>
-                                                    }
-                                                >
-                                                <ItemForm item={item} onSave={handleSave} onClose={()=>{}} />
-                                                </AddEntityDialog>
-                                            )}
-                                            {can('delete', moduleName) && (
-                                                <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(item.id!)}>
-                                                    <Trash2 className="ml-2 h-4 w-4" />
-                                                    حذف
-                                                </DropdownMenuItem>
-                                            )}
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
+                                                    </AlertDialogTrigger>
+                                                )}
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                             <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>هل أنت متأكد تمامًا؟</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        سيؤدي هذا الإجراء إلى حذف الصنف بشكل دائم. لا يمكن التراجع عن هذا الإجراء.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDelete(item.id!)}>متابعة</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
                                     </TableCell>
                                 </TableRow>
                             ))}
@@ -276,4 +292,3 @@ export default function ItemsPage() {
     </>
   );
 }
-
