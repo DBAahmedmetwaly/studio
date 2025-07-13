@@ -209,62 +209,60 @@ export default function ExpensesPage() {
                             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                         </div>
                     ) : (
-                         <div className="w-full overflow-auto">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>النوع</TableHead>
-                                        <TableHead>الوصف</TableHead>
-                                        <TableHead>مدفوع من</TableHead>
-                                        <TableHead className="text-center">المبلغ</TableHead>
-                                        <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>النوع</TableHead>
+                                    <TableHead>الوصف</TableHead>
+                                    <TableHead>مدفوع من</TableHead>
+                                    <TableHead className="text-center">المبلغ</TableHead>
+                                    <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {expenses.map(expense => (
+                                    <TableRow key={expense.id}>
+                                        <TableCell>
+                                            <div className="font-medium">{expense.expenseType}</div>
+                                            <div className="text-sm text-muted-foreground">{new Date(expense.date).toLocaleDateString('ar-EG')}</div>
+                                        </TableCell>
+                                        <TableCell>{expense.description}</TableCell>
+                                        <TableCell>{getCashAccountName(expense.paidFromAccountId)}</TableCell>
+                                        <TableCell className="text-center">{expense.amount.toLocaleString()}</TableCell>
+                                        <TableCell className="text-center">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button aria-haspopup="true" size="icon" variant="ghost">
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                        <span className="sr-only">قائمة</span>
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+                                                    {/* Edit is complex for numbered transactions, disabling for now. */}
+                                                    {/* <AddEntityDialog
+                                                        title="تعديل المصروف"
+                                                        description="تحديث تفاصيل المصروف."
+                                                        triggerButton={
+                                                            <DropdownMenuItem onSelect={e => e.preventDefault()}>
+                                                                <Edit className="ml-2 h-4 w-4" />
+                                                                تعديل
+                                                            </DropdownMenuItem>
+                                                        }
+                                                    >
+                                                        <ExpenseForm expense={expense} onSave={handleSave} onClose={() => {}} warehouses={warehouses} cashAccounts={cashAccounts} />
+                                                    </AddEntityDialog> */}
+                                                    <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(expense.id!)}>
+                                                        <Trash2 className="ml-2 h-4 w-4" />
+                                                        حذف
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
                                     </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {expenses.map(expense => (
-                                        <TableRow key={expense.id}>
-                                            <TableCell>
-                                                <div className="font-medium">{expense.expenseType}</div>
-                                                <div className="text-sm text-muted-foreground">{new Date(expense.date).toLocaleDateString('ar-EG')}</div>
-                                            </TableCell>
-                                            <TableCell>{expense.description}</TableCell>
-                                            <TableCell>{getCashAccountName(expense.paidFromAccountId)}</TableCell>
-                                            <TableCell className="text-center">{expense.amount.toLocaleString()}</TableCell>
-                                            <TableCell className="text-center">
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button aria-haspopup="true" size="icon" variant="ghost">
-                                                            <MoreHorizontal className="h-4 w-4" />
-                                                            <span className="sr-only">قائمة</span>
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                                                        {/* Edit is complex for numbered transactions, disabling for now. */}
-                                                        {/* <AddEntityDialog
-                                                            title="تعديل المصروف"
-                                                            description="تحديث تفاصيل المصروف."
-                                                            triggerButton={
-                                                                <DropdownMenuItem onSelect={e => e.preventDefault()}>
-                                                                    <Edit className="ml-2 h-4 w-4" />
-                                                                    تعديل
-                                                                </DropdownMenuItem>
-                                                            }
-                                                        >
-                                                            <ExpenseForm expense={expense} onSave={handleSave} onClose={() => {}} warehouses={warehouses} cashAccounts={cashAccounts} />
-                                                        </AddEntityDialog> */}
-                                                        <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(expense.id!)}>
-                                                            <Trash2 className="ml-2 h-4 w-4" />
-                                                            حذف
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
+                                ))}
+                            </TableBody>
+                        </Table>
                     )}
                 </CardContent>
             </Card>

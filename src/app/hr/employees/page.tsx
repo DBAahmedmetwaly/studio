@@ -161,64 +161,62 @@ export default function EmployeesPage() {
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
             ) : (
-                 <div className="w-full overflow-auto border rounded-lg">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>اسم الموظف</TableHead>
-                                <TableHead>المسمى الوظيفي</TableHead>
-                                <TableHead>رقم الهاتف</TableHead>
-                                <TableHead className="text-center">الراتب الأساسي</TableHead>
-                                <TableHead className="text-center">تاريخ التعيين</TableHead>
-                                <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>اسم الموظف</TableHead>
+                            <TableHead>المسمى الوظيفي</TableHead>
+                            <TableHead>رقم الهاتف</TableHead>
+                            <TableHead className="text-center">الراتب الأساسي</TableHead>
+                            <TableHead className="text-center">تاريخ التعيين</TableHead>
+                            <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {employees.map((employee) => (
+                            <TableRow key={employee.id}>
+                                <TableCell className="font-medium">{employee.name}</TableCell>
+                                <TableCell>{employee.jobTitle}</TableCell>
+                                <TableCell>{employee.phone || '-'}</TableCell>
+                                <TableCell className="text-center">{employee.basicSalary.toLocaleString()} ج.م</TableCell>
+                                <TableCell className="text-center">{new Date(employee.hireDate).toLocaleDateString('ar-EG')}</TableCell>
+                                <TableCell className="text-center">
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button aria-haspopup="true" size="icon" variant="ghost">
+                                                <MoreHorizontal className="h-4 w-4" />
+                                                <span className="sr-only">قائمة الإجراءات</span>
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                        <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+                                        {can('edit', moduleName) && (
+                                            <AddEntityDialog
+                                                title="تعديل بيانات الموظف"
+                                                description="قم بتحديث بيانات الموظف هنا."
+                                                triggerButton={
+                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                    <Edit className="ml-2 h-4 w-4" />
+                                                    تعديل
+                                                    </DropdownMenuItem>
+                                                }
+                                            >
+                                                <EmployeeForm employee={employee} onSave={handleSave} onClose={()=>{}} />
+                                            </AddEntityDialog>
+                                        )}
+                                        {can('delete', moduleName) && (
+                                            <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(employee.id!)}>
+                                                <Trash2 className="ml-2 h-4 w-4" />
+                                                حذف
+                                            </DropdownMenuItem>
+                                        )}
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </TableCell>
                             </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {employees.map((employee) => (
-                                <TableRow key={employee.id}>
-                                    <TableCell className="font-medium">{employee.name}</TableCell>
-                                    <TableCell>{employee.jobTitle}</TableCell>
-                                    <TableCell>{employee.phone || '-'}</TableCell>
-                                    <TableCell className="text-center">{employee.basicSalary.toLocaleString()} ج.م</TableCell>
-                                    <TableCell className="text-center">{new Date(employee.hireDate).toLocaleDateString('ar-EG')}</TableCell>
-                                    <TableCell className="text-center">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button aria-haspopup="true" size="icon" variant="ghost">
-                                                    <MoreHorizontal className="h-4 w-4" />
-                                                    <span className="sr-only">قائمة الإجراءات</span>
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                            <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                                            {can('edit', moduleName) && (
-                                                <AddEntityDialog
-                                                    title="تعديل بيانات الموظف"
-                                                    description="قم بتحديث بيانات الموظف هنا."
-                                                    triggerButton={
-                                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                                        <Edit className="ml-2 h-4 w-4" />
-                                                        تعديل
-                                                        </DropdownMenuItem>
-                                                    }
-                                                >
-                                                    <EmployeeForm employee={employee} onSave={handleSave} onClose={()=>{}} />
-                                                </AddEntityDialog>
-                                            )}
-                                            {can('delete', moduleName) && (
-                                                <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(employee.id!)}>
-                                                    <Trash2 className="ml-2 h-4 w-4" />
-                                                    حذف
-                                                </DropdownMenuItem>
-                                            )}
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                 </div>
+                        ))}
+                    </TableBody>
+                </Table>
             )}
           </CardContent>
         </Card>

@@ -487,48 +487,46 @@ export default function JournalPage() {
                             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                         </div>
                     ) : (
-                        <div className="w-full overflow-auto border rounded-lg">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead className="w-[120px]">التاريخ</TableHead>
-                                        <TableHead className="w-[120px]">رقم القيد</TableHead>
-                                        <TableHead>البيان</TableHead>
-                                        <TableHead>الحساب</TableHead>
-                                        <TableHead className="text-center w-[150px]">مدين</TableHead>
-                                        <TableHead className="text-center w-[150px]">دائن</TableHead>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead className="w-[120px]">التاريخ</TableHead>
+                                    <TableHead className="w-[120px]">رقم القيد</TableHead>
+                                    <TableHead>البيان</TableHead>
+                                    <TableHead>الحساب</TableHead>
+                                    <TableHead className="text-center w-[150px]">مدين</TableHead>
+                                    <TableHead className="text-center w-[150px]">دائن</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {filteredEntries.map((entry) => (
+                                    <TableRow key={entry.id}>
+                                        <TableCell>{new Date(entry.date).toLocaleDateString('ar-EG')}</TableCell>
+                                        <TableCell className="font-mono">
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <span>{entry.number}</span>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    <p>{getReceiptTooltip(entry.number)}</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </TableCell>
+                                        <TableCell>{entry.description}</TableCell>
+                                        <TableCell>{entry.account}</TableCell>
+                                        <TableCell className="text-center font-mono">{entry.debit > 0 ? entry.debit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</TableCell>
+                                        <TableCell className="text-center font-mono">{entry.credit > 0 ? entry.credit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</TableCell>
                                     </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {filteredEntries.map((entry) => (
-                                        <TableRow key={entry.id}>
-                                            <TableCell>{new Date(entry.date).toLocaleDateString('ar-EG')}</TableCell>
-                                            <TableCell className="font-mono">
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <span>{entry.number}</span>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent>
-                                                        <p>{getReceiptTooltip(entry.number)}</p>
-                                                    </TooltipContent>
-                                                </Tooltip>
-                                            </TableCell>
-                                            <TableCell>{entry.description}</TableCell>
-                                            <TableCell>{entry.account}</TableCell>
-                                            <TableCell className="text-center font-mono">{entry.debit > 0 ? entry.debit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</TableCell>
-                                            <TableCell className="text-center font-mono">{entry.credit > 0 ? entry.credit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</TableCell>
-                                        </TableRow>
-                                    ))}
-                                    {filteredEntries.length === 0 && (
-                                        <TableRow>
-                                            <TableCell colSpan={6} className="text-center text-muted-foreground py-10">
-                                                لا توجد قيود يومية تطابق الفلاتر المحددة.
-                                            </TableCell>
-                                        </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </div>
+                                ))}
+                                {filteredEntries.length === 0 && (
+                                    <TableRow>
+                                        <TableCell colSpan={6} className="text-center text-muted-foreground py-10">
+                                            لا توجد قيود يومية تطابق الفلاتر المحددة.
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
                     )}
                 </CardContent>
                 </Card>
@@ -568,33 +566,31 @@ export default function JournalPage() {
                                         </div>
                                     </CardHeader>
                                     <CardContent className="p-0">
-                                         <div className="w-full overflow-auto">
-                                            <Table>
-                                                <TableHeader>
-                                                    <TableRow>
-                                                        <TableHead>الحساب</TableHead>
-                                                        <TableHead className="w-[150px] text-center">مدين</TableHead>
-                                                        <TableHead className="w-[150px] text-center">دائن</TableHead>
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>الحساب</TableHead>
+                                                    <TableHead className="w-[150px] text-center">مدين</TableHead>
+                                                    <TableHead className="w-[150px] text-center">دائن</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {entry.debits.map((d, i) => (
+                                                    <TableRow key={`d-${i}`}>
+                                                        <TableCell className="font-medium pr-6">{d.account}</TableCell>
+                                                        <TableCell className="text-center font-mono">{d.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</TableCell>
+                                                        <TableCell className="text-center">-</TableCell>
                                                     </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
-                                                    {entry.debits.map((d, i) => (
-                                                        <TableRow key={`d-${i}`}>
-                                                            <TableCell className="font-medium pr-6">{d.account}</TableCell>
-                                                            <TableCell className="text-center font-mono">{d.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</TableCell>
-                                                            <TableCell className="text-center">-</TableCell>
-                                                        </TableRow>
-                                                    ))}
-                                                     {entry.credits.map((c, i) => (
-                                                        <TableRow key={`c-${i}`}>
-                                                            <TableCell className="text-muted-foreground pr-10">{c.account}</TableCell>
-                                                            <TableCell className="text-center">-</TableCell>
-                                                            <TableCell className="text-center font-mono text-muted-foreground">{c.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</TableCell>
-                                                        </TableRow>
-                                                    ))}
-                                                </TableBody>
-                                            </Table>
-                                        </div>
+                                                ))}
+                                                    {entry.credits.map((c, i) => (
+                                                    <TableRow key={`c-${i}`}>
+                                                        <TableCell className="text-muted-foreground pr-10">{c.account}</TableCell>
+                                                        <TableCell className="text-center">-</TableCell>
+                                                        <TableCell className="text-center font-mono text-muted-foreground">{c.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
                                     </CardContent>
                                     <CardFooter className='pt-4'>
                                         <p className="text-xs text-muted-foreground">البيان: {entry.description}</p>
