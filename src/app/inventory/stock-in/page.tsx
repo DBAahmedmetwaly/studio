@@ -88,15 +88,14 @@ export default function StockInListPage() {
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
             ) : (
-              <div className="w-full overflow-auto border rounded-lg">
+              <div className="w-full overflow-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>رقم الإيصال</TableHead>
-                      <TableHead>التاريخ</TableHead>
+                      <TableHead className="hidden sm:table-cell">التاريخ</TableHead>
                       <TableHead>المخزن</TableHead>
-                      <TableHead>السبب</TableHead>
-                      <TableHead>ملاحظات</TableHead>
+                      <TableHead className="hidden md:table-cell">السبب</TableHead>
                       <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -105,15 +104,9 @@ export default function StockInListPage() {
                       stockInRecords.map((record) => (
                         <TableRow key={record.id}>
                           <TableCell className="font-mono">{record.receiptNumber}</TableCell>
-                          <TableCell>{new Date(record.date).toLocaleDateString('ar-EG')}</TableCell>
+                          <TableCell className="hidden sm:table-cell">{new Date(record.date).toLocaleDateString('ar-EG')}</TableCell>
                           <TableCell>{getWarehouseName(record.warehouseId)}</TableCell>
-                          <TableCell>{getReasonLabel(record.reason)}</TableCell>
-                          <TableCell>
-                            <span className="flex items-center gap-2 text-muted-foreground">
-                              <FileText className="h-4 w-4" />
-                              <span>{`تحتوي على ${record.items.length} أصناف`}</span>
-                            </span>
-                          </TableCell>
+                          <TableCell className="hidden md:table-cell">{getReasonLabel(record.reason)}</TableCell>
                            <TableCell className="text-center">
                              <DropdownMenu>
                                 <DropdownMenuTrigger asChild>

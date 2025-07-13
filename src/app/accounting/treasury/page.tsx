@@ -251,27 +251,28 @@ export default function TreasuryPage() {
                             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                         </div>
                     ) : (
-                         <div className="w-full overflow-auto border rounded-lg max-h-96">
+                         <div className="w-full overflow-auto max-h-96">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="w-[120px]">التاريخ</TableHead>
                                         <TableHead>الحساب</TableHead>
-                                        <TableHead>البيان</TableHead>
-                                        <TableHead className="text-center">النوع</TableHead>
-                                        <TableHead className="text-center w-[120px]">المبلغ</TableHead>
+                                        <TableHead className="hidden md:table-cell">البيان</TableHead>
+                                        <TableHead className="text-center hidden sm:table-cell">النوع</TableHead>
+                                        <TableHead className="text-center">المبلغ</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {sortedTransactions.map(tx => (
                                         <TableRow key={tx.id}>
-                                            <TableCell>{new Date(tx.date).toLocaleDateString('ar-EG')}</TableCell>
-                                            <TableCell className="flex items-center gap-2">
-                                                {getAccountTypeIcon(tx.accountId)}
-                                                <span>{getAccountName(tx.accountId)}</span>
+                                            <TableCell>
+                                                <div className="flex items-center gap-2 font-medium">
+                                                    {getAccountTypeIcon(tx.accountId)}
+                                                    <span>{getAccountName(tx.accountId)}</span>
+                                                </div>
+                                                <div className="text-xs text-muted-foreground md:hidden">{tx.description}</div>
                                             </TableCell>
-                                            <TableCell>{tx.description}</TableCell>
-                                            <TableCell className="text-center">
+                                            <TableCell className="hidden md:table-cell">{tx.description}</TableCell>
+                                            <TableCell className="text-center hidden sm:table-cell">
                                                 <Badge variant={tx.type === 'deposit' ? 'default' : 'destructive'}>
                                                     {tx.type === 'deposit' ? 'إيداع' : 'سحب'}
                                                 </Badge>
@@ -299,5 +300,3 @@ export default function TreasuryPage() {
     </>
     );
 }
-
-    

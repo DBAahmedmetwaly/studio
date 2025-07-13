@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 
 interface Warehouse {
   id?: string;
@@ -137,12 +138,12 @@ export default function WarehousesPage() {
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
             ) : (
-                 <div className="w-full overflow-auto border rounded-lg">
+                 <div className="w-full overflow-auto">
                     <Table>
                         <TableHeader>
                             <TableRow>
                                 <TableHead>اسم المخزن</TableHead>
-                                <TableHead>العنوان</TableHead>
+                                <TableHead className="hidden sm:table-cell">العنوان</TableHead>
                                 <TableHead className="text-center">تحديث تلقائي</TableHead>
                                 <TableHead className="text-center w-[100px]">
                                     <span className="sr-only">الإجراءات</span>
@@ -153,7 +154,7 @@ export default function WarehousesPage() {
                             {warehouses.map((warehouse) => (
                                 <TableRow key={warehouse.id}>
                                     <TableCell className="font-medium">{warehouse.name}</TableCell>
-                                    <TableCell>{warehouse.address}</TableCell>
+                                    <TableCell className="hidden sm:table-cell">{warehouse.address}</TableCell>
                                     <TableCell className="text-center">
                                         <Badge variant={warehouse.autoStockUpdate ? 'default' : 'outline'}>
                                             {warehouse.autoStockUpdate ? 'مفعل' : 'غير مفعل'}

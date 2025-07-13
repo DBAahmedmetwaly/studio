@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState } from "react";
@@ -210,17 +211,15 @@ export default function ItemsPage() {
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
             ) : (
-                 <div className="w-full overflow-auto border rounded-lg">
+                 <div className="w-full overflow-auto">
                     <Table>
                         <TableHeader>
                             <TableRow>
                                 <TableHead className="w-[120px]">كود الصنف</TableHead>
                                 <TableHead>اسم الصنف</TableHead>
-                                <TableHead className="text-center">الوحدة</TableHead>
-                                <TableHead className="text-center">التكلفة</TableHead>
+                                <TableHead className="text-center hidden sm:table-cell">الوحدة</TableHead>
+                                <TableHead className="text-center hidden md:table-cell">التكلفة</TableHead>
                                 <TableHead className="text-center">السعر</TableHead>
-                                <TableHead className="text-center">رصيد أول المدة</TableHead>
-                                <TableHead className="text-center">حد الطلب</TableHead>
                                 <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -229,11 +228,9 @@ export default function ItemsPage() {
                                 <TableRow key={item.id}>
                                     <TableCell className="font-mono">{item.code}</TableCell>
                                     <TableCell className="font-medium">{item.name}</TableCell>
-                                    <TableCell className="text-center">{getUnitLabel(item.unit)}</TableCell>
-                                    <TableCell className="text-center">{item.cost?.toLocaleString() || '-'}</TableCell>
+                                    <TableCell className="text-center hidden sm:table-cell">{getUnitLabel(item.unit)}</TableCell>
+                                    <TableCell className="text-center hidden md:table-cell">{item.cost?.toLocaleString() || '-'}</TableCell>
                                     <TableCell className="text-center">{item.price.toLocaleString()}</TableCell>
-                                    <TableCell className="text-center">{item.openingStock}</TableCell>
-                                    <TableCell className="text-center">{item.reorderPoint || 0}</TableCell>
                                     <TableCell className="text-center">
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>

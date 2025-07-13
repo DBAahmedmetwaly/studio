@@ -189,23 +189,24 @@ export default function CustomerPaymentsPage() {
                             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                         </div>
                     ) : (
-                         <div className="w-full overflow-auto border rounded-lg">
+                         <div className="w-full overflow-auto">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="w-[150px]">التاريخ</TableHead>
                                         <TableHead>العميل</TableHead>
-                                        <TableHead>مستلمة في</TableHead>
-                                        <TableHead className="text-center w-[150px]">المبلغ</TableHead>
+                                        <TableHead className="hidden md:table-cell">مستلمة في</TableHead>
+                                        <TableHead className="text-center">المبلغ</TableHead>
                                         <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {payments.map(payment => (
                                         <TableRow key={payment.id}>
-                                            <TableCell>{new Date(payment.date).toLocaleDateString('ar-EG')}</TableCell>
-                                            <TableCell>{getCustomerName(payment.customerId)}</TableCell>
-                                            <TableCell>{getCashAccountName(payment.paidToAccountId)}</TableCell>
+                                            <TableCell>
+                                                <div className="font-medium">{getCustomerName(payment.customerId)}</div>
+                                                <div className="text-sm text-muted-foreground md:hidden">{new Date(payment.date).toLocaleDateString('ar-EG')}</div>
+                                            </TableCell>
+                                            <TableCell className="hidden md:table-cell">{getCashAccountName(payment.paidToAccountId)}</TableCell>
                                             <TableCell className="text-center">{payment.amount.toLocaleString()}</TableCell>
                                             <TableCell className="text-center">
                                                 <DropdownMenu>

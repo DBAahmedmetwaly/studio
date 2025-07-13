@@ -176,15 +176,15 @@ export default function InventoryMovementsPage() {
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
             ) : (
-                <div className="w-full overflow-auto border rounded-lg">
+                <div className="w-full overflow-auto">
                     <Table>
                         <TableHeader>
                             <TableRow>
                             <TableHead className="text-center w-[150px]">نوع الحركة</TableHead>
                             <TableHead className="w-[150px]">رقم الإيصال</TableHead>
-                            <TableHead className="w-[150px]">التاريخ</TableHead>
+                            <TableHead className="w-[150px] hidden md:table-cell">التاريخ</TableHead>
                             <TableHead>التفاصيل</TableHead>
-                            <TableHead>الأصناف</TableHead>
+                            <TableHead className="hidden sm:table-cell">الأصناف</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -211,13 +211,13 @@ export default function InventoryMovementsPage() {
                                         </TooltipContent>
                                     </Tooltip>
                                 </TableCell>
-                                <TableCell>{new Date(move.date).toLocaleDateString('ar-EG')}</TableCell>
+                                <TableCell className="hidden md:table-cell">{new Date(move.date).toLocaleDateString('ar-EG')}</TableCell>
                                 <TableCell>
                                 {move.type === 'in' && `إلى: ${getSourceName(move.warehouseId)}`}
                                 {move.type === 'out' && `من: ${getSourceName(move.sourceId)}`}
                                 {move.type === 'transfer' && `من: ${getSourceName(move.fromSourceId)} إلى: ${getSourceName(move.toSourceId)}`}
                                 </TableCell>
-                                <TableCell>
+                                <TableCell className="hidden sm:table-cell">
                                 {move.items.map((item: any, index: number) => (
                                     <div key={index} className="text-xs">
                                     {item.name} (الكمية: {item.qty})

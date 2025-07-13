@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   ArrowUpRight,
   CreditCard,
@@ -40,6 +40,9 @@ import {
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import useFirebase from "@/hooks/use-firebase";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
 
 // Interfaces for Firebase data
 interface SaleInvoice {
@@ -50,6 +53,7 @@ interface SaleInvoice {
   date: string;
   warehouseId: string;
   items: { id: string; qty: number; }[];
+  status?: 'pending' | 'approved';
 }
 interface CustomerPayment {
     id: string;
@@ -102,6 +106,7 @@ export default function Dashboard() {
   const { data: cashAccounts, loading: l14 } = useFirebase<CashAccount>('cashAccounts');
   
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<string>('all');
+  const [dateRange, setDateRange] = useState({ from: '', to: '' });
 
   const loading = l1 || l2 || l3 || l4 || l5 || l6 || l7 || l8 || l9 || l10 || l11 || l12 || l13 || l14;
   
@@ -112,6 +117,19 @@ export default function Dashboard() {
   }, [warehouses, selectedWarehouseId]);
 
   const dashboardData = useMemo(() => {
+    
+     const filterByDate = (collection: any[]) => {
+      if (!dateRange.from && !dateRange.to) return collection;
+      return collection.filter(item => {
+        const itemDate = new Date(item.date);
+        const from = dateRange.from ? new Date(dateRange.from) : null;
+        const to = dateRange.to ? new Date(dateRange.to) : null;
+        if (from && itemDate < from) return false;
+        if (to && itemDate > to) return false;
+        return true;
+      });
+    };
+
     const filterByWarehouse = (collection: any[], idField: string) => {
         if (selectedWarehouseId === 'all') return collection;
         return collection.filter(item => item[idField] === selectedWarehouseId);
@@ -122,13 +140,14 @@ export default function Dashboard() {
         .filter(acc => acc.warehouseId === selectedWarehouseId)
         .map(acc => acc.id);
 
-    const filteredSales = filterByWarehouse(sales, 'warehouseId');
+    const approvedSales = sales.filter(s => s.status === 'approved');
+    const filteredSales = filterByWarehouse(filterByDate(approvedSales), 'warehouseId');
 
     const receiptsFromInvoicePayments = filteredSales.reduce((acc, sale) => acc + (sale.paidAmount || 0), 0);
-    const receiptsFromCustomerPayments = customerPayments
+    const receiptsFromCustomerPayments = filterByDate(customerPayments)
         .filter(p => selectedWarehouseId === 'all' || warehouseCashAccountIds.includes(p.paidToAccountId))
         .reduce((acc, payment) => acc + payment.amount, 0);
-    const receiptsFromExceptionalIncomes = filterByWarehouse(exceptionalIncomes, 'warehouseId').reduce((acc, income) => acc + income.amount, 0);
+    const receiptsFromExceptionalIncomes = filterByWarehouse(filterByDate(exceptionalIncomes), 'warehouseId').reduce((acc, income) => acc + income.amount, 0);
     
     const totalReceipts = receiptsFromInvoicePayments + receiptsFromCustomerPayments + receiptsFromExceptionalIncomes;
     
@@ -146,7 +165,7 @@ export default function Dashboard() {
         salesReturns.filter(sr => sr.warehouseId === selectedWarehouseId).forEach(sr => sr.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
 
         // Decreases
-        sales.filter(s => s.warehouseId === selectedWarehouseId).forEach(s => s.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
+        sales.filter(s => s.warehouseId === selectedWarehouseId && s.status === 'approved').forEach(s => s.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
         stockOuts.filter(so => so.sourceId === selectedWarehouseId).forEach(so => so.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
         transfers.filter(t => t.fromSourceId === selectedWarehouseId).forEach(t => t.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
         adjustments.filter(adj => adj.warehouseId === selectedWarehouseId).forEach(adj => adj.items.filter(i => i.itemId === item.id && i.difference < 0).forEach(i => stock += i.difference));
@@ -160,7 +179,7 @@ export default function Dashboard() {
     const recentTransactions = filteredSales.slice(-5).reverse();
 
     return { totalReceipts, totalSalesCount, totalCustomers, inventoryValue, lowStockItems, recentTransactions };
-  }, [selectedWarehouseId, sales, purchases, customers, allItems, warehouses, stockIns, stockOuts, transfers, adjustments, salesReturns, purchaseReturns, customerPayments, exceptionalIncomes, cashAccounts]);
+  }, [selectedWarehouseId, dateRange, sales, purchases, customers, allItems, warehouses, stockIns, stockOuts, transfers, adjustments, salesReturns, purchaseReturns, customerPayments, exceptionalIncomes, cashAccounts]);
 
 
   if (loading && !warehouses.length) {
@@ -174,27 +193,36 @@ export default function Dashboard() {
   return (
     <>
       <PageHeader title="لوحة التحكم">
-        <div className="flex items-center space-x-2">
-          <label htmlFor="warehouse-select" className="text-sm font-medium">
-            المخزن:
-          </label>
+        <div className="flex flex-col sm:flex-row items-center gap-2">
+            <Label htmlFor="warehouse-select" className="text-sm font-medium">المخزن:</Label>
            <Select value={selectedWarehouseId} onValueChange={setSelectedWarehouseId}>
-            <SelectTrigger
-              id="warehouse-select"
-              className="w-auto md:w-[180px] bg-card"
-              disabled={loading || warehouses.length === 0}
-            >
+            <SelectTrigger id="warehouse-select" className="w-[180px] bg-card" disabled={loading || warehouses.length === 0}>
               <SelectValue placeholder="اختر مخزنًا" />
             </SelectTrigger>
             <SelectContent>
-                {warehouses.map(warehouse => (
-                    <SelectItem key={warehouse.id} value={warehouse.id}>{warehouse.name}</SelectItem>
-                ))}
+                {warehouses.map(warehouse => ( <SelectItem key={warehouse.id} value={warehouse.id}>{warehouse.name}</SelectItem> ))}
             </SelectContent>
           </Select>
         </div>
       </PageHeader>
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
+        <Card>
+            <CardHeader>
+                <CardTitle>فلاتر العرض</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                     <div className="space-y-2">
+                        <Label>من تاريخ</Label>
+                        <Input type="date" value={dateRange.from} onChange={(e) => setDateRange(prev => ({...prev, from: e.target.value}))} />
+                    </div>
+                     <div className="space-y-2">
+                        <Label>إلى تاريخ</Label>
+                        <Input type="date" value={dateRange.to} onChange={(e) => setDateRange(prev => ({...prev, to: e.target.value}))} />
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -206,7 +234,7 @@ export default function Dashboard() {
             <CardContent>
               <div className="text-2xl font-bold font-headline">ج.م {dashboardData.totalReceipts.toLocaleString()}</div>
               <p className="text-xs text-muted-foreground">
-                إجمالي النقدية المحصلة
+                إجمالي النقدية المحصلة في الفترة
               </p>
             </CardContent>
           </Card>
@@ -232,7 +260,7 @@ export default function Dashboard() {
             <CardContent>
               <div className="text-2xl font-bold font-headline">+{dashboardData.totalSalesCount}</div>
               <p className="text-xs text-muted-foreground">
-                عدد فواتير المخزن المحدد
+                عدد فواتير المخزن في الفترة
               </p>
             </CardContent>
           </Card>
@@ -268,42 +296,44 @@ export default function Dashboard() {
               </Button>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>العميل</TableHead>
-                    <TableHead className="hidden xl:table-column">
-                      الحالة
-                    </TableHead>
-                    <TableHead className="hidden xl:table-column">
-                      التاريخ
-                    </TableHead>
-                    <TableHead className="text-left">المبلغ</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {dashboardData.recentTransactions.length > 0 ? dashboardData.recentTransactions.map((sale) => (
-                    <TableRow key={sale.id}>
-                      <TableCell>
-                        <div className="font-medium">{sale.customerName || 'عميل غير محدد'}</div>
-                      </TableCell>
-                      <TableCell className="hidden xl:table-column">
-                        <Badge className="text-xs" variant="outline">
-                          موافق عليه
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell lg:hidden xl:table-column">
-                        {new Date(sale.date).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell className="text-left">ج.م {sale.total.toLocaleString()}</TableCell>
-                    </TableRow>
-                  )) : (
+              <div className="overflow-auto">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                        <TableCell colSpan={4} className="text-center text-muted-foreground">لا توجد معاملات حديثة.</TableCell>
+                      <TableHead>العميل</TableHead>
+                      <TableHead className="hidden sm:table-cell">
+                        الحالة
+                      </TableHead>
+                      <TableHead className="hidden md:table-cell">
+                        التاريخ
+                      </TableHead>
+                      <TableHead className="text-left">المبلغ</TableHead>
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {dashboardData.recentTransactions.length > 0 ? dashboardData.recentTransactions.map((sale) => (
+                      <TableRow key={sale.id}>
+                        <TableCell>
+                          <div className="font-medium">{sale.customerName || 'عميل غير محدد'}</div>
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          <Badge className="text-xs" variant="outline">
+                            موافق عليه
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          {new Date(sale.date).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell className="text-left">ج.م {sale.total.toLocaleString()}</TableCell>
+                      </TableRow>
+                    )) : (
+                      <TableRow>
+                          <TableCell colSpan={4} className="text-center text-muted-foreground">لا توجد معاملات حديثة.</TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
           <Card className="col-span-4 lg:col-span-3">
@@ -338,4 +368,3 @@ export default function Dashboard() {
     </>
   );
 }
-

@@ -155,23 +155,24 @@ export default function ExceptionalIncomePage() {
                         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                     </div>
                 ) : (
-                    <div className="w-full overflow-auto border rounded-lg">
+                    <div className="w-full overflow-auto">
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead className="w-[150px]">التاريخ</TableHead>
                                     <TableHead>الوصف</TableHead>
-                                    <TableHead>المخزن/الجهة</TableHead>
-                                    <TableHead className="text-center w-[150px]">المبلغ</TableHead>
+                                    <TableHead className="hidden sm:table-cell">المخزن/الجهة</TableHead>
+                                    <TableHead className="text-center">المبلغ</TableHead>
                                     <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {incomes.map(income => (
                                     <TableRow key={income.id}>
-                                        <TableCell>{new Date(income.date).toLocaleDateString('ar-EG')}</TableCell>
-                                        <TableCell>{income.description}</TableCell>
-                                        <TableCell>{getWarehouseName(income.warehouseId)}</TableCell>
+                                        <TableCell>
+                                            <div className="font-medium">{income.description}</div>
+                                            <div className="text-sm text-muted-foreground sm:hidden">{new Date(income.date).toLocaleDateString('ar-EG')}</div>
+                                        </TableCell>
+                                        <TableCell className="hidden sm:table-cell">{getWarehouseName(income.warehouseId)}</TableCell>
                                         <TableCell className="text-center">{income.amount.toLocaleString()}</TableCell>
                                         <TableCell className="text-center">
                                             <DropdownMenu>
