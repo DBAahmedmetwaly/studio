@@ -157,7 +157,7 @@ export default function NewStockInPage() {
 
     const loading = loadingItems || loadingWarehouses || loadingInvoices || loadingStockInRecords;
     const getUnitLabel = (unit: string) => {
-        const units = { piece: "قطعة", weight: "وزن", meter: "متر", kilo: "كيلو", gram: "جرام" };
+        const units = { piece: "قطعة", weight: "لتر ", meter: "متر", kilo: "كيلو", gram: "جرام" };
         return units[unit as keyof typeof units] || unit;
     }
 

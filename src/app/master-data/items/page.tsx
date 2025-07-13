@@ -92,7 +92,7 @@ const ItemForm = ({ item, onSave, onClose }: { item?: Item, onSave: (item: Omit<
             </SelectTrigger>
             <SelectContent>
                 <SelectItem value="piece">قطعة</SelectItem>
-                <SelectItem value="weight">وزن</SelectItem>
+                <SelectItem value="weight">لتر </SelectItem>
                 <SelectItem value="meter">متر</SelectItem>
                 <SelectItem value="kilo">كيلو</SelectItem>
                 <SelectItem value="gram">جرام</SelectItem>
@@ -175,7 +175,7 @@ export default function ItemsPage() {
     };
     
     const getUnitLabel = (unit: string) => {
-        const units = { piece: "قطعة", weight: "وزن", meter: "متر", kilo: "كيلو", gram: "جرام" };
+        const units = { piece: "قطعة", weight: "لتر ", meter: "متر", kilo: "كيلو", gram: "جرام" };
         return units[unit as keyof typeof units] || unit;
     }
 
@@ -256,7 +256,7 @@ export default function ItemsPage() {
                                                 </AddEntityDialog>
                                             )}
                                             {can('delete', moduleName) && (
-                                                <DropdownMenuItem className="text-destructive" onClick={async () => await handleDelete(item.id!)}>
+                                                <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(item.id!)}>
                                                     <Trash2 className="ml-2 h-4 w-4" />
                                                     حذف
                                                 </DropdownMenuItem>
@@ -276,3 +276,4 @@ export default function ItemsPage() {
     </>
   );
 }
+
