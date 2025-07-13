@@ -6,7 +6,7 @@ import PageHeader from "@/components/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import useFirebase from "@/hooks/use-firebase";
-import { Loader2, ArrowUp, ArrowDown, ArrowLeftRight } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -196,10 +196,7 @@ export default function InventoryMovementsPage() {
                                     move.type === 'out' ? 'destructive' :
                                     'secondary'
                                 }>
-                                    {move.type === 'in' && <ArrowDown className="h-3 w-3 -ml-1" />}
-                                    {move.type === 'out' && <ArrowUp className="h-3 w-3 -ml-1" />}
-                                    {move.type === 'transfer' && <ArrowLeftRight className="h-3 w-3 -ml-1" />}
-                                    <span className="mr-1">{move.typeLabel}</span>
+                                    <span>{move.typeLabel}</span>
                                 </Badge>
                                 </TableCell>
                                 <TableCell className="font-mono">
