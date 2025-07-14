@@ -19,6 +19,8 @@ import useFirebase from '@/hooks/use-firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AddEntityDialog } from '@/components/add-entity-dialog';
+import { useAuth } from '@/contexts/auth-context';
 
 interface Employee {
   id: string;
@@ -41,6 +43,10 @@ interface EmployeeAdjustment {
     amount: number;
 }
 
+interface CashAccount {
+    id: string;
+    name: string;
+}
 
 interface PayrollResult {
     employeeId: string;
@@ -52,17 +58,55 @@ interface PayrollResult {
     netSalary: number;
 }
 
+
+const PaymentDialogContent = ({ onConfirm, cashAccounts, onClose }: { onConfirm: (accountId: string) => void, cashAccounts: CashAccount[], onClose: () => void }) => {
+    const [selectedAccountId, setSelectedAccountId] = useState('');
+
+    const handleConfirm = () => {
+        if (!selectedAccountId) {
+            alert('Please select a payment account.');
+            return;
+        }
+        onConfirm(selectedAccountId);
+        onClose();
+    }
+
+    return (
+        <div className="space-y-4">
+            <div className="space-y-2">
+                <Label htmlFor="payment-account">حساب الدفع</Label>
+                <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+                    <SelectTrigger id="payment-account">
+                        <SelectValue placeholder="اختر حساب الخزينة/البنك" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {cashAccounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+            </div>
+            <div className="flex justify-end">
+                <Button onClick={handleConfirm}>تأكيد الصرف</Button>
+            </div>
+        </div>
+    )
+}
+
+
 export default function PayrollPage() {
     const { data: employees, loading: loadingEmployees } = useFirebase<Employee>('employees');
     const { data: advances, loading: loadingAdvances } = useFirebase<EmployeeAdvance>('employeeAdvances');
     const { data: adjustments, loading: loadingAdjustments } = useFirebase<EmployeeAdjustment>('employeeAdjustments');
+    const { data: cashAccounts, loading: loadingCashAccounts } = useFirebase<CashAccount>('cashAccounts');
+    const { add: addExpense, getNextId } = useFirebase('expenses');
+    const { user } = useAuth();
     const { toast } = useToast();
     
     const [selectedMonth, setSelectedMonth] = useState<string>(String(new Date().getMonth() + 1));
     const [selectedYear, setSelectedYear] = useState<string>(String(new Date().getFullYear()));
     const [payrollData, setPayrollData] = useState<PayrollResult[] | null>(null);
+    const [isPosting, setIsPosting] = useState(false);
 
-    const loading = loadingEmployees || loadingAdvances || loadingAdjustments;
+    const loading = loadingEmployees || loadingAdvances || loadingAdjustments || loadingCashAccounts;
 
     const handleCalculatePayroll = () => {
         if (!selectedMonth || !selectedYear) {
@@ -109,6 +153,42 @@ export default function PayrollPage() {
         setPayrollData(results);
         toast({ title: "تم احتساب الرواتب بنجاح" });
     };
+
+    const handlePostJournalEntry = async (accountId: string) => {
+        if (!payrollData) return;
+        setIsPosting(true);
+
+        const monthName = months.find(m => m.value === selectedMonth)?.label;
+
+        try {
+            const expensePromises = payrollData.map(async (payroll) => {
+                if (payroll.netSalary > 0) {
+                    const receiptNumber = `م-${await getNextId('expense')}`;
+                    return addExpense({
+                        date: new Date(parseInt(selectedYear), parseInt(selectedMonth) -1, 28).toISOString(),
+                        amount: payroll.netSalary,
+                        description: `راتب شهر ${monthName} ${selectedYear} للموظف ${payroll.employeeName}`,
+                        expenseType: 'رواتب',
+                        paidFromAccountId: accountId,
+                        receiptNumber,
+                        createdById: user?.id,
+                        createdByName: user?.name,
+                    });
+                }
+            });
+
+            await Promise.all(expensePromises);
+            
+            toast({ title: "تم الترحيل بنجاح", description: "تم إنشاء قيود المصروفات للرواتب." });
+            setPayrollData(null); // Reset the view after posting
+        } catch (error) {
+            console.error(error);
+            toast({ variant: "destructive", title: "خطأ", description: "فشل ترحيل القيود." });
+        } finally {
+            setIsPosting(false);
+        }
+    }
+
 
     const handlePrint = () => {
         window.print();
@@ -179,10 +259,18 @@ export default function PayrollPage() {
                             <Printer className="ml-2 h-4 w-4" />
                             طباعة
                         </Button>
-                         <Button disabled>
-                            <FileText className="ml-2 h-4 w-4" />
-                            ترحيل القيد المحاسبي
-                        </Button>
+                        <AddEntityDialog
+                            title="تأكيد صرف الرواتب"
+                            description="اختر الحساب الذي سيتم صرف الرواتب منه لتسجيل قيد المصروف."
+                            triggerButton={
+                                 <Button disabled={isPosting}>
+                                    {isPosting ? <Loader2 className="animate-spin ml-2 h-4 w-4"/> : <FileText className="ml-2 h-4 w-4" />}
+                                    {isPosting ? 'جارٍ الترحيل...' : 'ترحيل قيد المصروف'}
+                                </Button>
+                            }
+                        >
+                            <PaymentDialogContent onConfirm={handlePostJournalEntry} cashAccounts={cashAccounts} onClose={() => {}} />
+                        </AddEntityDialog>
                     </div>
                 </CardHeader>
                 <CardContent>
