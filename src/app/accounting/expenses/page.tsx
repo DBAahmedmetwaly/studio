@@ -16,7 +16,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PlusCircle, Loader2, MoreHorizontal, Edit, Trash2, Info } from "lucide-react";
-import useFirebase from '@/hooks/use-firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem } from '@/components/ui/dropdown-menu';
@@ -24,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/auth-context';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { useData } from '@/contexts/data-provider';
 
 
 const EXPENSE_TYPES = [
@@ -137,21 +137,17 @@ const ExpenseForm = ({ expense, onSave, onClose, warehouses, cashAccounts }: { e
 };
 
 export default function ExpensesPage() {
-    const { data: expenses, loading: loadingExpenses, add, update, remove, getNextId } = useFirebase<Expense>('expenses');
-    const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
-    const { data: cashAccounts, loading: loadingCashAccounts } = useFirebase<CashAccount>('cashAccounts');
+    const { expenses, warehouses, cashAccounts, dbAction, getNextId, loading } = useData();
     const { toast } = useToast();
     const { user } = useAuth();
     
-    const loading = loadingExpenses || loadingWarehouses || loadingCashAccounts;
-
      const getWarehouseName = (warehouseId?: string) => {
         if (!warehouseId || warehouseId === 'none') return 'عام';
         return warehouses.find(w => w.id === warehouseId)?.name || 'غير معروف';
     };
     
     const getCashAccountName = (accountId: string) => {
-        return cashAccounts.find(acc => acc.id === accountId)?.name || 'غير معروف';
+        return cashAccounts.find((acc: any) => acc.id === accountId)?.name || 'غير معروف';
     }
 
 
@@ -164,7 +160,7 @@ export default function ExpensesPage() {
                 createdById: user?.id,
                 createdByName: user?.name,
             };
-            await add(newExpense);
+            await dbAction('expenses', 'add', newExpense);
             toast({ title: "تمت الإضافة بنجاح", description: `تم تسجيل المصروف برقم إيصال: ${receiptNumber}` });
         } catch (error) {
             toast({ variant: "destructive", title: "حدث خطأ", description: "فشل الحفظ" });
@@ -173,7 +169,7 @@ export default function ExpensesPage() {
     
     const handleDelete = async (id: string) => {
         try {
-            await remove(id);
+            await dbAction('expenses', 'remove', { id });
             toast({ title: "تم الحذف بنجاح" });
         } catch (error) {
             toast({ variant: "destructive", title: "حدث خطأ", description: "فشل الحذف" });

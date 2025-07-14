@@ -17,7 +17,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PlusCircle, Loader2, MoreHorizontal, Edit, Trash2 } from "lucide-react";
-import useFirebase from '@/hooks/use-firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem } from '@/components/ui/dropdown-menu';
@@ -25,6 +24,7 @@ import { AddEntityDialog } from '@/components/add-entity-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/auth-context';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { useData } from '@/contexts/data-provider';
 
 
 interface ExceptionalIncome {
@@ -90,13 +90,10 @@ const IncomeForm = ({ income, onSave, onClose, warehouses }: { income?: Exceptio
 
 
 export default function ExceptionalIncomePage() {
-    const { data: incomes, loading: loadingIncomes, add, update, remove, getNextId } = useFirebase<ExceptionalIncome>('exceptionalIncomes');
-    const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
+    const { exceptionalIncomes: incomes, warehouses, dbAction, getNextId, loading } = useData();
     const { toast } = useToast();
     const { user } = useAuth();
     
-    const loading = loadingIncomes || loadingWarehouses;
-
     const getWarehouseName = (warehouseId?: string) => {
         if (!warehouseId || warehouseId === 'none') return 'عام';
         return warehouses.find(w => w.id === warehouseId)?.name || 'غير معروف';
@@ -111,7 +108,7 @@ export default function ExceptionalIncomePage() {
                 createdById: user?.id,
                 createdByName: user?.name,
             };
-            await add(newIncome);
+            await dbAction('exceptionalIncomes', 'add', newIncome);
             toast({ title: "تمت الإضافة بنجاح", description: `تم تسجيل الدخل برقم إيصال: ${receiptNumber}` });
         } catch (error) {
             toast({ variant: "destructive", title: "حدث خطأ", description: "فشل الحفظ" });
@@ -120,7 +117,7 @@ export default function ExceptionalIncomePage() {
 
     const handleDelete = async (id: string) => {
         try {
-            await remove(id);
+            await dbAction('exceptionalIncomes', 'remove', { id });
             toast({ title: "تم الحذف بنجاح" });
         } catch (error) {
             toast({ variant: "destructive", title: "حدث خطأ", description: "فشل الحذف" });

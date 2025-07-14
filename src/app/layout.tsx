@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
 import { PermissionsProvider } from "@/contexts/permissions-context";
 import { AuthProvider } from "@/contexts/auth-context";
+import { DataProvider } from "@/contexts/data-provider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -42,7 +43,9 @@ export default function RootLayout({
         >
           <AuthProvider>
             <PermissionsProvider>
-              <AppLayout>{children}</AppLayout>
+              <DataProvider>
+                <AppLayout>{children}</AppLayout>
+              </DataProvider>
             </PermissionsProvider>
           </AuthProvider>
           <Toaster />

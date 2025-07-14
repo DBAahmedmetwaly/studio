@@ -20,7 +20,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import useFirebase from "@/hooks/use-firebase";
 import { Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,6 +27,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useData } from '@/contexts/data-provider';
 
 interface SaleInvoice {
   id: string; date: string; customerName: string; total: number; warehouseId: string; discount: number; invoiceNumber?: string;
@@ -154,28 +154,29 @@ export default function JournalPage() {
         toDate: ""
     });
 
-    const { data: sales, loading: l1 } = useFirebase<SaleInvoice>("salesInvoices");
-    const { data: purchases, loading: l2 } = useFirebase<PurchaseInvoice>("purchaseInvoices");
-    const { data: expenses, loading: l3 } = useFirebase<Expense>("expenses");
-    const { data: exceptionalIncomes, loading: l4 } = useFirebase<ExceptionalIncome>("exceptionalIncomes");
-    const { data: warehouses, loading: l5 } = useFirebase<Warehouse>("warehouses");
-    const { data: transfers, loading: l6 } = useFirebase<StockTransferRecord>("stockTransferRecords");
-    const { data: itemsData, loading: l7 } = useFirebase<Item>("items");
-    const { data: cashAccounts, loading: l8 } = useFirebase<CashAccount>("cashAccounts");
-    const { data: treasuryTxs, loading: l9 } = useFirebase<TreasuryTransaction>("treasuryTransactions");
-    const { data: employeeAdvances, loading: l10 } = useFirebase<EmployeeAdvance>("employeeAdvances");
-    const { data: employees, loading: l11 } = useFirebase<Employee>("employees");
-    const { data: employeeAdjustments, loading: l12 } = useFirebase<EmployeeAdjustment>("employeeAdjustments");
-    const { data: salesReturns, loading: l13 } = useFirebase<SalesReturn>("salesReturns");
-    const { data: purchaseReturns, loading: l14 } = useFirebase<PurchaseReturn>("purchaseReturns");
-    const { data: customers, loading: l15 } = useFirebase<Customer>("customers");
-    const { data: suppliers, loading: l16 } = useFirebase<Supplier>("suppliers");
-    const { data: supplierPayments, loading: l17 } = useFirebase<SupplierPayment>("supplierPayments");
-    const { data: customerPayments, loading: l18 } = useFirebase<CustomerPayment>("customerPayments");
-    const { data: stockOuts, loading: l19 } = useFirebase<StockOutRecord>("stockOutRecords");
+    const {
+        salesInvoices: sales,
+        purchaseInvoices: purchases,
+        expenses,
+        exceptionalIncomes,
+        warehouses,
+        stockTransferRecords: transfers,
+        items: itemsData,
+        cashAccounts,
+        treasuryTransactions: treasuryTxs,
+        employeeAdvances,
+        employees,
+        employeeAdjustments,
+        salesReturns,
+        purchaseReturns,
+        customers,
+        suppliers,
+        supplierPayments,
+        customerPayments,
+        stockOutRecords: stockOuts,
+        loading
+    } = useData();
 
-
-    const loading = l1 || l2 || l3 || l4 || l5 || l6 || l7 || l8 || l9 || l10 || l11 || l12 || l13 || l14 || l15 || l16 || l17 || l18 || l19;
     
     const itemsMap = useMemo(() => {
         const map = new Map<string, Item>();

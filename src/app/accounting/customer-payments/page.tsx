@@ -16,7 +16,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PlusCircle, Loader2, MoreHorizontal, Edit, Trash2, Info } from "lucide-react";
-import useFirebase from '@/hooks/use-firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem } from '@/components/ui/dropdown-menu';
@@ -24,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/auth-context';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { useData } from '@/contexts/data-provider';
 
 
 interface CustomerPayment {
@@ -119,20 +119,16 @@ const PaymentForm = ({ payment, onSave, onClose, customers, cashAccounts }: { pa
 };
 
 export default function CustomerPaymentsPage() {
-    const { data: payments, loading: loadingPayments, add, update, remove, getNextId } = useFirebase<CustomerPayment>('customerPayments');
-    const { data: customers, loading: loadingCustomers } = useFirebase<Customer>('customers');
-    const { data: cashAccounts, loading: loadingCashAccounts } = useFirebase<CashAccount>('cashAccounts');
+    const { customerPayments: payments, customers, cashAccounts, dbAction, getNextId, loading } = useData();
     const { toast } = useToast();
     const { user } = useAuth();
     
-    const loading = loadingPayments || loadingCustomers || loadingCashAccounts;
-
      const getCustomerName = (customerId: string) => {
         return customers.find(c => c.id === customerId)?.name || 'غير معروف';
     };
 
     const getCashAccountName = (accountId: string) => {
-        return cashAccounts.find(acc => acc.id === accountId)?.name || 'غير معروف';
+        return cashAccounts.find((acc: any) => acc.id === accountId)?.name || 'غير معروف';
     }
 
     const handleSave = async (data: Omit<CustomerPayment, 'id' | 'receiptNumber'>) => {
@@ -144,7 +140,7 @@ export default function CustomerPaymentsPage() {
                 createdById: user?.id,
                 createdByName: user?.name,
             };
-            await add(newPayment);
+            await dbAction('customerPayments', 'add', newPayment);
             toast({ title: "تمت الإضافة بنجاح", description: `تم حفظ الدفعة برقم إيصال: ${receiptNumber}` });
         } catch (error) {
             toast({ variant: "destructive", title: "حدث خطأ", description: "فشل الحفظ" });
@@ -153,7 +149,7 @@ export default function CustomerPaymentsPage() {
     
     const handleDelete = async (id: string) => {
         try {
-            await remove(id);
+            await dbAction('customerPayments', 'remove', { id });
             toast({ title: "تم الحذف بنجاح" });
         } catch (error) {
             toast({ variant: "destructive", title: "حدث خطأ", description: "فشل الحذف" });

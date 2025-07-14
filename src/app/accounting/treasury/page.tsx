@@ -15,13 +15,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PlusCircle, Loader2, ArrowUpCircle, ArrowDownCircle, Wallet, Landmark, User } from "lucide-react";
-import useFirebase from '@/hooks/use-firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from '@/contexts/auth-context';
+import { useData } from '@/contexts/data-provider';
 
 
 interface CashAccount {
@@ -122,17 +122,20 @@ const TransactionForm = ({ onSave, cashAccounts, onClose }: { onSave: (data: Omi
 
 
 export default function TreasuryPage() {
-    const { data: transactions, loading: loadingTxs, add, getNextId } = useFirebase<TreasuryTransaction>('treasuryTransactions');
-    const { data: cashAccounts, loading: loadingAccounts } = useFirebase<CashAccount>('cashAccounts');
-    const { data: expenses, loading: l_exp } = useFirebase<Expense>('expenses');
-    const { data: supplierPayments, loading: l_sp } = useFirebase<SupplierPayment>('supplierPayments');
-    const { data: employeeAdvances, loading: l_ea } = useFirebase<EmployeeAdvance>('employeeAdvances');
-    const { data: customerPayments, loading: l_cp } = useFirebase<CustomerPayment>('customerPayments');
-    const { data: salesReps, loading: l_sr } = useFirebase<any>('users');
+    const { 
+        treasuryTransactions: transactions, 
+        cashAccounts, 
+        expenses, 
+        supplierPayments, 
+        employeeAdvances, 
+        customerPayments, 
+        dbAction, 
+        getNextId,
+        loading 
+    } = useData();
+
     const { toast } = useToast();
     const { user } = useAuth();
-    
-    const loading = loadingTxs || loadingAccounts || l_exp || l_sp || l_ea || l_cp || l_sr;
     
     const getAccountName = (accountId: string) => cashAccounts.find(acc => acc.id === accountId)?.name || 'غير معروف';
     const getAccountTypeIcon = (accountId: string) => {
@@ -153,7 +156,7 @@ export default function TreasuryPage() {
                 createdById: user?.id,
                 createdByName: user?.name,
             };
-            await add(newTransaction);
+            await dbAction('treasuryTransactions', 'add', newTransaction);
             toast({ title: "تمت إضافة الحركة بنجاح" });
         } catch (error) {
             toast({ variant: "destructive", title: "حدث خطأ", description: "فشل حفظ الحركة" });
