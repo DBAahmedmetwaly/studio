@@ -26,11 +26,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 
 // Data Interfaces
-interface Item { id: string; name: string; unit: string; price: number; openingStock: number; reorderPoint?: number; }
+interface Item { id: string; name: string; unit: string; price: number; reorderPoint?: number; }
 interface Warehouse { id: string; name: string; }
 interface SaleInvoice { id: string; warehouseId: string; items: { id: string; qty: number; }[]; status?: 'approved' | 'pending'; }
 interface PurchaseInvoice { id: string; warehouseId: string; items: { id: string; qty: number; }[]; }
-interface StockInRecord { id: string; warehouseId: string; items: { id: string; qty: number; }[]; }
+interface StockInRecord { id: string; warehouseId: string; reason: string; items: { id: string; qty: number; }[]; }
 interface StockOutRecord { id: string; sourceId: string; items: { id: string; qty: number; }[]; }
 interface StockTransferRecord { id: string; fromSourceId: string; toSourceId: string; items: { id: string; qty: number; }[]; }
 interface StockAdjustmentRecord { id: string; warehouseId: string; items: { itemId: string; difference: number; }[]; }
@@ -73,11 +73,18 @@ export default function StockStatusPage() {
 
         targetWarehouses.forEach(warehouse => {
             allItems.forEach(item => {
-                let stock = item.openingStock || 0;
+                let stock = 0; // Start from zero
+                let openingStock = 0;
 
                 // Increases
                 purchases.filter(p => p.warehouseId === warehouse.id).forEach(p => p.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
-                stockIns.filter(si => si.warehouseId === warehouse.id).forEach(si => si.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
+                // Handle both opening_stock and other reasons from stock-in records
+                stockIns.filter(si => si.warehouseId === warehouse.id).forEach(si => si.items.filter(i => i.id === item.id).forEach(i => {
+                    stock += i.qty;
+                    if (si.reason === 'opening_stock') {
+                        openingStock += i.qty;
+                    }
+                }));
                 transfers.filter(t => t.toSourceId === warehouse.id).forEach(t => t.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
                 adjustments.filter(adj => adj.warehouseId === warehouse.id).forEach(adj => adj.items.filter(i => i.itemId === item.id && i.difference > 0).forEach(i => stock += i.difference));
                 salesReturns.filter(sr => sr.warehouseId === warehouse.id).forEach(sr => sr.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
@@ -97,7 +104,7 @@ export default function StockStatusPage() {
                     itemName: item.name,
                     unit: item.unit,
                     price: item.price,
-                    openingStock: item.openingStock || 0,
+                    openingStock: openingStock,
                     currentStock: stock,
                     reorderPoint: item.reorderPoint || 0,
                 });

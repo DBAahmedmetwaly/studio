@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
@@ -75,7 +76,6 @@ interface Customer { id: string; }
 interface Item {
   id: string;
   name: string;
-  openingStock: number;
   cost?: number;
   price?: number;
   reorderPoint?: number;
@@ -155,7 +155,7 @@ export default function Dashboard() {
     const totalCustomers = customers.length; // This is not warehouse-specific
 
     const warehouseItems = allItems.map(item => {
-        let stock = item.openingStock || 0;
+        let stock = 0; // Start from zero
         
         // Increases
         purchases.filter(p => p.warehouseId === selectedWarehouseId).forEach(p => p.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));

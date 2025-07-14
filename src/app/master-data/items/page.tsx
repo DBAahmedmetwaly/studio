@@ -45,14 +45,13 @@ interface Item {
   unit: 'piece' | 'weight' | 'meter' | 'kilo' | 'gram';
   price: number;
   cost?: number;
-  openingStock: number;
   reorderPoint?: number;
 }
 
 const ItemForm = ({ item, onSave, onClose }: { item?: Item, onSave: (item: Omit<Item, 'id' | 'code'> & { id?: string, code?: string }) => void, onClose: () => void }) => {
   const [formData, setFormData] = useState<Omit<Item, 'id' | 'code'>>(
-    item ? { name: item.name, unit: item.unit, price: item.price, cost: item.cost, openingStock: item.openingStock, reorderPoint: item.reorderPoint }
-    : { name: "", unit: "piece", price: 0, cost: 0, openingStock: 0, reorderPoint: 5 }
+    item ? { name: item.name, unit: item.unit, price: item.price, cost: item.cost, reorderPoint: item.reorderPoint }
+    : { name: "", unit: "piece", price: 0, cost: 0, reorderPoint: 5 }
   );
 
   const handleSubmit = () => {
@@ -61,7 +60,6 @@ const ItemForm = ({ item, onSave, onClose }: { item?: Item, onSave: (item: Omit<
         ...formData,
         price: Number(formData.price),
         cost: Number(formData.cost),
-        openingStock: Number(formData.openingStock),
         reorderPoint: Number(formData.reorderPoint)
     });
     onClose();
@@ -112,12 +110,6 @@ const ItemForm = ({ item, onSave, onClose }: { item?: Item, onSave: (item: Omit<
             السعر
             </Label>
             <Input id="item-price" type="number" value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value as any})} className="col-span-3" />
-        </div>
-        <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="opening-stock" className="text-right">
-            رصيد أول المدة
-            </Label>
-            <Input id="opening-stock" type="number" value={formData.openingStock} onChange={(e) => setFormData({...formData, openingStock: e.target.value as any})} className="col-span-3" />
         </div>
         <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="reorder-point" className="text-right">
@@ -202,7 +194,7 @@ export default function ItemsPage() {
           <CardHeader>
             <CardTitle>الأصناف</CardTitle>
             <CardDescription>
-              تحديد الأصناف مع الفئات والوحدات والأسعار والأرصدة الافتتاحية.
+              تحديد الأصناف مع الفئات والوحدات والأسعار. لإدخال رصيد أول المدة، استخدم شاشة استلام المخزون.
             </CardDescription>
           </CardHeader>
           <CardContent>
