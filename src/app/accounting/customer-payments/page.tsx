@@ -204,6 +204,7 @@ export default function CustomerPaymentsPage() {
                                             <TableCell>
                                                 <div className="font-medium">{getCustomerName(payment.customerId)}</div>
                                                 <div className="text-sm text-muted-foreground">{new Date(payment.date).toLocaleDateString('ar-EG')}</div>
+                                                <div className="text-xs text-muted-foreground">بواسطة: {payment.createdByName || 'غير معروف'}</div>
                                             </TableCell>
                                             <TableCell className="hidden sm:table-cell">{getCashAccountName(payment.paidToAccountId)}</TableCell>
                                             <TableCell className="text-center">{payment.amount.toLocaleString()}</TableCell>

@@ -183,7 +183,7 @@ export default function EmployeeAdjustmentsPage() {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="w-[150px]">التاريخ</TableHead>
+                                        <TableHead>التاريخ</TableHead>
                                         <TableHead>الموظف</TableHead>
                                         <TableHead className="text-center">النوع</TableHead>
                                         <TableHead>الوصف</TableHead>
@@ -194,7 +194,10 @@ export default function EmployeeAdjustmentsPage() {
                                 <TableBody>
                                     {adjustments.map((adj : EmployeeAdjustment) => (
                                         <TableRow key={adj.id}>
-                                            <TableCell>{new Date(adj.date).toLocaleDateString('ar-EG')}</TableCell>
+                                            <TableCell>
+                                                <div>{new Date(adj.date).toLocaleDateString('ar-EG')}</div>
+                                                <div className="text-xs text-muted-foreground">بواسطة: {adj.createdByName || 'غير معروف'}</div>
+                                            </TableCell>
                                             <TableCell>{getEmployeeName(adj.employeeId)}</TableCell>
                                             <TableCell className="text-center">
                                                 <Badge variant={adj.type === 'reward' ? 'default' : 'destructive'}>

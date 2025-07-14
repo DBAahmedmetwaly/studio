@@ -171,6 +171,7 @@ export default function ExceptionalIncomePage() {
                                         <TableCell>
                                             <div className="font-medium">{income.description}</div>
                                             <div className="text-sm text-muted-foreground">{new Date(income.date).toLocaleDateString('ar-EG')}</div>
+                                            <div className="text-xs text-muted-foreground">بواسطة: {income.createdByName || 'غير معروف'}</div>
                                         </TableCell>
                                         <TableCell className="hidden sm:table-cell">{getWarehouseName(income.warehouseId)}</TableCell>
                                         <TableCell className="text-center">{income.amount.toLocaleString()}</TableCell>

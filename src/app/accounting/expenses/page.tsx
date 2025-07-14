@@ -225,6 +225,7 @@ export default function ExpensesPage() {
                                             <TableCell>
                                                 <div className="font-medium">{expense.expenseType}</div>
                                                 <div className="text-sm text-muted-foreground">{new Date(expense.date).toLocaleDateString('ar-EG')}</div>
+                                                <div className="text-xs text-muted-foreground">بواسطة: {expense.createdByName || 'غير معروف'}</div>
                                             </TableCell>
                                             <TableCell className="hidden sm:table-cell">{expense.description}</TableCell>
                                             <TableCell className="hidden md:table-cell">{getCashAccountName(expense.paidFromAccountId)}</TableCell>

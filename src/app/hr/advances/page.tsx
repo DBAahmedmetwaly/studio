@@ -192,7 +192,7 @@ export default function EmployeeAdvancesPage() {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead className="w-[150px]">التاريخ</TableHead>
+                                        <TableHead>التاريخ</TableHead>
                                         <TableHead>الموظف</TableHead>
                                         <TableHead>مدفوعة من</TableHead>
                                         <TableHead className="text-center w-[150px]">المبلغ</TableHead>
@@ -202,7 +202,10 @@ export default function EmployeeAdvancesPage() {
                                 <TableBody>
                                     {advances.map((advance: EmployeeAdvance) => (
                                         <TableRow key={advance.id}>
-                                            <TableCell>{new Date(advance.date).toLocaleDateString('ar-EG')}</TableCell>
+                                            <TableCell>
+                                                <div>{new Date(advance.date).toLocaleDateString('ar-EG')}</div>
+                                                <div className="text-xs text-muted-foreground">بواسطة: {advance.createdByName || 'غير معروف'}</div>
+                                            </TableCell>
                                             <TableCell>{getEmployeeName(advance.employeeId)}</TableCell>
                                             <TableCell>{getCashAccountName(advance.paidFromAccountId)}</TableCell>
                                             <TableCell className="text-center">{advance.amount.toLocaleString()}</TableCell>

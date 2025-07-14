@@ -29,7 +29,6 @@ interface AdjustmentItem {
 interface Item {
     id: string;
     name: string;
-    openingStock?: number;
 }
 interface Warehouse { id: string; name: string; }
 interface SaleInvoice { id: string; warehouseId: string; items: { id: string; qty: number; }[]; }
@@ -73,8 +72,7 @@ export default function StockAdjustmentPage() {
     const calculateSystemStock = useCallback((itemId: string, warehouseId: string) => {
         if (!itemId || !warehouseId) return 0;
         
-        const item = availableItems.find(i => i.id === itemId);
-        let stock = item?.openingStock || 0;
+        let stock = 0;
 
         // Increases
         purchases.filter(p => p.warehouseId === warehouseId).forEach(p => p.items.filter(i => i.id === itemId).forEach(i => stock += i.qty));
@@ -90,7 +88,7 @@ export default function StockAdjustmentPage() {
         adjustments.filter(adj => adj.warehouseId === warehouseId).forEach(adj => adj.items.filter(i => i.itemId === itemId).forEach(i => stock += i.difference));
 
         return stock;
-    }, [availableItems, purchases, sales, stockIns, stockOuts, transfers, adjustments]);
+    }, [purchases, sales, stockIns, stockOuts, transfers, adjustments]);
 
     const handleAddItem = () => {
         if (!newItem.itemId || !selectedWarehouse) {
