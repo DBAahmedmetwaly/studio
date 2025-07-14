@@ -31,11 +31,11 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 
 interface SaleInvoice {
   id: string; date: string; customerName: string; total: number; warehouseId: string; discount: number; invoiceNumber?: string;
-  items: { qty: number; cost?: number; price: number }[];
+  items: { id: string; qty: number; cost?: number; price: number }[];
   status?: 'pending' | 'approved';
   paidAmount?: number;
 }
-interface PurchaseInvoice { id: string; date: string; supplierName: string; total: number; warehouseId: string; discount: number; invoiceNumber?: string; paidAmount?: number;}
+interface PurchaseInvoice { id: string; date: string; supplierName: string; total: number; warehouseId: string; discount: number; invoiceNumber?: string; paidAmount?: number; items: { id: string, name: string; qty: number, cost?:number }[];}
 interface Expense { id: string; date: string; description: string; amount: number; warehouseId?: string; expenseType: string; paidFromAccountId: string; receiptNumber?: string;}
 interface ExceptionalIncome { id: string; date: string; description: string; amount: number; warehouseId?: string; receiptNumber?: string; }
 interface Warehouse { id: string; name: string; autoStockUpdate?: boolean; }
@@ -43,6 +43,10 @@ interface CashAccount { id: string; name: string; }
 interface StockTransferRecord {
     id: string; date: string; fromSourceId: string; toSourceId: string; receiptNumber?: string;
     items: { id: string, name: string; qty: number, cost?:number }[];
+}
+interface StockOutRecord {
+    id: string; date: string; sourceId: string; receiptNumber?: string; reason?: string;
+    items: { id: string; name: string; qty: number, cost?:number }[];
 }
 interface Item {
     id: string;
@@ -168,9 +172,10 @@ export default function JournalPage() {
     const { data: suppliers, loading: l16 } = useFirebase<Supplier>("suppliers");
     const { data: supplierPayments, loading: l17 } = useFirebase<SupplierPayment>("supplierPayments");
     const { data: customerPayments, loading: l18 } = useFirebase<CustomerPayment>("customerPayments");
+    const { data: stockOuts, loading: l19 } = useFirebase<StockOutRecord>("stockOutRecords");
 
 
-    const loading = l1 || l2 || l3 || l4 || l5 || l6 || l7 || l8 || l9 || l10 || l11 || l12 || l13 || l14 || l15 || l16 || l17 || l18;
+    const loading = l1 || l2 || l3 || l4 || l5 || l6 || l7 || l8 || l9 || l10 || l11 || l12 || l13 || l14 || l15 || l16 || l17 || l18 || l19;
     
     const itemsMap = useMemo(() => {
         const map = new Map<string, Item>();
@@ -301,7 +306,7 @@ export default function JournalPage() {
             const transferCost = t.items.reduce((acc, transferItem) => {
                 const itemMaster = itemsMap.get(transferItem.id);
                 // Use a fallback cost if not available
-                const itemCost = transferItem.cost || itemMaster?.cost || itemMaster?.price || 0;
+                const itemCost = transferItem.cost || itemMaster?.cost || 0;
                 return acc + (transferItem.qty * itemCost);
             }, 0);
             const fromWarehouseName = getWarehouse(t.fromSourceId)?.name || 'مخزن غير معروف';
@@ -311,6 +316,22 @@ export default function JournalPage() {
             entries.push({ id: `trn-debit-${t.id}`, date: t.date, warehouseId: t.toSourceId, number: number, description: `تحويل من ${fromWarehouseName}`, debit: transferCost, credit: 0, account: `مخزون - ${toWarehouseName}` });
             // Credit the sending warehouse (asset decrease)
             entries.push({ id: `trn-credit-${t.id}`, date: t.date, warehouseId: t.fromSourceId, number: number, description: `تحويل إلى ${toWarehouseName}`, debit: 0, credit: transferCost, account: `مخزون - ${fromWarehouseName}` });
+        });
+        
+         // Stock Outs (Damaged Goods)
+        stockOuts.filter(so => so.reason === 'damaged').forEach(so => {
+            const number = so.receiptNumber || `إذ-خ-${so.id.slice(-4)}`;
+            const warehouse = getWarehouse(so.sourceId);
+            const costOfDamagedGoods = so.items.reduce((acc, stockOutItem) => {
+                 const itemMaster = itemsMap.get(stockOutItem.id);
+                 const itemCost = stockOutItem.cost || itemMaster?.cost || 0;
+                 return acc + (stockOutItem.qty * itemCost);
+            }, 0);
+
+            if (costOfDamagedGoods > 0 && warehouse) {
+                 entries.push({ id: `so-damaged-debit-${so.id}`, date: so.date, warehouseId: so.sourceId, number: number, description: `بضاعة تالفة من مخزن ${warehouse.name}`, debit: costOfDamagedGoods, credit: 0, account: 'مصروف بضاعة تالفة' });
+                 entries.push({ id: `so-damaged-credit-${so.id}`, date: so.date, warehouseId: so.sourceId, number: number, description: `تخفيض مخزون تالف`, debit: 0, credit: costOfDamagedGoods, account: `مخزون - ${warehouse.name}` });
+            }
         });
         
         // Treasury Transactions
@@ -364,7 +385,7 @@ export default function JournalPage() {
 
 
         return entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [sales, purchases, expenses, exceptionalIncomes, transfers, warehouses, itemsMap, cashAccounts, treasuryTxs, employeeAdvances, employees, employeeAdjustments, salesReturns, purchaseReturns, customers, suppliers, supplierPayments, customerPayments]);
+    }, [sales, purchases, expenses, exceptionalIncomes, transfers, warehouses, itemsMap, cashAccounts, treasuryTxs, employeeAdvances, employees, employeeAdjustments, salesReturns, purchaseReturns, customers, suppliers, supplierPayments, customerPayments, stockOuts]);
 
     const filteredEntries = journalEntries.filter(entry => {
         const entryDate = new Date(entry.date);
@@ -487,46 +508,48 @@ export default function JournalPage() {
                             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                         </div>
                     ) : (
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead className="w-[120px]">التاريخ</TableHead>
-                                    <TableHead className="w-[120px]">رقم القيد</TableHead>
-                                    <TableHead>البيان</TableHead>
-                                    <TableHead>الحساب</TableHead>
-                                    <TableHead className="text-center w-[150px]">مدين</TableHead>
-                                    <TableHead className="text-center w-[150px]">دائن</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {filteredEntries.map((entry) => (
-                                    <TableRow key={entry.id}>
-                                        <TableCell>{new Date(entry.date).toLocaleDateString('ar-EG')}</TableCell>
-                                        <TableCell className="font-mono">
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <span>{entry.number}</span>
-                                                </TooltipTrigger>
-                                                <TooltipContent>
-                                                    <p>{getReceiptTooltip(entry.number)}</p>
-                                                </TooltipContent>
-                                            </Tooltip>
-                                        </TableCell>
-                                        <TableCell>{entry.description}</TableCell>
-                                        <TableCell>{entry.account}</TableCell>
-                                        <TableCell className="text-center font-mono">{entry.debit > 0 ? entry.debit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</TableCell>
-                                        <TableCell className="text-center font-mono">{entry.credit > 0 ? entry.credit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</TableCell>
-                                    </TableRow>
-                                ))}
-                                {filteredEntries.length === 0 && (
+                        <div className="w-full overflow-auto">
+                            <Table>
+                                <TableHeader>
                                     <TableRow>
-                                        <TableCell colSpan={6} className="text-center text-muted-foreground py-10">
-                                            لا توجد قيود يومية تطابق الفلاتر المحددة.
-                                        </TableCell>
+                                        <TableHead className="w-[120px]">التاريخ</TableHead>
+                                        <TableHead className="w-[120px]">رقم القيد</TableHead>
+                                        <TableHead>البيان</TableHead>
+                                        <TableHead>الحساب</TableHead>
+                                        <TableHead className="text-center w-[150px]">مدين</TableHead>
+                                        <TableHead className="text-center w-[150px]">دائن</TableHead>
                                     </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
+                                </TableHeader>
+                                <TableBody>
+                                    {filteredEntries.map((entry) => (
+                                        <TableRow key={entry.id}>
+                                            <TableCell>{new Date(entry.date).toLocaleDateString('ar-EG')}</TableCell>
+                                            <TableCell className="font-mono">
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <span>{entry.number}</span>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                        <p>{getReceiptTooltip(entry.number)}</p>
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </TableCell>
+                                            <TableCell>{entry.description}</TableCell>
+                                            <TableCell>{entry.account}</TableCell>
+                                            <TableCell className="text-center font-mono">{entry.debit > 0 ? entry.debit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</TableCell>
+                                            <TableCell className="text-center font-mono">{entry.credit > 0 ? entry.credit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                    {filteredEntries.length === 0 && (
+                                        <TableRow>
+                                            <TableCell colSpan={6} className="text-center text-muted-foreground py-10">
+                                                لا توجد قيود يومية تطابق الفلاتر المحددة.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
                     )}
                 </CardContent>
                 </Card>
@@ -566,31 +589,33 @@ export default function JournalPage() {
                                         </div>
                                     </CardHeader>
                                     <CardContent className="p-0">
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>الحساب</TableHead>
-                                                    <TableHead className="w-[150px] text-center">مدين</TableHead>
-                                                    <TableHead className="w-[150px] text-center">دائن</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {entry.debits.map((d, i) => (
-                                                    <TableRow key={`d-${i}`}>
-                                                        <TableCell className="font-medium pr-6">{d.account}</TableCell>
-                                                        <TableCell className="text-center font-mono">{d.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</TableCell>
-                                                        <TableCell className="text-center">-</TableCell>
+                                        <div className="w-full overflow-auto">
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>الحساب</TableHead>
+                                                        <TableHead className="w-[150px] text-center">مدين</TableHead>
+                                                        <TableHead className="w-[150px] text-center">دائن</TableHead>
                                                     </TableRow>
-                                                ))}
-                                                    {entry.credits.map((c, i) => (
-                                                    <TableRow key={`c-${i}`}>
-                                                        <TableCell className="text-muted-foreground pr-10">{c.account}</TableCell>
-                                                        <TableCell className="text-center">-</TableCell>
-                                                        <TableCell className="text-center font-mono text-muted-foreground">{c.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {entry.debits.map((d, i) => (
+                                                        <TableRow key={`d-${i}`}>
+                                                            <TableCell className="font-medium pr-6">{d.account}</TableCell>
+                                                            <TableCell className="text-center font-mono">{d.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</TableCell>
+                                                            <TableCell className="text-center">-</TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                        {entry.credits.map((c, i) => (
+                                                        <TableRow key={`c-${i}`}>
+                                                            <TableCell className="text-muted-foreground pr-10">{c.account}</TableCell>
+                                                            <TableCell className="text-center">-</TableCell>
+                                                            <TableCell className="text-center font-mono text-muted-foreground">{c.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
                                     </CardContent>
                                     <CardFooter className='pt-4'>
                                         <p className="text-xs text-muted-foreground">البيان: {entry.description}</p>

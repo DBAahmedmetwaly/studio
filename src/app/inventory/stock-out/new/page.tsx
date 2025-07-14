@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import PageHeader from "@/components/page-header";
@@ -20,6 +21,7 @@ interface StockItem {
   id: string; // The database ID of the item
   name: string;
   qty: number;
+  cost: number;
   unit: string;
   uniqueId: string; // A unique ID for the list key
 }
@@ -28,6 +30,7 @@ interface Item {
     id: string;
     name: string;
     unit: string;
+    cost?: number;
 }
 
 interface Warehouse {
@@ -40,7 +43,7 @@ export default function NewStockOutPage() {
     const { toast } = useToast();
     const { user } = useAuth();
     const [items, setItems] = useState<StockItem[]>([]);
-    const [newItem, setNewItem] = useState({ id: "", name: "", qty: 1, unit: "" });
+    const [newItem, setNewItem] = useState({ id: "", name: "", qty: 1, unit: "", cost: 0 });
     const [source, setSource] = useState<string>("");
     const [notes, setNotes] = useState<string>("");
     const [reason, setReason] = useState<string>("");
@@ -65,10 +68,11 @@ export default function NewStockOutPage() {
             name: selectedItem.name,
             qty: newItem.qty,
             unit: selectedItem.unit,
+            cost: selectedItem.cost || 0,
             uniqueId: `${selectedItem.id}-${Date.now()}` // Create a unique ID for the key
         },
         ]);
-        setNewItem({ id: "", name: "", qty: 1, unit: "" });
+        setNewItem({ id: "", name: "", qty: 1, unit: "", cost: 0 });
     };
 
     const handleItemSelect = (itemId: string) => {
@@ -78,6 +82,7 @@ export default function NewStockOutPage() {
                 ...newItem,
                 id: itemId,
                 unit: selectedItem.unit,
+                cost: selectedItem.cost || 0,
             });
         }
     }
@@ -106,7 +111,7 @@ export default function NewStockOutPage() {
         const record = {
             sourceId: source,
             date: new Date(date).toISOString(),
-            items: items.map(({id, name, qty}) => ({id, name, qty})), // Remove uniqueId before saving
+            items: items.map(({id, name, qty, cost}) => ({id, name, qty, cost})), // Include cost
             reason,
             notes,
             receiptNumber: `إذ-خ-${nextId}`,
