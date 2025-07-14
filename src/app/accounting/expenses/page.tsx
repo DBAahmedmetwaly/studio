@@ -213,8 +213,8 @@ export default function ExpensesPage() {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>النوع</TableHead>
-                                        <TableHead className="hidden sm:table-cell">الوصف</TableHead>
-                                        <TableHead className="hidden md:table-cell">مدفوع من</TableHead>
+                                        <TableHead>الوصف</TableHead>
+                                        <TableHead>مدفوع من</TableHead>
                                         <TableHead className="text-center">المبلغ</TableHead>
                                         <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
                                     </TableRow>
@@ -227,8 +227,8 @@ export default function ExpensesPage() {
                                                 <div className="text-sm text-muted-foreground">{new Date(expense.date).toLocaleDateString('ar-EG')}</div>
                                                 <div className="text-xs text-muted-foreground">بواسطة: {expense.createdByName || 'غير معروف'}</div>
                                             </TableCell>
-                                            <TableCell className="hidden sm:table-cell">{expense.description}</TableCell>
-                                            <TableCell className="hidden md:table-cell">{getCashAccountName(expense.paidFromAccountId)}</TableCell>
+                                            <TableCell>{expense.description}</TableCell>
+                                            <TableCell>{getCashAccountName(expense.paidFromAccountId)}</TableCell>
                                             <TableCell className="text-center">{expense.amount.toLocaleString()}</TableCell>
                                             <TableCell className="text-center">
                                                 <AlertDialog>

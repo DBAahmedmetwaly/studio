@@ -193,7 +193,7 @@ export default function CustomerPaymentsPage() {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>العميل</TableHead>
-                                        <TableHead className="hidden sm:table-cell">مستلمة في</TableHead>
+                                        <TableHead>مستلمة في</TableHead>
                                         <TableHead className="text-center">المبلغ</TableHead>
                                         <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
                                     </TableRow>
@@ -206,7 +206,7 @@ export default function CustomerPaymentsPage() {
                                                 <div className="text-sm text-muted-foreground">{new Date(payment.date).toLocaleDateString('ar-EG')}</div>
                                                 <div className="text-xs text-muted-foreground">بواسطة: {payment.createdByName || 'غير معروف'}</div>
                                             </TableCell>
-                                            <TableCell className="hidden sm:table-cell">{getCashAccountName(payment.paidToAccountId)}</TableCell>
+                                            <TableCell>{getCashAccountName(payment.paidToAccountId)}</TableCell>
                                             <TableCell className="text-center">{payment.amount.toLocaleString()}</TableCell>
                                             <TableCell className="text-center">
                                                 <AlertDialog>

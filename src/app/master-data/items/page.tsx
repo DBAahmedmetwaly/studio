@@ -203,7 +203,7 @@ export default function ItemsPage() {
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
             ) : (
-                 <div className="w-full overflow-auto">
+                <div className="w-full overflow-auto">
                     <Table>
                         <TableHeader>
                             <TableRow>

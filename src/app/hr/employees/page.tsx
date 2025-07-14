@@ -166,10 +166,10 @@ export default function EmployeesPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>اسم الموظف</TableHead>
-                                <TableHead className="hidden sm:table-cell">المسمى الوظيفي</TableHead>
-                                <TableHead className="hidden md:table-cell">رقم الهاتف</TableHead>
+                                <TableHead>المسمى الوظيفي</TableHead>
+                                <TableHead>رقم الهاتف</TableHead>
                                 <TableHead className="text-center">الراتب الأساسي</TableHead>
-                                <TableHead className="hidden lg:table-cell text-center">تاريخ التعيين</TableHead>
+                                <TableHead className="text-center">تاريخ التعيين</TableHead>
                                 <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -177,10 +177,10 @@ export default function EmployeesPage() {
                             {employees.map((employee) => (
                                 <TableRow key={employee.id}>
                                     <TableCell className="font-medium">{employee.name}</TableCell>
-                                    <TableCell className="hidden sm:table-cell">{employee.jobTitle}</TableCell>
-                                    <TableCell className="hidden md:table-cell">{employee.phone || '-'}</TableCell>
+                                    <TableCell>{employee.jobTitle}</TableCell>
+                                    <TableCell>{employee.phone || '-'}</TableCell>
                                     <TableCell className="text-center">{employee.basicSalary.toLocaleString()} ج.م</TableCell>
-                                    <TableCell className="hidden lg:table-cell text-center">{new Date(employee.hireDate).toLocaleDateString('ar-EG')}</TableCell>
+                                    <TableCell className="text-center">{new Date(employee.hireDate).toLocaleDateString('ar-EG')}</TableCell>
                                     <TableCell className="text-center">
                                         <AlertDialog>
                                             <DropdownMenu>

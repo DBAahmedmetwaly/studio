@@ -179,7 +179,7 @@ export default function EmployeeAdjustmentsPage() {
                             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                         </div>
                     ) : (
-                         <div className="w-full overflow-auto border rounded-lg">
+                         <div className="w-full overflow-auto">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
