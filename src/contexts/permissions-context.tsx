@@ -72,6 +72,7 @@ export const permissionsConfig = {
     settings_roles: { label: "الأدوار والصلاحيات", group: "settings", actions: ["view", "edit"] },
     settings_general: { label: "الإعدادات العامة", group: "settings", actions: ["view", "edit"] },
     settings_backup: { label: "النسخ الاحتياطي", group: "settings", actions: ["view", "generate"] },
+    settings_periodClosing: { label: "إقفال الفترات", group: "settings", actions: ["view", "generate"] },
 };
 
 const moduleGroupLabels: Record<string, string> = {

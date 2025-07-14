@@ -226,11 +226,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <NavSubLink href="/reports/item-profit-loss" module="reports_itemProfitLoss">أرباح وخسائر الأصناف</NavSubLink>
             </NavCollapsible>
             
-            <NavCollapsible title="الإعدادات" icon={<Settings />} modules={['settings_users', 'settings_roles', 'settings_general', 'settings_backup']}>
+            <NavCollapsible title="الإعدادات" icon={<Settings />} modules={['settings_users', 'settings_roles', 'settings_general', 'settings_backup', 'settings_periodClosing']}>
               <NavSubLink href="/users" module="settings_users">المستخدمون</NavSubLink>
               <NavSubLink href="/roles" module="settings_roles">الوظائف والصلاحيات</NavSubLink>
               <NavSubLink href="/settings" module="settings_general">الإعدادات العامة</NavSubLink>
               <NavSubLink href="/settings/backup" module="settings_backup">النسخ الاحتياطي</NavSubLink>
+              <NavSubLink href="/settings/period-closing" module="settings_periodClosing">إقفال الفترات</NavSubLink>
             </NavCollapsible>
 
           </SidebarMenu>
