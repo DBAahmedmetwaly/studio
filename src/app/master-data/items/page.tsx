@@ -45,13 +45,14 @@ interface Item {
   unit: 'piece' | 'weight' | 'meter' | 'kilo' | 'gram';
   price: number;
   cost?: number;
+  image?: string;
   reorderPoint?: number;
 }
 
 const ItemForm = ({ item, onSave, onClose }: { item?: Item, onSave: (item: Omit<Item, 'id' | 'code'> & { id?: string, code?: string }) => void, onClose: () => void }) => {
   const [formData, setFormData] = useState<Omit<Item, 'id' | 'code'>>(
-    item ? { name: item.name, unit: item.unit, price: item.price, cost: item.cost, reorderPoint: item.reorderPoint }
-    : { name: "", unit: "piece", price: 0, cost: 0, reorderPoint: 5 }
+    item ? { name: item.name, unit: item.unit, price: item.price, cost: item.cost, image: item.image, reorderPoint: item.reorderPoint }
+    : { name: "", unit: "piece", price: 0, cost: 0, image: "", reorderPoint: 5 }
   );
 
   const handleSubmit = () => {
@@ -81,6 +82,12 @@ const ItemForm = ({ item, onSave, onClose }: { item?: Item, onSave: (item: Omit<
             اسم الصنف
             </Label>
             <Input id="item-name" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="col-span-3" required />
+        </div>
+        <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="item-image" className="text-right">
+            رابط الصورة
+            </Label>
+            <Input id="item-image" placeholder="https://example.com/image.png" value={formData.image} onChange={(e) => setFormData({...formData, image: e.target.value})} className="col-span-3" />
         </div>
         <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="item-unit" className="text-right">

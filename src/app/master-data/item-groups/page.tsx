@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import Image from "next/image";
 
 const COLORS = [
   "bg-blue-500", "bg-green-500", "bg-red-500", "bg-yellow-500",
@@ -56,6 +57,7 @@ interface ItemGroup {
   id?: string;
   name: string;
   color: string;
+  image?: string;
   itemIds: string[];
 }
 
@@ -66,7 +68,7 @@ interface Item {
 
 const GroupForm = ({ group, onSave, onClose }: { group?: ItemGroup; onSave: (data: ItemGroup) => void; onClose: () => void }) => {
   const [formData, setFormData] = useState<ItemGroup>(
-    group || { name: "", color: COLORS[0], itemIds: [] }
+    group || { name: "", color: COLORS[0], image: "", itemIds: [] }
   );
   const { items } = useData();
 
@@ -89,6 +91,10 @@ const GroupForm = ({ group, onSave, onClose }: { group?: ItemGroup; onSave: (dat
       <div className="space-y-2">
         <Label htmlFor="group-name">اسم المجموعة</Label>
         <Input id="group-name" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+      </div>
+       <div className="space-y-2">
+        <Label htmlFor="group-image">رابط صورة المجموعة</Label>
+        <Input id="group-image" placeholder="https://example.com/image.png" value={formData.image} onChange={e => setFormData({ ...formData, image: e.target.value })} />
       </div>
       <div className="space-y-2">
         <Label>لون المجموعة</Label>
@@ -172,14 +178,15 @@ export default function ItemGroupsPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {itemGroups.map((group: ItemGroup) => (
                   <Card key={group.id} className="flex flex-col">
-                    <CardHeader className="flex flex-row items-center justify-between">
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
                       <CardTitle className="text-lg">{group.name}</CardTitle>
                       <div className={`h-6 w-6 rounded-full ${group.color}`} />
                     </CardHeader>
-                    <CardContent className="flex-grow">
-                      <p className="text-sm text-muted-foreground">
-                        تحتوي على {group.itemIds?.length || 0} صنف.
-                      </p>
+                    <CardContent className="flex-grow flex flex-col items-center justify-center gap-2">
+                        <Image src={group.image || "https://placehold.co/100x100.png"} alt={group.name} width={80} height={80} className="rounded-lg object-cover" />
+                        <p className="text-sm text-muted-foreground">
+                            تحتوي على {group.itemIds?.length || 0} صنف.
+                        </p>
                     </CardContent>
                     <CardFooter className="flex justify-end bg-muted/50 p-2">
                        <AlertDialog>
