@@ -55,7 +55,7 @@ import {
   FilePieChart,
   UserSquare,
   Building2,
-  ClipboardUser,
+  Users2,
   PackageSearch,
 } from "lucide-react";
 import Link from "next/link";
@@ -214,7 +214,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <NavSubLink href="/reports/financial-statements" module="reports_financialStatements">القوائم المالية</NavSubLink>
             </NavCollapsible>
             
-            <NavCollapsible title="المناديب والشركاء" icon={<ClipboardUser />} modules={['salesReps_data', 'partners_data', 'sales_issueToRep', 'sales_returnFromRep', 'sales_repInvoices', 'sales_repOperations', 'sales_remitFromRep', 'reports_partnerShares']}>
+            <NavCollapsible title="المناديب والشركاء" icon={<Users2 />} modules={['salesReps_data', 'partners_data', 'sales_issueToRep', 'sales_returnFromRep', 'sales_repInvoices', 'sales_repOperations', 'sales_remitFromRep', 'reports_partnerShares']}>
                 <NavSubLink href="/master-data/sales-reps" module="salesReps_data">بيانات المناديب</NavSubLink>
                  <NavSubLink href="/master-data/partners" module="partners_data">بيانات الشركاء</NavSubLink>
                 <NavSubLink href="/sales/issue-to-rep/list" module="sales_issueToRep">صرف بضاعة لمندوب</NavSubLink>
