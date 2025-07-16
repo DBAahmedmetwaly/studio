@@ -118,7 +118,7 @@ const ReportContainer = ({ title, description, children, onPrint }: { title: str
 )
 
 const StockStatusReport = ({ filters, data }: any) => {
-    const { allItems, warehouses, sales, purchases, stockIns, stockOuts, transfers, adjustments, salesReturns, purchaseReturns, issuesToReps, returnsFromReps } = data;
+    const { items: allItems, warehouses, sales, purchases, stockIns, stockOuts, transfers, adjustments, salesReturns, purchaseReturns, issuesToReps, returnsFromReps } = data;
     
     const stockData = useMemo(() => {
         let targetWarehouses = filters.warehouseId === 'all'
@@ -128,6 +128,8 @@ const StockStatusReport = ({ filters, data }: any) => {
         let targetItems = filters.itemId
             ? allItems.filter((item:any) => item.id === filters.itemId)
             : allItems;
+        
+        if (!targetItems) return [];
 
         return targetWarehouses.flatMap((warehouse:any) => 
             targetItems.map((item:any) => {
@@ -173,7 +175,7 @@ const StockStatusReport = ({ filters, data }: any) => {
 }
 
 const ItemLedgerReport = ({ filters, data }: any) => {
-    const { allItems, warehouses, sales, purchases, stockIns, stockOuts, transfers, adjustments, salesReturns, purchaseReturns, issuesToReps, returnsFromReps } = data;
+    const { items: allItems, warehouses, sales, purchases, stockIns, stockOuts, transfers, adjustments, salesReturns, purchaseReturns, issuesToReps, returnsFromReps } = data;
     const { fromDate, toDate, warehouseId, itemId } = filters;
 
     const ledgerData = useMemo(() => {
@@ -264,7 +266,7 @@ const ItemLedgerReport = ({ filters, data }: any) => {
 };
 
 const ReorderListReport = ({ filters, data }: any) => {
-    const { allItems, warehouses, sales, purchases, stockIns, stockOuts, transfers, adjustments, salesReturns, purchaseReturns, issuesToReps, returnsFromReps } = data;
+    const { items: allItems, warehouses, sales, purchases, stockIns, stockOuts, transfers, adjustments, salesReturns, purchaseReturns, issuesToReps, returnsFromReps } = data;
 
     const stockData = useMemo(() => {
         return allItems
