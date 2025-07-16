@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState } from "react";
@@ -40,7 +39,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import useFirebase from "@/hooks/use-firebase";
+import { useData } from "@/contexts/data-provider";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/contexts/permissions-context";
 import { auth } from "@/lib/firebase";
@@ -154,7 +153,7 @@ const UserForm = ({ user, onSave, onClose, warehouses, roles }: { user?: User, o
         <div className="flex items-center space-x-4">
              <div className="flex items-center space-x-2">
                 <Checkbox id="is-sales-rep" checked={formData.isSalesRep} onCheckedChange={(checked) => setFormData({...formData, isSalesRep: !!checked})} />
-                <Label htmlFor="is-sales-rep" className="cursor-pointer">مندوب مبيعات</Label>
+                <Label htmlFor="is-sales-rep" className="cursor-pointer">مندوب مبيعات / كاشير</Label>
             </div>
              <div className="flex items-center space-x-2">
                 <Checkbox id="is-employee" checked={formData.isEmployee} onCheckedChange={(checked) => setFormData({...formData, isEmployee: !!checked})} />
@@ -201,40 +200,34 @@ const UserForm = ({ user, onSave, onClose, warehouses, roles }: { user?: User, o
 };
 
 export default function UsersPage() {
-  const { data: usersData, loading: loadingUsers, add, update, remove } = useFirebase<User>('users');
-  const { add: addEmployee, update: updateEmployee, remove: removeEmployee } = useFirebase<any>('employees');
-  const { data: cashAccountsData, add: addCashAccount, remove: removeCashAccount } = useFirebase<any>('cashAccounts');
-  const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
-  const { data: rolesData, loading: loadingRoles } = useFirebase<any>('roles');
+  const { users: usersData, cashAccounts: cashAccountsData, warehouses, roles: rolesData, loading, dbAction } = useData();
   const { toast } = useToast();
   const { can } = usePermissions();
   const moduleName = 'settings_users';
   
   const roleNames = rolesData ? Object.keys(rolesData) : [];
-  const combinedLoading = loadingUsers || loadingWarehouses || loadingRoles;
-
-
+  
   const handleSave = async (user: Omit<User, 'id'> & { id?: string }) => {
     try {
         const userId = user.id;
         if (userId) { // This is an update
             if (!can('edit', moduleName)) return toast({variant: 'destructive', title: 'غير مصرح به'});
             const { id, ...dataToUpdate } = user;
-            await update(id, dataToUpdate);
+            await dbAction('users', 'update', {id, data: dataToUpdate});
             
             // Sync employee data
             if (user.isEmployee) {
-                await updateEmployee(id, { name: user.name, jobTitle: user.jobTitle, basicSalary: user.basicSalary, hireDate: user.hireDate, phone: user.phone });
+                await dbAction('employees', 'update', {id, data: { name: user.name, jobTitle: user.jobTitle, basicSalary: user.basicSalary, hireDate: user.hireDate, phone: user.phone }});
             } else {
-                await removeEmployee(id);
+                await dbAction('employees', 'remove', {id});
             }
             
             // Sync sales rep cash account
             const existingCashAccount = cashAccountsData.find((acc: any) => acc.salesRepId === id);
             if (user.isSalesRep && !existingCashAccount) {
-                 await addCashAccount({ name: `خزينة المندوب: ${user.name}`, type: 'cash', openingBalance: 0, salesRepId: id });
+                 await dbAction('cashAccounts', 'add', { name: `عهدة: ${user.name}`, type: 'cash', openingBalance: 0, salesRepId: id });
             } else if (!user.isSalesRep && existingCashAccount) {
-                await removeCashAccount(existingCashAccount.id);
+                await dbAction('cashAccounts', 'remove', {id: existingCashAccount.id});
             }
 
             toast({ title: "تم تحديث المستخدم بنجاح" });
@@ -262,16 +255,16 @@ export default function UsersPage() {
                 name: user.name, loginName: user.loginName, role: user.role, warehouse: user.warehouse, isSalesRep: user.isSalesRep, isEmployee: user.isEmployee, uid: newAuthUser.uid, phone: user.phone,
              };
             
-            const newUserKey = await add(userDataForDb);
+            const newUserKey = await dbAction('users', 'add', userDataForDb);
             if (!newUserKey) throw new Error("Failed to get new user key from database.");
             
             if (user.isEmployee) {
                 const employeeRecord = { name: user.name, jobTitle: user.jobTitle, basicSalary: user.basicSalary, hireDate: user.hireDate, phone: user.phone };
-                await updateEmployee(newUserKey, employeeRecord);
+                await dbAction('employees', 'update', {id: newUserKey, data: employeeRecord});
             }
             
             if (user.isSalesRep) {
-                await addCashAccount({ name: `خزينة المندوب: ${user.name}`, type: 'cash', openingBalance: 0, salesRepId: newUserKey });
+                await dbAction('cashAccounts', 'add', { name: `عهدة: ${user.name}`, type: 'cash', openingBalance: 0, salesRepId: newUserKey });
             }
 
             toast({ title: "تمت إضافة المستخدم بنجاح" });
@@ -291,11 +284,11 @@ export default function UsersPage() {
 
     if (confirm(`هل أنت متأكد من حذف المستخدم "${userToDelete.name}"؟`)) {
       try {
-        await remove(userToDelete.id);
-        if (userToDelete.isEmployee) await removeEmployee(userToDelete.id);
+        await dbAction('users', 'remove', {id: userToDelete.id});
+        if (userToDelete.isEmployee) await dbAction('employees', 'remove', {id: userToDelete.id});
         
         const repCashAccount = cashAccountsData.find((acc: any) => acc.salesRepId === userToDelete.id);
-        if(repCashAccount) await removeCashAccount(repCashAccount.id);
+        if(repCashAccount) await dbAction('cashAccounts', 'remove', {id: repCashAccount.id});
 
         toast({ title: "تم حذف المستخدم بنجاح من قاعدة البيانات", description: "ملاحظة: حساب المصادقة لا يتم حذفه من هنا." });
       } catch (error) {
@@ -319,8 +312,8 @@ export default function UsersPage() {
             title="إضافة مستخدم جديد"
             description="أدخل تفاصيل المستخدم الجديد وصلاحياته."
             triggerButton={
-              <Button size="sm" className="gap-1" disabled={combinedLoading}>
-                 {combinedLoading ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <PlusCircle className="h-4 w-4" />}
+              <Button size="sm" className="gap-1" disabled={loading}>
+                 {loading ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <PlusCircle className="h-4 w-4" />}
                 إضافة مستخدم
               </Button>
             }
@@ -338,7 +331,7 @@ export default function UsersPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {combinedLoading ? (
+            {loading ? (
                  <div className="flex justify-center items-center py-10">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
@@ -349,7 +342,7 @@ export default function UsersPage() {
                         <TableRow>
                         <TableHead>المستخدم</TableHead>
                         <TableHead>اسم الدخول</TableHead>
-                        <TableHead className="text-center">مندوب</TableHead>
+                        <TableHead className="text-center">مندوب/كاشير</TableHead>
                         <TableHead className="text-center">الوظيفة</TableHead>
                         <TableHead>المخزن</TableHead>
                         <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
@@ -380,7 +373,7 @@ export default function UsersPage() {
                             <TableCell className="text-center">
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                <Button aria-haspopup="true" size="icon" variant="ghost" disabled={combinedLoading}>
+                                <Button aria-haspopup="true" size="icon" variant="ghost" disabled={loading}>
                                     <MoreHorizontal className="h-4 w-4" />
                                     <span className="sr-only">تبديل القائمة</span>
                                 </Button>
