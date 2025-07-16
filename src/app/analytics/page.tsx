@@ -3,7 +3,7 @@
 
 import { Bar, CartesianGrid, LabelList, XAxis, YAxis, Pie, PieChart as RechartsPieChart, BarChart as RechartsBarChart, Cell } from "recharts"
 import React, { useMemo, useState, useEffect } from 'react';
-import useFirebase from "@/hooks/use-firebase";
+import { useData } from "@/contexts/data-provider";
 import {
   Card,
   CardContent,
@@ -63,15 +63,7 @@ const chartConfig = {
 const COLORS = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
 
 export default function AnalyticsPage() {
-    const { data: items, loading: loadingItems } = useFirebase<Item>('items');
-    const { data: sales, loading: loadingSales } = useFirebase<SaleInvoice>('salesInvoices');
-    const { data: purchases, loading: loadingPurchases } = useFirebase<PurchaseInvoice>('purchaseInvoices');
-    const { data: suppliers, loading: loadingSuppliers } = useFirebase<Supplier>('suppliers');
-    const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
-    const { data: customers, loading: loadingCustomers } = useFirebase<Customer>('customers');
-    const { data: expenses, loading: loadingExpenses } = useFirebase<Expense>('expenses');
-    const { data: users, loading: loadingUsers } = useFirebase<User>('users');
-
+    const { items, salesInvoices, purchaseInvoices, suppliers, warehouses, customers, expenses, users, loading } = useData();
 
     const [dateRange, setDateRange] = useState({
       from: '',
@@ -90,10 +82,8 @@ export default function AnalyticsPage() {
         });
     }, []);
 
-    const loading = loadingItems || loadingSales || loadingPurchases || loadingSuppliers || loadingWarehouses || loadingCustomers || loadingExpenses || loadingUsers;
-
     const filteredSales = useMemo(() => {
-        return sales.filter(sale => {
+        return salesInvoices.filter(sale => {
             if (sale.status && sale.status !== 'approved') return false;
             const saleDate = new Date(sale.date);
             const from = dateRange.from ? new Date(dateRange.from) : null;
@@ -103,10 +93,10 @@ export default function AnalyticsPage() {
             if (selectedWarehouse !== 'all' && sale.warehouseId !== selectedWarehouse) return false;
             return true;
         });
-    }, [sales, dateRange, selectedWarehouse]);
+    }, [salesInvoices, dateRange, selectedWarehouse]);
 
     const filteredPurchases = useMemo(() => {
-        return purchases.filter(purchase => {
+        return purchaseInvoices.filter(purchase => {
             const purchaseDate = new Date(purchase.date);
             const from = dateRange.from ? new Date(dateRange.from) : null;
             const to = dateRange.to ? new Date(dateRange.to) : null;
@@ -115,7 +105,7 @@ export default function AnalyticsPage() {
             if (selectedWarehouse !== 'all' && purchase.warehouseId !== selectedWarehouse) return false;
             return true;
         });
-    }, [purchases, dateRange, selectedWarehouse]);
+    }, [purchaseInvoices, dateRange, selectedWarehouse]);
 
     const filteredExpenses = useMemo(() => {
         return expenses.filter(expense => {
@@ -438,5 +428,3 @@ export default function AnalyticsPage() {
     </>
   )
 }
-
-    

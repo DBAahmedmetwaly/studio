@@ -168,7 +168,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <SidebarContent>
           <SidebarMenu>
             <NavLink href="/" icon={<LayoutDashboard />} module="dashboard">لوحة التحكم</NavLink>
-            <NavLink href="/analytics" icon={<BarChart />} module="analytics">التحليلات</NavLink>
+            <NavLink href="/analytics" icon={<BarChart />} module="analytics">التحليلات الرسومية</NavLink>
 
             <NavCollapsible title="نقاط البيع" icon={<Receipt />} modules={['pos', 'pos_itemGroups', 'pos_remit', 'pos_closing', 'reports_pos']}>
                 <NavSubLink href="/pos" module="pos">شاشة الكاشير</NavSubLink>
@@ -275,4 +275,3 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     </SidebarProvider>
   );
 }
-
