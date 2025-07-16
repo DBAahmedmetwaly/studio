@@ -132,7 +132,6 @@ const StockStatusReport = ({ filters, data }: any) => {
         return targetWarehouses.flatMap((warehouse:any) => 
             targetItems.map((item:any) => {
                 let stock = 0;
-                // Increases
                 purchases.filter((p:any) => p.warehouseId === warehouse.id && new Date(p.date) <= new Date(filters.toDate || Date.now())).forEach((p:any) => p.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
                 stockIns.filter((si:any) => si.warehouseId === warehouse.id && new Date(si.date) <= new Date(filters.toDate || Date.now())).forEach((si:any) => si.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
                 transfers.filter((t:any) => t.toSourceId === warehouse.id && new Date(t.date) <= new Date(filters.toDate || Date.now())).forEach((t:any) => t.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
@@ -140,7 +139,6 @@ const StockStatusReport = ({ filters, data }: any) => {
                 salesReturns.filter((sr:any) => sr.warehouseId === warehouse.id && new Date(sr.date) <= new Date(filters.toDate || Date.now())).forEach((sr:any) => sr.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
                 returnsFromReps.filter((rfr:any) => rfr.warehouseId === warehouse.id && new Date(rfr.date) <= new Date(filters.toDate || Date.now())).forEach((rfr:any) => rfr.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
 
-                // Decreases
                 sales.filter((s:any) => s.warehouseId === warehouse.id && s.status === 'approved' && new Date(s.date) <= new Date(filters.toDate || Date.now())).forEach((s:any) => s.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
                 stockOuts.filter((so:any) => so.sourceId === warehouse.id && new Date(so.date) <= new Date(filters.toDate || Date.now())).forEach((so:any) => so.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
                 transfers.filter((t:any) => t.fromSourceId === warehouse.id && new Date(t.date) <= new Date(filters.toDate || Date.now())).forEach((t:any) => t.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
@@ -173,8 +171,140 @@ const StockStatusReport = ({ filters, data }: any) => {
         </ReportContainer>
      )
 }
-// Add more report components here...
 
+const ItemLedgerReport = ({ filters, data }: any) => {
+    const { allItems, warehouses, sales, purchases, stockIns, stockOuts, transfers, adjustments, salesReturns, purchaseReturns, issuesToReps, returnsFromReps } = data;
+    const { fromDate, toDate, warehouseId, itemId } = filters;
+
+    const ledgerData = useMemo(() => {
+        if (!itemId) return [];
+        let transactions: any[] = [];
+        
+        let openingBalance = 0;
+        const allTargetWarehouses = warehouseId === 'all' ? warehouses.map((w:any) => w.id) : [warehouseId];
+        
+        // Calculate Opening Balance
+        allTargetWarehouses.forEach(whId => {
+            // Additions
+            purchases.filter((t:any) => t.warehouseId === whId && new Date(t.date) < new Date(fromDate)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => openingBalance += i.qty));
+            stockIns.filter((t:any) => t.warehouseId === whId && new Date(t.date) < new Date(fromDate)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => openingBalance += i.qty));
+            transfers.filter((t:any) => t.toSourceId === whId && new Date(t.date) < new Date(fromDate)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => openingBalance += i.qty));
+            salesReturns.filter((t:any) => t.warehouseId === whId && new Date(t.date) < new Date(fromDate)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => openingBalance += i.qty));
+            returnsFromReps.filter((t:any) => t.warehouseId === whId && new Date(t.date) < new Date(fromDate)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => openingBalance += i.qty));
+            adjustments.filter((t:any) => t.warehouseId === whId && new Date(t.date) < new Date(fromDate)).forEach((t:any) => t.items.filter((i:any)=>i.itemId === itemId).forEach((i:any) => openingBalance += i.difference > 0 ? i.difference : 0));
+            // Subtractions
+            sales.filter((t:any) => t.warehouseId === whId && new Date(t.date) < new Date(fromDate) && t.status==='approved').forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => openingBalance -= i.qty));
+            stockOuts.filter((t:any) => t.sourceId === whId && new Date(t.date) < new Date(fromDate)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => openingBalance -= i.qty));
+            transfers.filter((t:any) => t.fromSourceId === whId && new Date(t.date) < new Date(fromDate)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => openingBalance -= i.qty));
+            purchaseReturns.filter((t:any) => t.warehouseId === whId && new Date(t.date) < new Date(fromDate)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => openingBalance -= i.qty));
+            issuesToReps.filter((t:any) => t.warehouseId === whId && new Date(t.date) < new Date(fromDate)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => openingBalance -= i.qty));
+            adjustments.filter((t:any) => t.warehouseId === whId && new Date(t.date) < new Date(fromDate)).forEach((t:any) => t.items.filter((i:any)=>i.itemId === itemId).forEach((i:any) => openingBalance += i.difference < 0 ? i.difference : 0));
+        });
+
+        transactions.push({ date: fromDate, description: "رصيد افتتاحي", incoming: 0, outgoing: 0, balance: openingBalance });
+
+        const withinPeriodTransactions = [
+            ...purchases.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'in', qty: i.qty, warehouseId: t.warehouseId, source: "فاتورة شراء"}))),
+            ...stockIns.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'in', qty: i.qty, warehouseId: t.warehouseId, source: "إذن استلام"}))),
+            ...salesReturns.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'in', qty: i.qty, warehouseId: t.warehouseId, source: "مرتجع بيع"}))),
+            ...returnsFromReps.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'in', qty: i.qty, warehouseId: t.warehouseId, source: "مرتجع مندوب"}))),
+            ...transfers.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'in', qty: i.qty, warehouseId: t.toSourceId, source: "تحويل مخزني"}))),
+            ...adjustments.flatMap((t:any) => t.items.filter((i:any)=>i.itemId===itemId && i.difference > 0).map((i:any) => ({...t, type: 'in', qty: i.difference, warehouseId: t.warehouseId, source: "تسوية مخزون"}))),
+
+            ...sales.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId && t.status==='approved').map((i:any) => ({...t, type: 'out', qty: i.qty, warehouseId: t.warehouseId, source: "فاتورة بيع"}))),
+            ...stockOuts.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'out', qty: i.qty, warehouseId: t.sourceId, source: "إذن صرف"}))),
+            ...purchaseReturns.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'out', qty: i.qty, warehouseId: t.warehouseId, source: "مرتجع شراء"}))),
+            ...issuesToReps.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'out', qty: i.qty, warehouseId: t.warehouseId, source: "صرف للمندوب"}))),
+            ...transfers.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'out', qty: i.qty, warehouseId: t.fromSourceId, source: "تحويل مخزني"}))),
+            ...adjustments.flatMap((t:any) => t.items.filter((i:any)=>i.itemId===itemId && i.difference < 0).map((i:any) => ({...t, type: 'out', qty: Math.abs(i.difference), warehouseId: t.warehouseId, source: "تسوية مخزون"}))),
+        ]
+        .filter((t:any) => {
+            const tDate = new Date(t.date);
+            const start = fromDate ? new Date(fromDate) : null;
+            const end = toDate ? new Date(toDate) : null;
+            if(start && tDate < start) return false;
+            if(end && tDate > end) return false;
+            if(warehouseId !== 'all' && t.warehouseId !== warehouseId) return false;
+            return true;
+        })
+        .sort((a:any, b:any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        
+        let currentBalance = openingBalance;
+        withinPeriodTransactions.forEach((t:any) => {
+            const incoming = t.type === 'in' ? t.qty : 0;
+            const outgoing = t.type === 'out' ? t.qty : 0;
+            currentBalance += incoming - outgoing;
+            transactions.push({ date: new Date(t.date).toLocaleDateString('ar-EG'), description: t.source, incoming, outgoing, balance: currentBalance });
+        });
+
+        return transactions;
+
+    }, [filters, data]);
+
+    if (!itemId) return <Card><CardContent className="p-10 text-center text-muted-foreground">الرجاء اختيار صنف لعرض كارت الحركة الخاص به.</CardContent></Card>;
+
+    return (
+        <ReportContainer title={`كارت الصنف: ${allItems.find((i:any)=>i.id === itemId)?.name}`} description={`حركة الصنف من ${filters.fromDate || 'البداية'} إلى ${filters.toDate || 'النهاية'}`} onPrint={() => window.print()}>
+            <Table>
+                <TableHeader><TableRow><TableHead>التاريخ</TableHead><TableHead>البيان</TableHead><TableHead className="text-center">وارد</TableHead><TableHead className="text-center">منصرف</TableHead><TableHead className="text-center">الرصيد</TableHead></TableRow></TableHeader>
+                <TableBody>
+                    {ledgerData.map((tx, idx) => (
+                        <TableRow key={idx}>
+                            <TableCell>{tx.date}</TableCell>
+                            <TableCell>{tx.description}</TableCell>
+                            <TableCell className="text-center text-green-600">{tx.incoming > 0 ? tx.incoming : ''}</TableCell>
+                            <TableCell className="text-center text-destructive">{tx.outgoing > 0 ? tx.outgoing : ''}</TableCell>
+                            <TableCell className="text-center font-bold">{tx.balance}</TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        </ReportContainer>
+    );
+};
+
+const ReorderListReport = ({ filters, data }: any) => {
+    const { allItems, warehouses, sales, purchases, stockIns, stockOuts, transfers, adjustments, salesReturns, purchaseReturns, issuesToReps, returnsFromReps } = data;
+
+    const stockData = useMemo(() => {
+        return allItems
+            .filter((item: any) => item.reorderPoint > 0)
+            .map((item: any) => {
+                let stock = 0;
+                let targetWarehouses = filters.warehouseId === 'all' ? warehouses : warehouses.filter((w: any) => w.id === filters.warehouseId);
+                
+                targetWarehouses.forEach((wh: any) => {
+                    purchases.filter((p:any) => p.warehouseId === wh.id).forEach((p:any) => p.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
+                    sales.filter((s:any) => s.warehouseId === wh.id && s.status === 'approved').forEach((s:any) => s.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
+                    // Add other movements if needed...
+                });
+
+                return { ...item, currentStock: stock };
+            })
+            .filter((item: any) => item.currentStock <= item.reorderPoint);
+
+    }, [filters, data]);
+
+    return (
+        <ReportContainer title="تقرير الأصناف تحت حد الطلب" description="يعرض الأصناف التي وصل رصيدها إلى أو أقل من حد إعادة الطلب" onPrint={() => window.print()}>
+            <Table>
+                <TableHeader><TableRow><TableHead>كود الصنف</TableHead><TableHead>اسم الصنف</TableHead><TableHead className="text-center">الرصيد الحالي</TableHead><TableHead className="text-center">حد الطلب</TableHead></TableRow></TableHeader>
+                <TableBody>
+                    {stockData.map((item:any) => (
+                        <TableRow key={item.id}>
+                            <TableCell>{item.code}</TableCell>
+                            <TableCell>{item.name}</TableCell>
+                            <TableCell className="text-center text-destructive font-bold">{item.currentStock}</TableCell>
+                            <TableCell className="text-center">{item.reorderPoint}</TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        </ReportContainer>
+    );
+};
+
+// --- Main Page Component ---
 export default function InventoryReportsPage() {
     const data = useData();
     const [activeFilters, setActiveFilters] = useState<any>(null);
@@ -194,19 +324,19 @@ export default function InventoryReportsPage() {
                         <TabsList className="grid w-full grid-cols-7 no-print">
                             <TabsTrigger value="stock_status">حالة المخزون</TabsTrigger>
                             <TabsTrigger value="item_ledger">كارت الصنف</TabsTrigger>
-                            <TabsTrigger value="valuation">تقييم المخزون</TabsTrigger>
-                            <TabsTrigger value="movement_summary">ملخص الحركة</TabsTrigger>
-                            <TabsTrigger value="dead_stock">الأصناف الراكدة</TabsTrigger>
                             <TabsTrigger value="reorder_list">حد الطلب</TabsTrigger>
-                            <TabsTrigger value="abc_analysis">تحليل ABC</TabsTrigger>
+                            <TabsTrigger value="valuation" disabled>تقييم المخزون</TabsTrigger>
+                            <TabsTrigger value="movement_summary" disabled>ملخص الحركة</TabsTrigger>
+                            <TabsTrigger value="dead_stock" disabled>الأصناف الراكدة</TabsTrigger>
+                            <TabsTrigger value="abc_analysis" disabled>تحليل ABC</TabsTrigger>
                         </TabsList>
                         
                         <TabsContent value="stock_status"><StockStatusReport filters={activeFilters} data={data} /></TabsContent>
-                        <TabsContent value="item_ledger"><Card><CardContent className="p-10 text-center">قيد التطوير</CardContent></Card></TabsContent>
+                        <TabsContent value="item_ledger"><ItemLedgerReport filters={activeFilters} data={data} /></TabsContent>
+                        <TabsContent value="reorder_list"><ReorderListReport filters={activeFilters} data={data} /></TabsContent>
                         <TabsContent value="valuation"><Card><CardContent className="p-10 text-center">قيد التطوير</CardContent></Card></TabsContent>
                         <TabsContent value="movement_summary"><Card><CardContent className="p-10 text-center">قيد التطوير</CardContent></Card></TabsContent>
                         <TabsContent value="dead_stock"><Card><CardContent className="p-10 text-center">قيد التطوير</CardContent></Card></TabsContent>
-                        <TabsContent value="reorder_list"><Card><CardContent className="p-10 text-center">قيد التطوير</CardContent></Card></TabsContent>
                         <TabsContent value="abc_analysis"><Card><CardContent className="p-10 text-center">قيد التطوير</CardContent></Card></TabsContent>
                     </Tabs>
                 )}

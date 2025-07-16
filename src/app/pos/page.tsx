@@ -269,7 +269,7 @@ export default function PosPage() {
 
 
                 {/* Left Side - Cart and Payment */}
-                <div className="col-span-5 flex flex-col gap-4">
+                <div className="col-span-5 flex flex-col gap-4 overflow-hidden">
                     <Card className="flex-grow flex flex-col overflow-hidden">
                         <CardHeader className="shrink-0">
                             <CardTitle className="flex items-center gap-2"><ShoppingCart/> سلة المبيعات</CardTitle>
