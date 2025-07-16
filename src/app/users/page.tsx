@@ -58,6 +58,7 @@ interface User {
   warehouse: string;
   phone?: string;
   isSalesRep?: boolean;
+  isCashier?: boolean;
   isEmployee?: boolean;
   jobTitle?: string;
   basicSalary?: number;
@@ -78,6 +79,7 @@ const UserForm = ({ user, onSave, onClose, warehouses, roles }: { user?: User, o
     warehouse: user?.warehouse || "",
     phone: user?.phone || "",
     isSalesRep: user?.isSalesRep || false,
+    isCashier: user?.isCashier || false,
     isEmployee: user?.isEmployee || false,
     jobTitle: user?.jobTitle || "",
     basicSalary: user?.basicSalary || 0,
@@ -153,7 +155,11 @@ const UserForm = ({ user, onSave, onClose, warehouses, roles }: { user?: User, o
         <div className="flex items-center space-x-4">
              <div className="flex items-center space-x-2">
                 <Checkbox id="is-sales-rep" checked={formData.isSalesRep} onCheckedChange={(checked) => setFormData({...formData, isSalesRep: !!checked})} />
-                <Label htmlFor="is-sales-rep" className="cursor-pointer">مندوب مبيعات / كاشير</Label>
+                <Label htmlFor="is-sales-rep" className="cursor-pointer">مندوب مبيعات</Label>
+            </div>
+             <div className="flex items-center space-x-2">
+                <Checkbox id="is-cashier" checked={formData.isCashier} onCheckedChange={(checked) => setFormData({...formData, isCashier: !!checked})} />
+                <Label htmlFor="is-cashier" className="cursor-pointer">كاشير (لنقاط البيع)</Label>
             </div>
              <div className="flex items-center space-x-2">
                 <Checkbox id="is-employee" checked={formData.isEmployee} onCheckedChange={(checked) => setFormData({...formData, isEmployee: !!checked})} />
@@ -222,11 +228,13 @@ export default function UsersPage() {
                 await dbAction('employees', 'remove', {id});
             }
             
-            // Sync sales rep cash account
-            const existingCashAccount = cashAccountsData.find((acc: any) => acc.salesRepId === id);
-            if (user.isSalesRep && !existingCashAccount) {
-                 await dbAction('cashAccounts', 'add', { name: `عهدة: ${user.name}`, type: 'cash', openingBalance: 0, salesRepId: id });
-            } else if (!user.isSalesRep && existingCashAccount) {
+            // Sync user custody cash account
+            const existingCashAccount = cashAccountsData.find((acc: any) => acc.userId === id);
+            const needsCustodyAccount = user.isSalesRep || user.isCashier;
+
+            if (needsCustodyAccount && !existingCashAccount) {
+                 await dbAction('cashAccounts', 'add', { name: `عهدة المستخدم: ${user.name}`, type: 'cash', openingBalance: 0, userId: id });
+            } else if (!needsCustodyAccount && existingCashAccount) {
                 await dbAction('cashAccounts', 'remove', {id: existingCashAccount.id});
             }
 
@@ -252,7 +260,7 @@ export default function UsersPage() {
             await signInWithCredential(auth, credential);
 
              const userDataForDb = { 
-                name: user.name, loginName: user.loginName, role: user.role, warehouse: user.warehouse, isSalesRep: user.isSalesRep, isEmployee: user.isEmployee, uid: newAuthUser.uid, phone: user.phone,
+                name: user.name, loginName: user.loginName, role: user.role, warehouse: user.warehouse, isSalesRep: user.isSalesRep, isCashier: user.isCashier, isEmployee: user.isEmployee, uid: newAuthUser.uid, phone: user.phone,
              };
             
             const newUserKey = await dbAction('users', 'add', userDataForDb);
@@ -263,8 +271,8 @@ export default function UsersPage() {
                 await dbAction('employees', 'update', {id: newUserKey, data: employeeRecord});
             }
             
-            if (user.isSalesRep) {
-                await dbAction('cashAccounts', 'add', { name: `عهدة: ${user.name}`, type: 'cash', openingBalance: 0, salesRepId: newUserKey });
+            if (user.isSalesRep || user.isCashier) {
+                await dbAction('cashAccounts', 'add', { name: `عهدة المستخدم: ${user.name}`, type: 'cash', openingBalance: 0, userId: newUserKey });
             }
 
             toast({ title: "تمت إضافة المستخدم بنجاح" });
@@ -287,7 +295,7 @@ export default function UsersPage() {
         await dbAction('users', 'remove', {id: userToDelete.id});
         if (userToDelete.isEmployee) await dbAction('employees', 'remove', {id: userToDelete.id});
         
-        const repCashAccount = cashAccountsData.find((acc: any) => acc.salesRepId === userToDelete.id);
+        const repCashAccount = cashAccountsData.find((acc: any) => acc.userId === userToDelete.id);
         if(repCashAccount) await dbAction('cashAccounts', 'remove', {id: repCashAccount.id});
 
         toast({ title: "تم حذف المستخدم بنجاح من قاعدة البيانات", description: "ملاحظة: حساب المصادقة لا يتم حذفه من هنا." });
@@ -342,7 +350,8 @@ export default function UsersPage() {
                         <TableRow>
                         <TableHead>المستخدم</TableHead>
                         <TableHead>اسم الدخول</TableHead>
-                        <TableHead className="text-center">مندوب/كاشير</TableHead>
+                        <TableHead className="text-center">مندوب</TableHead>
+                        <TableHead className="text-center">كاشير</TableHead>
                         <TableHead className="text-center">الوظيفة</TableHead>
                         <TableHead>المخزن</TableHead>
                         <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
@@ -365,6 +374,9 @@ export default function UsersPage() {
                             <TableCell className="font-mono">{user.loginName}</TableCell>
                             <TableCell className="text-center">
                                 {user.isSalesRep && <CheckCircle className="h-5 w-5 text-green-500 mx-auto" />}
+                            </TableCell>
+                            <TableCell className="text-center">
+                                {user.isCashier && <CheckCircle className="h-5 w-5 text-green-500 mx-auto" />}
                             </TableCell>
                             <TableCell className="text-center">
                             <Badge variant="outline">{user.role}</Badge>
@@ -416,3 +428,4 @@ export default function UsersPage() {
   );
 }
     
+

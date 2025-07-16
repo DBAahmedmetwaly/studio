@@ -16,47 +16,47 @@ import { useRouter } from 'next/navigation';
 interface User {
     id: string;
     name: string;
-    isSalesRep?: boolean;
+    isCashier?: boolean;
 }
 
 interface CashAccount {
     id: string;
     name: string;
-    salesRepId?: string; // To identify rep accounts
+    userId?: string; 
 }
 
 export default function RemitFromCashierPage() {
     const router = useRouter();
     const { toast } = useToast();
-    const [selectedRepId, setSelectedRepId] = useState<string>("");
+    const [selectedCashierId, setSelectedCashierId] = useState<string>("");
     const [amount, setAmount] = useState<number>(0);
     const [toAccountId, setToAccountId] = useState<string>("");
     const [notes, setNotes] = useState("");
     
     const { users, cashAccounts, dbAction, getNextId, loading } = useData();
 
-    const cashiers = users.filter((u: User) => u.isSalesRep);
-    const mainCashAccounts = cashAccounts.filter((acc: CashAccount) => !acc.salesRepId);
+    const cashiers = users.filter((u: User) => u.isCashier);
+    const mainCashAccounts = cashAccounts.filter((acc: CashAccount) => !acc.userId);
     
     const handleConfirm = async () => {
-        if (!selectedRepId || amount <= 0 || !toAccountId) {
+        if (!selectedCashierId || amount <= 0 || !toAccountId) {
             toast({ variant: "destructive", title: "بيانات غير مكتملة", description: "يرجى اختيار الكاشير والحساب وإدخال مبلغ صحيح." });
             return;
         }
 
-        const repCashAccount = cashAccounts.find((acc: CashAccount) => acc.salesRepId === selectedRepId);
-        if (!repCashAccount) {
+        const cashierCashAccount = cashAccounts.find((acc: CashAccount) => acc.userId === selectedCashierId);
+        if (!cashierCashAccount) {
             toast({ variant: "destructive", title: "خطأ", description: "لم يتم العثور على خزينة الكاشير." });
             return;
         }
 
-        const repName = users.find((u:User) => u.id === selectedRepId)?.name || 'غير معروف';
+        const cashierName = users.find((u:User) => u.id === selectedCashierId)?.name || 'غير معروف';
 
         try {
             const remittanceId = await getNextId('remittance');
             await dbAction('repRemittances', 'add', {
-                salesRepId: selectedRepId,
-                fromAccountId: repCashAccount.id,
+                userId: selectedCashierId,
+                fromAccountId: cashierCashAccount.id,
                 toAccountId: toAccountId,
                 date: new Date().toISOString(),
                 amount: Number(amount),
@@ -66,12 +66,12 @@ export default function RemitFromCashierPage() {
             });
 
             // Create two treasury transactions to reflect the accounting entry
-            // 1. Withdrawal from rep's account
+            // 1. Withdrawal from cashier's account
             const withdrawalId = await getNextId('treasuryTransaction');
             await dbAction('treasuryTransactions', 'add', {
                 date: new Date().toISOString(),
                 amount: Number(amount),
-                accountId: repCashAccount.id,
+                accountId: cashierCashAccount.id,
                 type: 'withdrawal',
                 description: `توريد إلى ${cashAccounts.find((c:CashAccount) => c.id === toAccountId)?.name}`,
                 receiptNumber: `ح-خ-${withdrawalId}`,
@@ -84,7 +84,7 @@ export default function RemitFromCashierPage() {
                 amount: Number(amount),
                 accountId: toAccountId,
                 type: 'deposit',
-                description: `توريد من الكاشير ${repName}`,
+                description: `توريد من الكاشير ${cashierName}`,
                 receiptNumber: `ح-خ-${depositId}`,
             });
 
@@ -112,9 +112,9 @@ export default function RemitFromCashierPage() {
             ) : (
                 <div className="space-y-4">
                     <div className="space-y-2">
-                        <Label htmlFor="rep">من الكاشير</Label>
-                        <Select value={selectedRepId} onValueChange={setSelectedRepId}>
-                            <SelectTrigger id="rep"><SelectValue placeholder="اختر الكاشير" /></SelectTrigger>
+                        <Label htmlFor="cashier">من الكاشير</Label>
+                        <Select value={selectedCashierId} onValueChange={setSelectedCashierId}>
+                            <SelectTrigger id="cashier"><SelectValue placeholder="اختر الكاشير" /></SelectTrigger>
                             <SelectContent>
                                 {cashiers.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
                             </SelectContent>

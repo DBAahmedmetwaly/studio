@@ -22,7 +22,7 @@ interface User {
 interface CashAccount {
     id: string;
     name: string;
-    salesRepId?: string; // To identify rep accounts
+    userId?: string; 
 }
 
 export default function RemitFromRepPage() {
@@ -36,8 +36,7 @@ export default function RemitFromRepPage() {
     const { users, cashAccounts, dbAction, getNextId, loading } = useData();
 
     const reps = users.filter((u: User) => u.isSalesRep);
-    // Exclude rep-specific accounts from the destination list
-    const mainCashAccounts = cashAccounts.filter((acc: CashAccount) => !acc.salesRepId);
+    const mainCashAccounts = cashAccounts.filter((acc: CashAccount) => !acc.userId);
     
     const handleConfirm = async () => {
         if (!selectedRepId || amount <= 0 || !toAccountId) {
@@ -45,7 +44,7 @@ export default function RemitFromRepPage() {
             return;
         }
 
-        const repCashAccount = cashAccounts.find((acc: CashAccount) => acc.salesRepId === selectedRepId);
+        const repCashAccount = cashAccounts.find((acc: CashAccount) => acc.userId === selectedRepId);
         if (!repCashAccount) {
             toast({ variant: "destructive", title: "خطأ", description: "لم يتم العثور على خزينة المندوب." });
             return;
@@ -54,17 +53,16 @@ export default function RemitFromRepPage() {
         const repName = users.find((u:User) => u.id === selectedRepId)?.name || 'غير معروف';
 
         try {
-            // Record the remittance itself for reporting
             const remittanceId = await getNextId('remittance');
             await dbAction('repRemittances', 'add', {
-                salesRepId: selectedRepId,
+                userId: selectedRepId,
                 fromAccountId: repCashAccount.id,
                 toAccountId: toAccountId,
                 date: new Date().toISOString(),
                 amount: Number(amount),
                 notes,
                 receiptNumber: `ت-ن-${remittanceId}`,
-                type: 'sales_rep', // Differentiate from cashier remittance
+                type: 'sales_rep',
             });
 
             // Create two treasury transactions to reflect the accounting entry

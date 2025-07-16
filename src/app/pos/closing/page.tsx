@@ -29,7 +29,7 @@ import { Label } from '@/components/ui/label';
 const CloseSessionDialog = ({ session, onConfirm, onClose }: { session: any, onConfirm: (toAccountId: string) => void, onClose: () => void }) => {
     const { cashAccounts } = useData();
     const [toAccountId, setToAccountId] = useState('');
-    const mainCashAccounts = cashAccounts.filter(acc => !acc.salesRepId);
+    const mainCashAccounts = cashAccounts.filter(acc => !acc.userId);
 
     const handleConfirm = () => {
         if(!toAccountId) {
@@ -67,34 +67,34 @@ export default function PosClosingPage() {
     const openSessions = useMemo(() => {
         const cashierSales = new Map<string, number>();
 
+        const cashiers = users.filter((u:any) => u.isCashier);
+
         // Calculate total sales for all cashiers from sales not in a closed session
         const closedSessionCashierIds = new Set(posSessions.filter((s:any) => s.isClosed).map((s:any) => s.cashierId));
         
         posSales.forEach((sale: any) => {
             const session = posSessions.find((s:any) => s.cashierId === sale.cashierId && !s.isClosed);
-            // We only care about sales from cashiers that don't have a closed session.
-            // Simplified: we sum up all sales for a cashier and assume it's for one open session.
-             if (!closedSessionCashierIds.has(sale.cashierId)) {
+            if (!closedSessionCashierIds.has(sale.cashierId)) {
                 cashierSales.set(sale.cashierId, (cashierSales.get(sale.cashierId) || 0) + sale.total);
             }
         });
         
-         // Filter out cashiers who have all their sessions closed.
-        const openCashiers = Array.from(cashierSales.keys()).filter(cashierId => !closedSessionCashierIds.has(cashierId));
+        const openCashiers = cashiers.filter(cashier => {
+            const hasOpenSales = posSales.some((sale:any) => sale.cashierId === cashier.id && !closedSessionCashierIds.has(sale.cashierId));
+            return hasOpenSales;
+        });
 
 
-        return openCashiers.map(cashierId => {
-            const cashierName = users.find((u:any) => u.id === cashierId)?.name || 'غير معروف';
-            const expectedCash = cashierSales.get(cashierId) || 0;
-            
-            return { cashierId, cashierName, expectedCash };
+        return openCashiers.map(cashier => {
+            const expectedCash = cashierSales.get(cashier.id) || 0;
+            return { cashierId: cashier.id, cashierName: cashier.name, expectedCash };
         });
     }, [posSales, posSessions, users]);
     
     const handleCloseSession = async (session: any, toAccountId: string) => {
         try {
             const cashierName = users.find((u: any) => u.id === session.cashierId)?.name || 'كاشير';
-            const repCashAccount = cashAccounts.find((acc: any) => acc.salesRepId === session.cashierId);
+            const repCashAccount = cashAccounts.find((acc: any) => acc.userId === session.cashierId);
 
             if (!repCashAccount) {
                  toast({variant: 'destructive', title: 'خطأ', description: `لم يتم العثور على حساب العهدة المالية للكاشير ${cashierName}.`});
@@ -198,4 +198,3 @@ export default function PosClosingPage() {
     </>
   );
 }
-
