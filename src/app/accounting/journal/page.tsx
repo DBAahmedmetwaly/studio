@@ -125,6 +125,19 @@ interface CustomerPayment {
     paidToAccountId: string;
     receiptNumber?: string;
 }
+interface ProfitDistribution {
+    id: string;
+    date: string;
+    amount: number;
+    partnerId: string;
+    paidFromAccountId: string;
+    receiptNumber?: string;
+}
+interface Partner {
+    id: string;
+    name: string;
+}
+
 
 interface JournalEntry {
   id: string;
@@ -174,6 +187,8 @@ export default function JournalPage() {
         supplierPayments,
         customerPayments,
         stockOutRecords: stockOuts,
+        profitDistributions,
+        partners,
         loading
     } = useData();
 
@@ -191,6 +206,7 @@ export default function JournalPage() {
         const getEmployeeName = (id?: string) => employees.find(e => e.id === id)?.name || 'موظف غير معروف';
         const getCustomerName = (id?: string) => customers.find(c => c.id === id)?.name || 'عميل غير معروف';
         const getSupplierName = (id?: string) => suppliers.find(s => s.id === id)?.name || 'مورد غير معروف';
+        const getPartnerName = (id?: string) => partners.find(p => p.id === id)?.name || 'شريك غير معروف';
         
         // Sales Invoices (Only approved ones)
         sales.filter(s => s.status === 'approved').forEach(sale => {
@@ -384,9 +400,18 @@ export default function JournalPage() {
             entries.push({ id: `cust-pay-credit-${p.id}`, date: p.date, number: number, description: `تخفيض مديونية العميل`, debit: 0, credit: p.amount, account: 'حسابات العملاء' });
         });
 
+        // Profit Distributions
+        profitDistributions.forEach(d => {
+            const number = d.receiptNumber || `ت-أ-${d.id.slice(-4)}`;
+            const partnerName = getPartnerName(d.partnerId);
+            const cashAccountName = getCashAccountName(d.paidFromAccountId);
+            entries.push({ id: `dist-debit-${d.id}`, date: d.date, number: number, description: `توزيع أرباح للشريك ${partnerName}`, debit: d.amount, credit: 0, account: `توزيعات أرباح - ${partnerName}` });
+            entries.push({ id: `dist-credit-${d.id}`, date: d.date, number: number, description: `دفع من ${cashAccountName}`, debit: 0, credit: d.amount, account: cashAccountName });
+        });
+
 
         return entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [sales, purchases, expenses, exceptionalIncomes, transfers, warehouses, itemsMap, cashAccounts, treasuryTxs, employeeAdvances, employees, employeeAdjustments, salesReturns, purchaseReturns, customers, suppliers, supplierPayments, customerPayments, stockOuts]);
+    }, [sales, purchases, expenses, exceptionalIncomes, transfers, warehouses, itemsMap, cashAccounts, treasuryTxs, employeeAdvances, employees, employeeAdjustments, salesReturns, purchaseReturns, customers, suppliers, supplierPayments, customerPayments, stockOuts, profitDistributions, partners]);
 
     const filteredEntries = journalEntries.filter(entry => {
         const entryDate = new Date(entry.date);
@@ -441,6 +466,7 @@ export default function JournalPage() {
             'إذ-خ-': "إذن صرف مخزني",
             'إذ-ت-': "إذن تحويل مخزني",
             'ت-م-': "تسوية مخزون / تسوية موظف",
+            'ت-أ-': "توزيع أرباح",
             'م-': "مصروف",
             'إ-س-': "إيراد استثنائي",
             'س-ع-': "سند قبض عميل",

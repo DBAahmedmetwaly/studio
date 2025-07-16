@@ -199,13 +199,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <NavSubLink href="/purchases/returns/new" module="purchases_returns">مرتجعات الشراء</NavSubLink>
             </NavCollapsible>
 
-             <NavCollapsible title="المحاسبة" icon={<BookUser />} modules={['accounting_journal', 'accounting_expenses', 'accounting_exceptionalIncome', 'accounting_supplierPayments', 'accounting_customerPayments', 'accounting_treasury', 'accounting_aiAnalysis']}>
+             <NavCollapsible title="المحاسبة" icon={<BookUser />} modules={['accounting_journal', 'accounting_expenses', 'accounting_exceptionalIncome', 'accounting_supplierPayments', 'accounting_customerPayments', 'accounting_treasury', 'accounting_profitDistribution', 'accounting_aiAnalysis']}>
                 <NavSubLink href="/accounting/journal" module="accounting_journal">قيود اليومية</NavSubLink>
                 <NavSubLink href="/accounting/expenses" module="accounting_expenses">إدارة المصروفات</NavSubLink>
                 <NavSubLink href="/accounting/exceptional-income" module="accounting_exceptionalIncome">الدخل الاستثنائي</NavSubLink>
                 <NavSubLink href="/accounting/supplier-payments" module="accounting_supplierPayments">مدفوعات الموردين</NavSubLink>
                 <NavSubLink href="/accounting/customer-payments" module="accounting_customerPayments">مقبوضات العملاء</NavSubLink>
                 <NavSubLink href="/accounting/treasury" module="accounting_treasury">حركة الخزينة</NavSubLink>
+                <NavSubLink href="/accounting/profit-distribution" module="accounting_profitDistribution">توزيعات الأرباح</NavSubLink>
                 <NavSubLink href="/accounting/ai-analysis" module="accounting_aiAnalysis">تحليل مالي بالذكاء الاصطناعي</NavSubLink>
             </NavCollapsible>
             

@@ -54,6 +54,7 @@ export const permissionsConfig = {
     accounting_supplierPayments: { label: "مدفوعات الموردين", group: "accounting", actions: ["view", "add", "delete"] },
     accounting_customerPayments: { label: "مقبوضات العملاء", group: "accounting", actions: ["view", "add", "delete"] },
     accounting_treasury: { label: "حركة الخزينة", group: "accounting", actions: ["view", "add", "delete"] },
+    accounting_profitDistribution: { label: "توزيعات الأرباح", group: "accounting", actions: ["view", "add", "delete"] },
     accounting_aiAnalysis: { label: "تحليل مالي بالذكاء الاصطناعي", group: "accounting", actions: ["view", "generate"] },
     
     hr_employees: { label: "الموظفين", group: "hr", actions: ["view", "add", "edit", "delete"] },
