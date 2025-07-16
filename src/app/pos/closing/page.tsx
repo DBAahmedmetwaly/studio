@@ -10,7 +10,6 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter
 } from "@/components/ui/card";
 import {
   Table,
@@ -27,14 +26,18 @@ import { useToast } from '@/hooks/use-toast';
 import { AddEntityDialog } from '@/components/add-entity-dialog';
 import { Label } from '@/components/ui/label';
 
-const CloseSessionDialog = ({ session, onConfirm }: { session: any, onConfirm: (toAccountId: string) => void }) => {
+const CloseSessionDialog = ({ session, onConfirm, onClose }: { session: any, onConfirm: (toAccountId: string) => void, onClose: () => void }) => {
     const { cashAccounts } = useData();
     const [toAccountId, setToAccountId] = useState('');
     const mainCashAccounts = cashAccounts.filter(acc => !acc.salesRepId);
 
     const handleConfirm = () => {
-        if(!toAccountId) return;
+        if(!toAccountId) {
+            alert("يرجى تحديد حساب لاستلام النقدية.");
+            return;
+        };
         onConfirm(toAccountId);
+        onClose();
     }
     
     return (
@@ -58,20 +61,31 @@ const CloseSessionDialog = ({ session, onConfirm }: { session: any, onConfirm: (
 }
 
 export default function PosClosingPage() {
-    const { posSales, posSessions, dbAction, users, loading } = useData();
+    const { posSales, posSessions, dbAction, users, loading, cashAccounts } = useData();
     const { toast } = useToast();
 
     const openSessions = useMemo(() => {
-        const activeCashierIds = new Set(posSales.filter((sale: any) => {
-            const session = posSessions.find((s:any) => s.cashierId === sale.cashierId);
-            return !session || !session.isClosed;
-        }).map((sale: any) => sale.cashierId));
+        const cashierSales = new Map<string, number>();
 
-        return Array.from(activeCashierIds).map(cashierId => {
+        // Calculate total sales for all cashiers from sales not in a closed session
+        const closedSessionCashierIds = new Set(posSessions.filter((s:any) => s.isClosed).map((s:any) => s.cashierId));
+        
+        posSales.forEach((sale: any) => {
+            const session = posSessions.find((s:any) => s.cashierId === sale.cashierId && !s.isClosed);
+            // We only care about sales from cashiers that don't have a closed session.
+            // Simplified: we sum up all sales for a cashier and assume it's for one open session.
+             if (!closedSessionCashierIds.has(sale.cashierId)) {
+                cashierSales.set(sale.cashierId, (cashierSales.get(sale.cashierId) || 0) + sale.total);
+            }
+        });
+        
+         // Filter out cashiers who have all their sessions closed.
+        const openCashiers = Array.from(cashierSales.keys()).filter(cashierId => !closedSessionCashierIds.has(cashierId));
+
+
+        return openCashiers.map(cashierId => {
             const cashierName = users.find((u:any) => u.id === cashierId)?.name || 'غير معروف';
-            const expectedCash = posSales
-                .filter((sale: any) => sale.cashierId === cashierId)
-                .reduce((sum: number, sale: any) => sum + sale.total, 0);
+            const expectedCash = cashierSales.get(cashierId) || 0;
             
             return { cashierId, cashierName, expectedCash };
         });
@@ -79,7 +93,40 @@ export default function PosClosingPage() {
     
     const handleCloseSession = async (session: any, toAccountId: string) => {
         try {
-            // Find existing session or create a new one to close
+            const cashierName = users.find((u: any) => u.id === session.cashierId)?.name || 'كاشير';
+            const repCashAccount = cashAccounts.find((acc: any) => acc.salesRepId === session.cashierId);
+
+            if (!repCashAccount) {
+                 toast({variant: 'destructive', title: 'خطأ', description: `لم يتم العثور على حساب العهدة المالية للكاشير ${cashierName}.`});
+                 return;
+            }
+
+            // Step 1: Create a treasury transaction for the withdrawal from the rep's cash account.
+            const withdrawalId = await dbAction('getNextId', { counterName: 'treasuryTransaction' });
+            await dbAction('treasuryTransactions', 'add', {
+                date: new Date().toISOString(),
+                amount: session.expectedCash,
+                accountId: repCashAccount.id,
+                type: 'withdrawal',
+                description: `إقفال وردية وتوريد إلى ${cashAccounts.find(c => c.id === toAccountId)?.name}`,
+                receiptNumber: `ح-خ-${withdrawalId}`,
+                linkedTransaction: true, // Mark as part of an internal transfer
+            });
+
+            // Step 2: Create a treasury transaction for the deposit into the main account.
+            const depositId = await dbAction('getNextId', { counterName: 'treasuryTransaction' });
+             await dbAction('treasuryTransactions', 'add', {
+                date: new Date().toISOString(),
+                amount: session.expectedCash,
+                accountId: toAccountId,
+                type: 'deposit',
+                description: `استلام من وردية الكاشير ${cashierName}`,
+                receiptNumber: `ح-خ-${depositId}`,
+                linkedTransaction: true, // Mark as part of an internal transfer
+            });
+
+
+            // Step 3: Mark the session as closed
             const existingSession = posSessions.find((s:any) => s.cashierId === session.cashierId && !s.isClosed);
             
             const sessionData = {
@@ -97,7 +144,6 @@ export default function PosClosingPage() {
                  await dbAction('posSessions', 'add', sessionData);
             }
             
-            // We can add a treasury transaction here in a real scenario
             toast({title: 'تم بنجاح', description: `تم إقفال وردية ${session.cashierName}`});
 
         } catch (error) {
@@ -136,7 +182,7 @@ export default function PosClosingPage() {
                                              <Button><Coins className="ml-2"/>إقفال وتوريد</Button>
                                         }
                                     >
-                                        <CloseSessionDialog session={session} onConfirm={(toAccountId) => handleCloseSession(session, toAccountId)} />
+                                        <CloseSessionDialog session={session} onConfirm={(toAccountId) => handleCloseSession(session, toAccountId)} onClose={()=>{}} />
                                     </AddEntityDialog>
                                 </TableCell>
                             </TableRow>
@@ -152,3 +198,4 @@ export default function PosClosingPage() {
     </>
   );
 }
+

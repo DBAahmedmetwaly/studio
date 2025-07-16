@@ -61,6 +61,7 @@ interface TreasuryTransaction {
     accountId: string;
     description: string;
     receiptNumber?: string;
+    linkedTransaction?: boolean;
 }
 interface EmployeeAdvance {
     id: string;
@@ -355,12 +356,23 @@ export default function JournalPage() {
         treasuryTxs.forEach(tx => {
             const number = tx.receiptNumber || `ح-خ-${tx.id.slice(-4)}`;
             const accountName = getCashAccountName(tx.accountId);
-            if(tx.type === 'deposit') {
-                entries.push({ id: `trx-dep-debit-${tx.id}`, date: tx.date, warehouseId: undefined, number: number, description: `إيداع: ${tx.description}`, debit: tx.amount, credit: 0, account: accountName });
-                entries.push({ id: `trx-dep-credit-${tx.id}`, date: tx.date, warehouseId: undefined, number: number, description: `إيداع: ${tx.description}`, debit: 0, credit: tx.amount, account: 'رأس المال' }); // Assuming deposit increases equity
-            } else { // withdrawal
-                 entries.push({ id: `trx-wit-debit-${tx.id}`, date: tx.date, warehouseId: undefined, number: number, description: `سحب: ${tx.description}`, debit: tx.amount, credit: 0, account: 'مسحوبات الشركاء' }); // Assuming withdrawal is for partners
-                 entries.push({ id: `trx-wit-credit-${tx.id}`, date: tx.date, warehouseId: undefined, number: number, description: `سحب: ${tx.description}`, debit: 0, credit: tx.amount, account: accountName });
+            
+            // For linked transactions (internal transfers), create a direct debit/credit
+            if (tx.linkedTransaction) {
+                if (tx.type === 'deposit') { // Deposit into main account
+                    entries.push({ id: `trx-linked-dep-debit-${tx.id}`, date: tx.date, warehouseId: undefined, number: number, description: tx.description, debit: tx.amount, credit: 0, account: accountName });
+                } else { // Withdrawal from rep account
+                    entries.push({ id: `trx-linked-wit-credit-${tx.id}`, date: tx.date, warehouseId: undefined, number: number, description: tx.description, debit: 0, credit: tx.amount, account: accountName });
+                }
+            } else {
+                // For regular deposits/withdrawals
+                if (tx.type === 'deposit') {
+                    entries.push({ id: `trx-dep-debit-${tx.id}`, date: tx.date, warehouseId: undefined, number: number, description: `إيداع: ${tx.description}`, debit: tx.amount, credit: 0, account: accountName });
+                    entries.push({ id: `trx-dep-credit-${tx.id}`, date: tx.date, warehouseId: undefined, number: number, description: `إيداع: ${tx.description}`, debit: 0, credit: tx.amount, account: 'رأس المال' });
+                } else { // withdrawal
+                     entries.push({ id: `trx-wit-debit-${tx.id}`, date: tx.date, warehouseId: undefined, number: number, description: `سحب: ${tx.description}`, debit: tx.amount, credit: 0, account: 'مسحوبات الشركاء' });
+                     entries.push({ id: `trx-wit-credit-${tx.id}`, date: tx.date, warehouseId: undefined, number: number, description: `سحب: ${tx.description}`, debit: 0, credit: tx.amount, account: accountName });
+                }
             }
         });
 
