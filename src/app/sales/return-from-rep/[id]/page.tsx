@@ -32,7 +32,7 @@ interface Warehouse {
 export default function ReturnFromRepDetailsPage() {
   const router = useRouter();
   const params = useParams();
-  const { id } = params;
+  const id = params.id as string;
 
   const [record, setRecord] = useState<ReturnFromRep | null>(null);
   const [loading, setLoading] = useState(true);

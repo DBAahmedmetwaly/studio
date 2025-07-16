@@ -28,7 +28,7 @@ interface Warehouse {
 export default function StockInDetailsPage() {
   const router = useRouter();
   const params = useParams();
-  const { id } = params;
+  const id = params.id as string;
 
   const [record, setRecord] = useState<StockInRecord | null>(null);
   const [loading, setLoading] = useState(true);

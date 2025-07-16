@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -29,7 +28,7 @@ interface Warehouse {
 export default function StockOutDetailsPage() {
   const router = useRouter();
   const params = useParams();
-  const { id } = params;
+  const id = params.id as string;
 
   const [record, setRecord] = useState<StockOutRecord | null>(null);
   const [loading, setLoading] = useState(true);
