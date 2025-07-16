@@ -10,6 +10,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
 import { useData } from "@/contexts/data-provider";
 import { Loader2, Printer, BarChart2 } from "lucide-react";
@@ -40,7 +41,7 @@ const ReportFilters = ({ onGenerate, hideItemFilter = false }: { onGenerate: (fi
     const { items, warehouses, loading } = useData();
     const [filters, setFilters] = useState({ fromDate: '', toDate: '', warehouseId: 'all', itemId: '' });
     
-    const itemOptions = useMemo(() => items.map(item => ({ value: item.id, label: `${item.name} (${item.code})` })), [items]);
+    const itemOptions = useMemo(() => items.map((item: Item) => ({ value: item.id, label: `${item.name} (${item.code})` })), [items]);
 
     const handleFilterChange = (key: string, value: string) => {
         setFilters(prev => ({ ...prev, [key]: value }));
@@ -67,7 +68,7 @@ const ReportFilters = ({ onGenerate, hideItemFilter = false }: { onGenerate: (fi
                             <SelectTrigger><SelectValue placeholder="الكل" /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">كل المخازن</SelectItem>
-                                {warehouses.map(w => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
+                                {warehouses.map((w: Warehouse) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
@@ -149,7 +150,7 @@ const StockStatusReport = ({ filters, data }: any) => {
 
                 return { id: `${warehouse.id}-${item.id}`, warehouseName: warehouse.name, itemName: item.name, code: item.code, currentStock: stock, reorderPoint: item.reorderPoint || 0 };
             })
-        ).filter(item => item.currentStock !== 0);
+        ).filter((item:any) => item.currentStock !== 0);
     }, [filters, data]);
 
      return (
@@ -213,4 +214,3 @@ export default function InventoryReportsPage() {
         </>
     );
 }
-
