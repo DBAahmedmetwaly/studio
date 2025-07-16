@@ -57,6 +57,7 @@ import {
   Building2,
   Users2,
   PackageSearch,
+  BookCopy,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -177,7 +178,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                  <NavSubLink href="/reports/pos-reports" module="reports_pos">تقارير نقاط البيع</NavSubLink>
             </NavCollapsible>
 
-            <NavCollapsible title="الأصناف والمخزون" icon={<Warehouse />} modules={['inventory_items', 'inventory_warehouses', 'inventory_stockIn', 'inventory_stockOut', 'inventory_transfer', 'inventory_adjustment', 'inventory_movements', 'inventory_stockStatus', 'reports_itemProfitLoss']}>
+            <NavCollapsible title="الأصناف والمخزون" icon={<Warehouse />} modules={['inventory_items', 'inventory_warehouses', 'inventory_stockIn', 'inventory_stockOut', 'inventory_transfer', 'inventory_adjustment', 'inventory_movements', 'inventory_stockStatus', 'reports_itemProfitLoss', 'reports_inventory']}>
                 <NavSubLink href="/master-data/items" module="inventory_items">بطاقة الأصناف</NavSubLink>
                 <NavSubLink href="/master-data/warehouses" module="inventory_warehouses">المخازن</NavSubLink>
                 <NavSubLink href="/inventory/stock-in/new" module="inventory_stockIn">استلام مخزون</NavSubLink>
@@ -187,18 +188,19 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <NavSubLink href="/inventory/movements" module="inventory_movements">حركة المخزون</NavSubLink>
                 <NavSubLink href="/inventory/stock-status" module="inventory_stockStatus">أرصدة المخزون</NavSubLink>
                 <NavSubLink href="/reports/item-profit-loss" module="reports_itemProfitLoss">تقرير أرباح الأصناف</NavSubLink>
+                 <NavSubLink href="/reports/inventory-reports" module="reports_inventory">تقارير المخزون الشاملة</NavSubLink>
             </NavCollapsible>
             
             <NavCollapsible title="العملاء والمبيعات" icon={<UserSquare />} modules={['customers_data', 'sales_invoices', 'sales_returns', 'reports_customerStatement']}>
                 <NavSubLink href="/master-data/customers" module="customers_data">بيانات العملاء</NavSubLink>
-                <NavSubLink href="/sales/invoices" module="sales_invoices">إنشاء فاتورة بيع</NavSubLink>
+                <NavSubLink href="/sales/invoices/list" module="sales_invoices">فواتير البيع</NavSubLink>
                 <NavSubLink href="/sales/returns/new" module="sales_returns">مرتجعات البيع</NavSubLink>
                 <NavSubLink href="/reports/customer-statement" module="reports_customerStatement">كشف حساب العملاء</NavSubLink>
             </NavCollapsible>
 
             <NavCollapsible title="الموردون والمشتريات" icon={<Building2 />} modules={['suppliers_data', 'purchases_invoices', 'purchases_returns', 'reports_supplierStatement']}>
                 <NavSubLink href="/master-data/suppliers" module="suppliers_data">بيانات الموردين</NavSubLink>
-                <NavSubLink href="/purchases/invoices" module="purchases_invoices">إنشاء فاتورة شراء</NavSubLink>
+                <NavSubLink href="/purchases/invoices/list" module="purchases_invoices">فواتير الشراء</NavSubLink>
                 <NavSubLink href="/purchases/returns/new" module="purchases_returns">مرتجعات الشراء</NavSubLink>
                 <NavSubLink href="/reports/supplier-statement" module="reports_supplierStatement">كشف حساب الموردين</NavSubLink>
             </NavCollapsible>
@@ -273,3 +275,4 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     </SidebarProvider>
   );
 }
+
