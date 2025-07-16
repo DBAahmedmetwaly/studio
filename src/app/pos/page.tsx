@@ -34,7 +34,7 @@ interface ItemGroup {
 }
 
 export default function PosPage() {
-    const { items: allItems, dbAction, getNextId, salesInvoices, itemGroups } = useData();
+    const { items: allItems, dbAction, getNextId, salesInvoices, itemGroups, posAuditLogs } = useData();
     const { user } = useAuth();
     const { toast } = useToast();
     const barcodeInputRef = useRef<HTMLInputElement>(null);
@@ -59,7 +59,20 @@ export default function PosPage() {
     }, [generateInvoiceNumber]);
 
 
-    const resetSale = useCallback(() => {
+    const resetSale = useCallback(async () => {
+        if (cart.length > 0) {
+            await dbAction('posAuditLogs', 'add', {
+                date: new Date().toISOString(),
+                cashierId: user?.id,
+                cashierName: user?.name,
+                action: 'INVOICE_CANCELLED',
+                details: {
+                    invoiceNumber: currentInvoiceNumber,
+                    items: cart,
+                    total: total,
+                }
+            });
+        }
         setCart([]);
         setDiscount(0);
         setPaidAmount(0);
@@ -67,7 +80,7 @@ export default function PosPage() {
         setSearchTerm("");
         generateInvoiceNumber();
         barcodeInputRef.current?.focus();
-    }, [generateInvoiceNumber]);
+    }, [cart, currentInvoiceNumber, dbAction, generateInvoiceNumber, total, user]);
 
     useEffect(() => {
         barcodeInputRef.current?.focus();
@@ -116,14 +129,14 @@ export default function PosPage() {
         const code = barcodeInputRef.current?.value;
         if (!code) return;
 
-        const itemToAdd = allItems.find(item => item.code === code);
+        const itemToAdd = allItems.find((item: any) => item.code === code);
         if (!itemToAdd) {
             toast({ variant: 'destructive', title: 'خطأ', description: `الصنف بالكود ${code} غير موجود.` });
-            barcodeInputRef.current!.value = "";
+            if(barcodeInputRef.current) barcodeInputRef.current.value = "";
             return;
         }
         addItemToCart(itemToAdd);
-        barcodeInputRef.current!.value = "";
+        if(barcodeInputRef.current) barcodeInputRef.current.value = "";
     };
 
     const handleGridItemClick = (item: any) => {
@@ -215,28 +228,25 @@ export default function PosPage() {
             <main className="flex-grow grid grid-cols-12 gap-4 p-4 overflow-hidden">
                 
                 {/* Right Side - Item Selection */}
-                <div className="col-span-7 flex flex-col gap-4">
-                     <div className="grid grid-cols-3 gap-4">
-                        <form onSubmit={handleBarcodeSubmit} className="col-span-2">
+                <div className="col-span-7 flex flex-col gap-4 overflow-hidden">
+                     <div className="shrink-0">
+                        <form onSubmit={handleBarcodeSubmit}>
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                                 <Input ref={barcodeInputRef} placeholder="امسح الباركود أو ابحث بالاسم..." className="h-12 text-lg pl-10" onChange={e => setSearchTerm(e.target.value)} />
                             </div>
                         </form>
-                        <form onSubmit={handleBarcodeSubmit}>
-                            <Input ref={barcodeInputRef} placeholder="كود الصنف..." className="h-12 text-lg" />
-                        </form>
                     </div>
                     
-                    <Card className="flex-grow flex flex-col">
-                         <CardHeader className="p-2 border-b">
+                    <Card className="flex-grow flex flex-col overflow-hidden">
+                         <CardHeader className="p-2 border-b shrink-0">
                             <ScrollArea className="w-full whitespace-nowrap">
                                 <div className="flex gap-2 p-2">
-                                     <Button size="lg" variant={activeGroupId === 'all' ? 'default' : 'outline'} onClick={() => setActiveGroupId('all')} className="h-16 px-6">
+                                     <Button size="lg" variant={activeGroupId === 'all' ? 'default' : 'outline'} onClick={() => setActiveGroupId('all')} className="h-16 px-6 shrink-0">
                                         <Grip className="ml-2 h-5 w-5" /> كل الأصناف
                                     </Button>
                                     {itemGroups.map((group: ItemGroup) => (
-                                        <Button key={group.id} size="lg" variant={activeGroupId === group.id ? 'default' : 'outline'} onClick={() => setActiveGroupId(group.id!)} className="h-16 px-6">
+                                        <Button key={group.id} size="lg" variant={activeGroupId === group.id ? 'default' : 'outline'} onClick={() => setActiveGroupId(group.id!)} className="h-16 px-6 shrink-0">
                                            <div className={`ml-2 h-5 w-5 rounded-full ${group.color}`} />
                                             {group.name}
                                         </Button>
@@ -244,7 +254,7 @@ export default function PosPage() {
                                 </div>
                             </ScrollArea>
                          </CardHeader>
-                         <ScrollArea className="h-[calc(100vh-21rem)]">
+                         <ScrollArea className="flex-grow">
                             <div className="p-4 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
                                 {itemsToShow.map((item: any) => (
                                     <button key={item.id} onClick={() => handleGridItemClick(item)} className="aspect-square flex flex-col items-center justify-center gap-2 rounded-lg bg-card text-card-foreground shadow-sm hover:bg-accent focus:ring-2 ring-primary transition-all p-1">
@@ -260,45 +270,43 @@ export default function PosPage() {
 
                 {/* Left Side - Cart and Payment */}
                 <div className="col-span-5 flex flex-col gap-4">
-                    <Card className="flex-grow flex flex-col">
-                        <CardHeader>
+                    <Card className="flex-grow flex flex-col overflow-hidden">
+                        <CardHeader className="shrink-0">
                             <CardTitle className="flex items-center gap-2"><ShoppingCart/> سلة المبيعات</CardTitle>
                         </CardHeader>
-                        <div className="flex-grow overflow-hidden">
-                            <ScrollArea className="h-full">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead className="w-[50%]">الصنف</TableHead>
-                                            <TableHead className="text-center">الكمية</TableHead>
-                                            <TableHead className="text-center">الإجمالي</TableHead>
-                                            <TableHead></TableHead>
+                        <ScrollArea className="flex-grow border-t border-b">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="w-[50%]">الصنف</TableHead>
+                                        <TableHead className="text-center">الكمية</TableHead>
+                                        <TableHead className="text-center">الإجمالي</TableHead>
+                                        <TableHead></TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {cart.map(item => (
+                                        <TableRow key={item.uniqueId}>
+                                            <TableCell className='py-2'>
+                                                <div>{item.name}</div>
+                                                <div className='text-xs text-muted-foreground'>{item.price.toFixed(2)} ج.م</div>
+                                            </TableCell>
+                                            <TableCell className='py-2'><Input type="number" value={item.qty} onChange={e => updateQty(item.uniqueId, Number(e.target.value))} className="w-16 text-center mx-auto" /></TableCell>
+                                            <TableCell className="text-center font-bold py-2">{item.total.toFixed(2)}</TableCell>
+                                            <TableCell className='py-2'>
+                                                <Button variant="ghost" size="icon" onClick={() => updateQty(item.uniqueId, 0)}>
+                                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                                </Button>
+                                            </TableCell>
                                         </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {cart.map(item => (
-                                            <TableRow key={item.uniqueId}>
-                                                <TableCell className='py-2'>
-                                                    <div>{item.name}</div>
-                                                    <div className='text-xs text-muted-foreground'>{item.price.toFixed(2)} ج.م</div>
-                                                </TableCell>
-                                                <TableCell className='py-2'><Input type="number" value={item.qty} onChange={e => updateQty(item.uniqueId, Number(e.target.value))} className="w-16 text-center mx-auto" /></TableCell>
-                                                <TableCell className="text-center font-bold py-2">{item.total.toFixed(2)}</TableCell>
-                                                <TableCell className='py-2'>
-                                                    <Button variant="ghost" size="icon" onClick={() => updateQty(item.uniqueId, 0)}>
-                                                        <Trash2 className="h-4 w-4 text-destructive" />
-                                                    </Button>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                         {cart.length === 0 && (
-                                            <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground h-24">السلة فارغة</TableCell></TableRow>
-                                        )}
-                                    </TableBody>
-                                </Table>
-                            </ScrollArea>
-                        </div>
-                         <CardFooter className="mt-auto p-4 border-t bg-muted/50">
+                                    ))}
+                                        {cart.length === 0 && (
+                                        <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground h-24">السلة فارغة</TableCell></TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </ScrollArea>
+                         <div className="p-4 bg-muted/50 shrink-0">
                              <div className="w-full space-y-3 text-lg">
                                 <div className="flex justify-between items-center">
                                     <span className="text-muted-foreground">الإجمالي الفرعي</span>
@@ -313,9 +321,9 @@ export default function PosPage() {
                                     <span>{total.toFixed(2)} ج.م</span>
                                 </div>
                             </div>
-                        </CardFooter>
+                        </div>
                     </Card>
-                     <Card>
+                     <Card className="shrink-0">
                         <CardContent className="p-4 grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="paidAmount" className="text-xl">المبلغ المدفوع</Label>
