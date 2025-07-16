@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Save } from "lucide-react";
 import React, { useState } from "react";
-import useFirebase from "@/hooks/use-firebase";
+import { useData } from "@/contexts/data-provider";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from 'next/navigation';
 
@@ -33,18 +33,12 @@ export default function RemitFromRepPage() {
     const [toAccountId, setToAccountId] = useState<string>("");
     const [notes, setNotes] = useState("");
     
-    const { data: users, loading: loadingUsers } = useFirebase<User>('users');
-    const { data: cashAccounts, loading: loadingAccounts } = useFirebase<CashAccount>('cashAccounts');
-    const { add: addRemittance, getNextId } = useFirebase("repRemittances");
-    const { add: addTreasuryTransaction } = useFirebase("treasuryTransactions");
+    const { users, cashAccounts, dbAction, getNextId, loading } = useData();
 
-
-    const reps = users.filter(u => u.isSalesRep);
+    const reps = users.filter((u: User) => u.isSalesRep);
     // Exclude rep-specific accounts from the destination list
     const mainCashAccounts = cashAccounts.filter((acc: CashAccount) => !acc.salesRepId);
     
-    const loading = loadingUsers || loadingAccounts;
-
     const handleConfirm = async () => {
         if (!selectedRepId || amount <= 0 || !toAccountId) {
             toast({ variant: "destructive", title: "بيانات غير مكتملة", description: "يرجى اختيار المندوب والحساب وإدخال مبلغ صحيح." });
@@ -57,12 +51,12 @@ export default function RemitFromRepPage() {
             return;
         }
 
-        const repName = users.find(u => u.id === selectedRepId)?.name || 'غير معروف';
+        const repName = users.find((u:User) => u.id === selectedRepId)?.name || 'غير معروف';
 
         try {
             // Record the remittance itself for reporting
             const remittanceId = await getNextId('remittance');
-            await addRemittance({
+            await dbAction('repRemittances', 'add', {
                 salesRepId: selectedRepId,
                 fromAccountId: repCashAccount.id,
                 toAccountId: toAccountId,
@@ -75,7 +69,7 @@ export default function RemitFromRepPage() {
             // Create two treasury transactions to reflect the accounting entry
             // 1. Withdrawal from rep's account
             const withdrawalId = await getNextId('treasuryTransaction');
-            await addTreasuryTransaction({
+            await dbAction('treasuryTransactions', 'add', {
                 date: new Date().toISOString(),
                 amount: Number(amount),
                 accountId: repCashAccount.id,
@@ -86,7 +80,7 @@ export default function RemitFromRepPage() {
             
             // 2. Deposit into main account
              const depositId = await getNextId('treasuryTransaction');
-             await addTreasuryTransaction({
+             await dbAction('treasuryTransactions', 'add', {
                 date: new Date().toISOString(),
                 amount: Number(amount),
                 accountId: toAccountId,

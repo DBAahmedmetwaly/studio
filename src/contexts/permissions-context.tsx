@@ -23,6 +23,7 @@ export const permissionsConfig = {
     
     pos: { label: "شاشة الكاشير", group: "pos", actions: ["view"] },
     pos_closing: { label: "إقفال وردية الكاشير", group: "pos", actions: ["view"] },
+    pos_remit: { label: "توريد نقدية الكاشير", group: "pos", actions: ["view"] },
     
     masterData_items: { label: "الأصناف", group: "masterData", actions: ["view", "add", "edit", "delete"] },
     masterData_itemGroups: { label: "مجموعات الأصناف", group: "pos", actions: ["view", "add", "edit", "delete"] },
@@ -45,7 +46,7 @@ export const permissionsConfig = {
     
     sales_issueToRep: { label: "صرف بضاعة لمندوب", group: "salesReps", actions: ["view", "add", "delete"] },
     sales_returnFromRep: { label: "مرتجع بضاعة من مندوب", group: "salesReps", actions: ["view", "add", "delete"] },
-    sales_remitFromRep: { label: "توريد نقدية من الكاشير/المندوب", group: "pos", actions: ["view", "add", "delete"] },
+    sales_remitFromRep: { label: "توريد نقدية من مندوب", group: "salesReps", actions: ["view", "add", "delete"] },
     sales_repInvoices: { label: "اعتماد فواتير المناديب", group: "salesReps", actions: ["view", "approve", "delete"] },
     sales_repOperations: { label: "مراقبة أداء المناديب", group: "salesReps", actions: ["view"] },
 

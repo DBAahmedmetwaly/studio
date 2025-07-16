@@ -173,10 +173,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <NavSubLink href="/master-data/sales-reps" module="masterData_salesReps">مناديب المبيعات</NavSubLink>
             </NavCollapsible>
 
-            <NavCollapsible title="نقاط البيع" icon={<Receipt />} modules={['pos', 'masterData_itemGroups', 'sales_remitFromRep', 'pos_closing']}>
+            <NavCollapsible title="نقاط البيع" icon={<Receipt />} modules={['pos', 'masterData_itemGroups', 'pos_remit', 'pos_closing']}>
                 <NavSubLink href="/pos" module="pos">شاشة الكاشير</NavSubLink>
                 <NavSubLink href="/master-data/item-groups" module="masterData_itemGroups">مجموعات الأصناف</NavSubLink>
-                <NavSubLink href="/sales/remit-from-rep" module="sales_remitFromRep">توريد نقدية الكاشير</NavSubLink>
+                <NavSubLink href="/pos/closing" module="pos_remit">توريد نقدية الكاشير</NavSubLink>
                 <NavSubLink href="/pos/closing" module="pos_closing">إقفال وردية الكاشير</NavSubLink>
             </NavCollapsible>
             
@@ -195,11 +195,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <NavSubLink href="/sales/returns/new" module="sales_returns">مرتجعات البيع</NavSubLink>
             </NavCollapsible>
 
-            <NavCollapsible title="عمليات المناديب" icon={<Truck />} modules={['sales_issueToRep', 'sales_returnFromRep', 'sales_repInvoices', 'sales_repOperations']}>
+            <NavCollapsible title="عمليات المناديب" icon={<Truck />} modules={['sales_issueToRep', 'sales_returnFromRep', 'sales_repInvoices', 'sales_repOperations', 'sales_remitFromRep']}>
                 <NavSubLink href="/sales/issue-to-rep/list" module="sales_issueToRep">صرف بضاعة لمندوب</NavSubLink>
                 <NavSubLink href="/sales/return-from-rep/list" module="sales_returnFromRep">مرتجع بضاعة من مندوب</NavSubLink>
                 <NavSubLink href="/sales/rep-invoices" module="sales_repInvoices">اعتماد فواتير المناديب</NavSubLink>
                 <NavSubLink href="/sales/rep-operations" module="sales_repOperations">مراقبة أداء المناديب</NavSubLink>
+                <NavSubLink href="/sales/remit-from-rep" module="sales_remitFromRep">توريد نقدية من مندوب</NavSubLink>
             </NavCollapsible>
             
             <NavCollapsible title="المشتريات" icon={<ShoppingBag />} modules={['purchases_invoices', 'purchases_returns']}>
