@@ -52,6 +52,11 @@ import {
   Laptop,
   Group,
   Receipt,
+  FilePieChart,
+  UserSquare,
+  Building2,
+  ClipboardUser,
+  PackageSearch,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -162,54 +167,42 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <SidebarContent>
           <SidebarMenu>
             <NavLink href="/" icon={<LayoutDashboard />} module="dashboard">لوحة التحكم</NavLink>
-            
-            <NavCollapsible title="البيانات الرئيسية" icon={<Package />} modules={['masterData_items', 'masterData_warehouses', 'masterData_customers', 'masterData_suppliers', 'masterData_partners', 'masterData_cashAccounts', 'masterData_salesReps']}>
-                <NavSubLink href="/master-data/items" module="masterData_items">الأصناف</NavSubLink>
-                <NavSubLink href="/master-data/warehouses" module="masterData_warehouses">المخازن</NavSubLink>
-                <NavSubLink href="/master-data/customers" module="masterData_customers">العملاء</NavSubLink>
-                <NavSubLink href="/master-data/suppliers" module="masterData_suppliers">الموردون</NavSubLink>
-                <NavSubLink href="/master-data/partners" module="masterData_partners">الشركاء</NavSubLink>
-                <NavSubLink href="/master-data/cash-accounts" module="masterData_cashAccounts">الخزائن والبنوك</NavSubLink>
-                <NavSubLink href="/master-data/sales-reps" module="masterData_salesReps">مناديب المبيعات</NavSubLink>
-            </NavCollapsible>
+            <NavLink href="/analytics" icon={<BarChart />} module="analytics">التحليلات</NavLink>
 
-            <NavCollapsible title="نقاط البيع" icon={<Receipt />} modules={['pos', 'masterData_itemGroups', 'pos_remit', 'pos_closing']}>
+            <NavCollapsible title="نقاط البيع" icon={<Receipt />} modules={['pos', 'pos_itemGroups', 'pos_remit', 'pos_closing']}>
                 <NavSubLink href="/pos" module="pos">شاشة الكاشير</NavSubLink>
-                <NavSubLink href="/master-data/item-groups" module="masterData_itemGroups">مجموعات الأصناف</NavSubLink>
+                <NavSubLink href="/master-data/item-groups" module="pos_itemGroups">مجموعات الأصناف</NavSubLink>
                 <NavSubLink href="/pos/remit" module="pos_remit">توريد نقدية الكاشير</NavSubLink>
                 <NavSubLink href="/pos/closing" module="pos_closing">إقفال وردية الكاشير</NavSubLink>
             </NavCollapsible>
-            
-            <NavCollapsible title="المخزون" icon={<Boxes />} modules={['inventory_stockIn', 'inventory_stockOut', 'inventory_transfer', 'inventory_adjustment', 'inventory_movements', 'inventory_stockStatus']}>
+
+            <NavCollapsible title="الأصناف والمخزون" icon={<Warehouse />} modules={['inventory_items', 'inventory_warehouses', 'inventory_stockIn', 'inventory_stockOut', 'inventory_transfer', 'inventory_adjustment', 'inventory_movements', 'inventory_stockStatus', 'reports_itemProfitLoss']}>
+                <NavSubLink href="/master-data/items" module="inventory_items">بطاقة الأصناف</NavSubLink>
+                <NavSubLink href="/master-data/warehouses" module="inventory_warehouses">المخازن</NavSubLink>
                 <NavSubLink href="/inventory/stock-in/new" module="inventory_stockIn">استلام مخزون</NavSubLink>
                 <NavSubLink href="/inventory/stock-out/new" module="inventory_stockOut">صرف مخزون</NavSubLink>
                 <NavSubLink href="/inventory/transfer/new" module="inventory_transfer">تحويل مخزون</NavSubLink>
                 <NavSubLink href="/inventory/adjustment" module="inventory_adjustment">تسوية المخزون</NavSubLink>
                 <NavSubLink href="/inventory/movements" module="inventory_movements">حركة المخزون</NavSubLink>
                 <NavSubLink href="/inventory/stock-status" module="inventory_stockStatus">أرصدة المخزون</NavSubLink>
-            </NavCollapsible>
-
-            <NavCollapsible title="المبيعات" icon={<ShoppingCart />} modules={['sales_invoices', 'sales_returns']}>
-                <NavSubLink href="/sales/invoices" module="sales_invoices">إنشاء فاتورة بيع</NavSubLink>
-                <NavSubLink href="/sales/invoices/list" module="sales_invoices">سجل فواتير البيع</NavSubLink>
-                <NavSubLink href="/sales/returns/new" module="sales_returns">مرتجعات البيع</NavSubLink>
-            </NavCollapsible>
-
-            <NavCollapsible title="عمليات المناديب" icon={<Truck />} modules={['sales_issueToRep', 'sales_returnFromRep', 'sales_repInvoices', 'sales_repOperations', 'sales_remitFromRep']}>
-                <NavSubLink href="/sales/issue-to-rep/list" module="sales_issueToRep">صرف بضاعة لمندوب</NavSubLink>
-                <NavSubLink href="/sales/return-from-rep/list" module="sales_returnFromRep">مرتجع بضاعة من مندوب</NavSubLink>
-                <NavSubLink href="/sales/rep-invoices" module="sales_repInvoices">اعتماد فواتير المناديب</NavSubLink>
-                <NavSubLink href="/sales/rep-operations" module="sales_repOperations">مراقبة أداء المناديب</NavSubLink>
-                <NavSubLink href="/sales/remit-from-rep" module="sales_remitFromRep">توريد نقدية من مندوب</NavSubLink>
+                <NavSubLink href="/reports/item-profit-loss" module="reports_itemProfitLoss">تقرير أرباح الأصناف</NavSubLink>
             </NavCollapsible>
             
-            <NavCollapsible title="المشتريات" icon={<ShoppingBag />} modules={['purchases_invoices', 'purchases_returns']}>
-                <NavSubLink href="/purchases/invoices" module="purchases_invoices">إنشاء فاتورة شراء</NavSubLink>
-                <NavSubLink href="/purchases/invoices/list" module="purchases_invoices">سجل فواتير الشراء</NavSubLink>
-                <NavSubLink href="/purchases/returns/new" module="purchases_returns">مرتجعات الشراء</NavSubLink>
+            <NavCollapsible title="العملاء والمبيعات" icon={<UserSquare />} modules={['customers_data', 'sales_invoices', 'sales_returns', 'reports_customerStatement']}>
+                <NavSubLink href="/master-data/customers" module="customers_data">بيانات العملاء</NavSubLink>
+                <NavSubLink href="/sales/invoices" module="sales_invoices">إنشاء فاتورة بيع</NavSubLink>
+                <NavSubLink href="/sales/returns/new" module="sales_returns">مرتجعات البيع</NavSubLink>
+                <NavSubLink href="/reports/customer-statement" module="reports_customerStatement">كشف حساب العملاء</NavSubLink>
             </NavCollapsible>
 
-             <NavCollapsible title="المحاسبة" icon={<BookUser />} modules={['accounting_journal', 'accounting_expenses', 'accounting_exceptionalIncome', 'accounting_supplierPayments', 'accounting_customerPayments', 'accounting_treasury', 'accounting_profitDistribution', 'accounting_aiAnalysis']}>
+            <NavCollapsible title="الموردون والمشتريات" icon={<Building2 />} modules={['suppliers_data', 'purchases_invoices', 'purchases_returns', 'reports_supplierStatement']}>
+                <NavSubLink href="/master-data/suppliers" module="suppliers_data">بيانات الموردين</NavSubLink>
+                <NavSubLink href="/purchases/invoices" module="purchases_invoices">إنشاء فاتورة شراء</NavSubLink>
+                <NavSubLink href="/purchases/returns/new" module="purchases_returns">مرتجعات الشراء</NavSubLink>
+                <NavSubLink href="/reports/supplier-statement" module="reports_supplierStatement">كشف حساب الموردين</NavSubLink>
+            </NavCollapsible>
+            
+            <NavCollapsible title="المحاسبة والمالية" icon={<BookUser />} modules={['accounting_journal', 'accounting_expenses', 'accounting_exceptionalIncome', 'accounting_supplierPayments', 'accounting_customerPayments', 'accounting_treasury', 'accounting_profitDistribution', 'accounting_aiAnalysis', 'reports_financialStatements']}>
                 <NavSubLink href="/accounting/journal" module="accounting_journal">قيود اليومية</NavSubLink>
                 <NavSubLink href="/accounting/expenses" module="accounting_expenses">إدارة المصروفات</NavSubLink>
                 <NavSubLink href="/accounting/exceptional-income" module="accounting_exceptionalIncome">الدخل الاستثنائي</NavSubLink>
@@ -218,28 +211,31 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <NavSubLink href="/accounting/treasury" module="accounting_treasury">حركة الخزينة</NavSubLink>
                 <NavSubLink href="/accounting/profit-distribution" module="accounting_profitDistribution">توزيعات الأرباح</NavSubLink>
                 <NavSubLink href="/accounting/ai-analysis" module="accounting_aiAnalysis">تحليل مالي بالذكاء الاصطناعي</NavSubLink>
+                <NavSubLink href="/reports/financial-statements" module="reports_financialStatements">القوائم المالية</NavSubLink>
             </NavCollapsible>
             
-            <NavCollapsible title="الموارد البشرية" icon={<UserRound />} modules={['hr_employees', 'hr_advances', 'hr_adjustments', 'hr_payroll']}>
+            <NavCollapsible title="المناديب والشركاء" icon={<ClipboardUser />} modules={['salesReps_data', 'partners_data', 'sales_issueToRep', 'sales_returnFromRep', 'sales_repInvoices', 'sales_repOperations', 'sales_remitFromRep', 'reports_partnerShares']}>
+                <NavSubLink href="/master-data/sales-reps" module="salesReps_data">بيانات المناديب</NavSubLink>
+                 <NavSubLink href="/master-data/partners" module="partners_data">بيانات الشركاء</NavSubLink>
+                <NavSubLink href="/sales/issue-to-rep/list" module="sales_issueToRep">صرف بضاعة لمندوب</NavSubLink>
+                <NavSubLink href="/sales/return-from-rep/list" module="sales_returnFromRep">مرتجع بضاعة من مندوب</NavSubLink>
+                <NavSubLink href="/sales/rep-invoices" module="sales_repInvoices">اعتماد فواتير المناديب</NavSubLink>
+                <NavSubLink href="/sales/rep-operations" module="sales_repOperations">مراقبة أداء المناديب</NavSubLink>
+                <NavSubLink href="/sales/remit-from-rep" module="sales_remitFromRep">توريد نقدية من مندوب</NavSubLink>
+                <NavSubLink href="/reports/partner-shares" module="reports_partnerShares">تقرير حصص الشركاء</NavSubLink>
+            </NavCollapsible>
+            
+            <NavCollapsible title="الموظفون والموارد البشرية" icon={<UserRound />} modules={['hr_employees', 'hr_advances', 'hr_adjustments', 'hr_payroll']}>
                 <NavSubLink href="/hr/employees" module="hr_employees">الموظفين</NavSubLink>
                 <NavSubLink href="/hr/advances" module="hr_advances">سلف الموظفين</NavSubLink>
                 <NavSubLink href="/hr/adjustments" module="hr_adjustments">المكافآت والجزاءات</NavSubLink>
                 <NavSubLink href="/hr/payroll" module="hr_payroll">احتساب الرواتب</NavSubLink>
             </NavCollapsible>
-
-            <NavLink href="/analytics" icon={<BarChart />} module="analytics">التحليلات</NavLink>
-
-            <NavCollapsible title="التقارير" icon={<AreaChart />} modules={['reports_financialStatements', 'reports_partnerShares', 'reports_customerStatement', 'reports_supplierStatement', 'reports_itemProfitLoss']}>
-                <NavSubLink href="/reports/financial-statements" module="reports_financialStatements">القوائم المالية</NavSubLink>
-                <NavSubLink href="/reports/partner-shares" module="reports_partnerShares">حصص الشركاء</NavSubLink>
-                <NavSubLink href="/reports/customer-statement" module="reports_customerStatement">كشف حساب العملاء</NavSubLink>
-                <NavSubLink href="/reports/supplier-statement" module="reports_supplierStatement">كشف حساب الموردين</NavSubLink>
-                <NavSubLink href="/reports/item-profit-loss" module="reports_itemProfitLoss">أرباح وخسائر الأصناف</NavSubLink>
-            </NavCollapsible>
             
-            <NavCollapsible title="الإعدادات" icon={<Settings />} modules={['settings_users', 'settings_roles', 'settings_general', 'settings_backup', 'settings_periodClosing']}>
+            <NavCollapsible title="الإعدادات" icon={<Settings />} modules={['settings_users', 'settings_roles', 'settings_general', 'settings_backup', 'settings_periodClosing', 'settings_cashAccounts']}>
               <NavSubLink href="/users" module="settings_users">المستخدمون</NavSubLink>
               <NavSubLink href="/roles" module="settings_roles">الوظائف والصلاحيات</NavSubLink>
+              <NavSubLink href="/master-data/cash-accounts" module="settings_cashAccounts">الخزائن والبنوك</NavSubLink>
               <NavSubLink href="/settings" module="settings_general">الإعدادات العامة</NavSubLink>
               <NavSubLink href="/settings/backup" module="settings_backup">النسخ الاحتياطي</NavSubLink>
               <NavSubLink href="/settings/period-closing" module="settings_periodClosing">إقفال الفترات</NavSubLink>

@@ -16,7 +16,7 @@ import {
 import { AddEntityDialog } from "@/components/add-entity-dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import useFirebase from "@/hooks/use-firebase";
+import { useData } from "@/contexts/data-provider";
 import {
   Table,
   TableBody,
@@ -133,16 +133,16 @@ const ItemForm = ({ item, onSave, onClose }: { item?: Item, onSave: (item: Omit<
 };
 
 export default function ItemsPage() {
-    const { data: items, loading, add, update, remove, getNextId } = useFirebase<Item>("items");
+    const { items, loading, dbAction, getNextId } = useData();
     const { toast } = useToast();
     const { can } = usePermissions();
-    const moduleName = 'masterData_items';
+    const moduleName = 'inventory_items';
 
     const handleSave = async (item: Omit<Item, 'id' | 'code'> & { id?: string, code?: string }) => {
         try {
             if (item.id) {
                 if (!can('edit', moduleName)) return toast({ variant: "destructive", title: "غير مصرح به" });
-                await update(item.id, item);
+                await dbAction('items', 'update', { id: item.id, data: item });
                 toast({ title: "تم التحديث بنجاح" });
             } else {
                 if (!can('add', moduleName)) return toast({ variant: "destructive", title: "غير مصرح به" });
@@ -152,7 +152,7 @@ export default function ItemsPage() {
                     return;
                 }
                 const newItem = { ...item, code: String(nextId) };
-                await add(newItem);
+                await dbAction('items', 'add', newItem);
                 toast({ title: "تمت الإضافة بنجاح", description: `تم إنشاء الصنف بكود: ${newItem.code}` });
             }
         } catch (e) {
@@ -166,7 +166,7 @@ export default function ItemsPage() {
             return;
         }
         try {
-            await remove(id);
+            await dbAction('items', 'remove', { id });
             toast({ title: "تم الحذف بنجاح" });
         } catch (error) {
             toast({ variant: "destructive", title: "خطأ", description: "فشل حذف الصنف." });
@@ -223,7 +223,7 @@ export default function ItemsPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {items.map((item) => (
+                            {items.map((item: Item) => (
                                 <TableRow key={item.id}>
                                     <TableCell className="font-mono">{item.code}</TableCell>
                                     <TableCell className="font-medium">{item.name}</TableCell>

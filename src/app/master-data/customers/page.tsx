@@ -16,7 +16,7 @@ import {
 import { AddEntityDialog } from "@/components/add-entity-dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import useFirebase from "@/hooks/use-firebase";
+import { useData } from "@/contexts/data-provider";
 import {
   Table,
   TableBody,
@@ -107,18 +107,13 @@ const CustomerForm = ({ customer, onSave, onClose }: { customer?: Customer, onSa
 
 
 export default function CustomersPage() {
-  const { data: customers, loading: loadingCustomers, add, update, remove } = useFirebase<Customer>("customers");
-  const { data: sales, loading: loadingSales } = useFirebase<SaleInvoice>('salesInvoices');
-  const { data: payments, loading: loadingPayments } = useFirebase<CustomerPayment>('customerPayments');
-  const { data: returns, loading: loadingReturns } = useFirebase<SalesReturn>('salesReturns');
-
-  const loading = loadingCustomers || loadingSales || loadingPayments || loadingReturns;
+  const { customers, salesInvoices, customerPayments, salesReturns, loading, dbAction } = useData();
   
   const customersWithBalance = useMemo(() => {
     return customers.map((customer: Customer) => {
-        const customerSales = sales.filter((s: SaleInvoice) => s.customerId === customer.id && s.status === 'approved');
-        const customerPayments = payments.filter((p: CustomerPayment) => p.customerId === customer.id);
-        const customerReturns = returns.filter((r: SalesReturn) => r.customerId === customer.id);
+        const customerSales = salesInvoices.filter((s: SaleInvoice) => s.customerId === customer.id && s.status === 'approved');
+        const customerPayments = customerPayments.filter((p: CustomerPayment) => p.customerId === customer.id);
+        const customerReturns = salesReturns.filter((r: SalesReturn) => r.customerId === customer.id);
 
         const totalSales = customerSales.reduce((acc: number, s: SaleInvoice) => acc + s.total, 0);
         const totalPaidOnInvoice = customerSales.reduce((acc: number, s: SaleInvoice) => acc + (s.paidAmount || 0), 0);
@@ -128,19 +123,19 @@ export default function CustomersPage() {
         const currentBalance = (customer.openingBalance || 0) + totalSales - totalPaidOnInvoice - totalSeparatePayments - totalReturns;
         return { ...customer, currentBalance };
     });
-  }, [customers, sales, payments, returns]);
+  }, [customers, salesInvoices, customerPayments, salesReturns]);
 
 
   const handleSave = (customer: Customer) => {
     if (customer.id) {
-      update(customer.id, customer);
+      dbAction('customers', 'update', { id: customer.id, data: customer });
     } else {
-      add(customer);
+      dbAction('customers', 'add', customer);
     }
   };
 
   const handleDelete = (id: string) => {
-    remove(id);
+    dbAction('customers', 'remove', { id });
   };
 
   return (
@@ -248,4 +243,3 @@ export default function CustomersPage() {
     </>
   );
 }
-

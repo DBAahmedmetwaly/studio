@@ -16,7 +16,7 @@ import {
 import { AddEntityDialog } from "@/components/add-entity-dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import useFirebase from "@/hooks/use-firebase";
+import { useData } from "@/contexts/data-provider";
 import {
   Table,
   TableBody,
@@ -91,18 +91,13 @@ const SupplierForm = ({ supplier, onSave, onClose }: { supplier?: Supplier, onSa
 
 
 export default function SuppliersPage() {
-  const { data: suppliers, loading: loadingSuppliers, add, update, remove } = useFirebase<Supplier>("suppliers");
-  const { data: purchases, loading: loadingPurchases } = useFirebase<PurchaseInvoice>('purchaseInvoices');
-  const { data: payments, loading: loadingPayments } = useFirebase<SupplierPayment>('supplierPayments');
-  const { data: returns, loading: loadingReturns } = useFirebase<PurchaseReturn>('purchaseReturns');
-
-  const loading = loadingSuppliers || loadingPurchases || loadingPayments || loadingReturns;
+  const { suppliers, purchaseInvoices, supplierPayments, purchaseReturns, loading, dbAction } = useData();
   
   const suppliersWithBalance = useMemo(() => {
     return suppliers.map((supplier: Supplier) => {
-        const supplierPurchases = purchases.filter((p: PurchaseInvoice) => p.supplierId === supplier.id);
-        const supplierPayments = payments.filter((p: SupplierPayment) => p.supplierId === supplier.id);
-        const supplierReturns = returns.filter((r: PurchaseReturn) => r.supplierId === supplier.id);
+        const supplierPurchases = purchaseInvoices.filter((p: PurchaseInvoice) => p.supplierId === supplier.id);
+        const supplierPayments = supplierPayments.filter((p: SupplierPayment) => p.supplierId === supplier.id);
+        const supplierReturns = purchaseReturns.filter((r: PurchaseReturn) => r.supplierId === supplier.id);
 
         const totalPurchases = supplierPurchases.reduce((acc: number, p: PurchaseInvoice) => acc + p.total, 0);
         const totalPaidOnInvoice = supplierPurchases.reduce((acc: number, p: PurchaseInvoice) => acc + (p.paidAmount || 0), 0);
@@ -112,18 +107,18 @@ export default function SuppliersPage() {
         const currentBalance = (supplier.openingBalance || 0) + totalPurchases - totalPaidOnInvoice - totalSeparatePayments - totalReturns;
         return { ...supplier, currentBalance };
     });
-  }, [suppliers, purchases, payments, returns]);
+  }, [suppliers, purchaseInvoices, supplierPayments, purchaseReturns]);
 
   const handleSave = (supplier: Supplier) => {
     if (supplier.id) {
-      update(supplier.id, supplier);
+      dbAction('suppliers', 'update', { id: supplier.id, data: supplier });
     } else {
-      add(supplier);
+      dbAction('suppliers', 'add', supplier);
     }
   };
 
   const handleDelete = (id: string) => {
-    remove(id);
+    dbAction('suppliers', 'remove', { id });
   };
 
   return (
