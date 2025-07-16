@@ -50,6 +50,7 @@ import {
   Monitor,
   List,
   Laptop,
+  Group,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -162,8 +163,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <NavLink href="/" icon={<LayoutDashboard />} module="dashboard">لوحة التحكم</NavLink>
             <NavLink href="/pos" icon={<Laptop />} module="pos">نقطة البيع (الكاشير)</NavLink>
             
-            <NavCollapsible title="البيانات الرئيسية" icon={<Package />} modules={['masterData_items', 'masterData_warehouses', 'masterData_customers', 'masterData_suppliers', 'masterData_partners', 'masterData_cashAccounts', 'masterData_salesReps']}>
+            <NavCollapsible title="البيانات الرئيسية" icon={<Package />} modules={['masterData_items', 'masterData_itemGroups', 'masterData_warehouses', 'masterData_customers', 'masterData_suppliers', 'masterData_partners', 'masterData_cashAccounts', 'masterData_salesReps']}>
                 <NavSubLink href="/master-data/items" module="masterData_items">الأصناف</NavSubLink>
+                <NavSubLink href="/master-data/item-groups" module="masterData_itemGroups">مجموعات الأصناف</NavSubLink>
                 <NavSubLink href="/master-data/warehouses" module="masterData_warehouses">المخازن</NavSubLink>
                 <NavSubLink href="/master-data/customers" module="masterData_customers">العملاء</NavSubLink>
                 <NavSubLink href="/master-data/suppliers" module="masterData_suppliers">الموردون</NavSubLink>

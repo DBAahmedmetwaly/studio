@@ -24,6 +24,7 @@ export const permissionsConfig = {
     pos_closing: { label: "إقفال وردية الكاشير", group: "settings", actions: ["view"] },
     
     masterData_items: { label: "الأصناف", group: "masterData", actions: ["view", "add", "edit", "delete"] },
+    masterData_itemGroups: { label: "مجموعات الأصناف", group: "masterData", actions: ["view", "add", "edit", "delete"] },
     masterData_warehouses: { label: "المخازن", group: "masterData", actions: ["view", "add", "edit", "delete"] },
     masterData_customers: { label: "العملاء", group: "masterData", actions: ["view", "add", "edit", "delete"] },
     masterData_suppliers: { label: "الموردون", group: "masterData", actions: ["view", "add", "edit", "delete"] },
