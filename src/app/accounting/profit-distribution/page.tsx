@@ -119,17 +119,20 @@ const DistributionForm = ({ onSave, partners, cashAccounts }: { onSave: (data: O
 };
 
 export default function ProfitDistributionPage() {
-    const { data: distributions, loading: loadingDists, add: addDistribution, remove: removeDistribution, getNextId } = useFirebase<ProfitDistribution>('profitDistributions');
-    const { data: partners, loading: loadingPartners } = useFirebase<Partner>('partners');
-    const { data: cashAccounts, loading: loadingCashAccounts } = useFirebase<CashAccount>('cashAccounts');
-    
+    const { 
+        profitDistributions: distributions,
+        partners,
+        cashAccounts,
+        dbAction,
+        getNextId,
+        loading
+    } = useData();
+
     const { toast } = useToast();
     const { user } = useAuth();
     
-    const loading = loadingDists || loadingPartners || loadingCashAccounts;
-
     const getPartnerName = (partnerId: string) => partners.find(p => p.id === partnerId)?.name || 'غير معروف';
-    const getCashAccountName = (accountId: string) => cashAccounts.find(acc => acc.id === accountId)?.name || 'غير معروف';
+    const getCashAccountName = (accountId: string) => cashAccounts.find((acc: any) => acc.id === accountId)?.name || 'غير معروف';
 
     const handleSave = async (data: Omit<ProfitDistribution, 'id' | 'receiptNumber'>) => {
         try {
@@ -140,7 +143,7 @@ export default function ProfitDistributionPage() {
                 createdById: user?.id,
                 createdByName: user?.name,
             };
-            await addDistribution(newDistribution);
+            await dbAction('profitDistributions', 'add', newDistribution);
             toast({ title: "تمت الإضافة بنجاح", description: `تم حفظ التوزيع برقم إيصال: ${receiptNumber}` });
         } catch (error) {
             toast({ variant: "destructive", title: "حدث خطأ", description: "فشل الحفظ" });
@@ -149,7 +152,7 @@ export default function ProfitDistributionPage() {
     
     const handleDelete = async (id: string) => {
         try {
-            await removeDistribution(id);
+            await dbAction('profitDistributions', 'remove', { id });
             toast({ title: "تم الحذف بنجاح" });
         } catch (error) {
             toast({ variant: "destructive", title: "حدث خطأ", description: "فشل الحذف" });
