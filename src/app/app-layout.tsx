@@ -176,7 +176,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <NavCollapsible title="نقاط البيع" icon={<Receipt />} modules={['pos', 'masterData_itemGroups', 'pos_remit', 'pos_closing']}>
                 <NavSubLink href="/pos" module="pos">شاشة الكاشير</NavSubLink>
                 <NavSubLink href="/master-data/item-groups" module="masterData_itemGroups">مجموعات الأصناف</NavSubLink>
-                <NavSubLink href="/pos/closing" module="pos_remit">توريد نقدية الكاشير</NavSubLink>
+                <NavSubLink href="/pos/remit" module="pos_remit">توريد نقدية الكاشير</NavSubLink>
                 <NavSubLink href="/pos/closing" module="pos_closing">إقفال وردية الكاشير</NavSubLink>
             </NavCollapsible>
             

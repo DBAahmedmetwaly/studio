@@ -25,7 +25,7 @@ interface CashAccount {
     salesRepId?: string; // To identify rep accounts
 }
 
-export default function RemitFromRepPage() {
+export default function RemitFromCashierPage() {
     const router = useRouter();
     const { toast } = useToast();
     const [selectedRepId, setSelectedRepId] = useState<string>("");
@@ -35,26 +35,24 @@ export default function RemitFromRepPage() {
     
     const { users, cashAccounts, dbAction, getNextId, loading } = useData();
 
-    const reps = users.filter((u: User) => u.isSalesRep);
-    // Exclude rep-specific accounts from the destination list
+    const cashiers = users.filter((u: User) => u.isSalesRep);
     const mainCashAccounts = cashAccounts.filter((acc: CashAccount) => !acc.salesRepId);
     
     const handleConfirm = async () => {
         if (!selectedRepId || amount <= 0 || !toAccountId) {
-            toast({ variant: "destructive", title: "بيانات غير مكتملة", description: "يرجى اختيار المندوب والحساب وإدخال مبلغ صحيح." });
+            toast({ variant: "destructive", title: "بيانات غير مكتملة", description: "يرجى اختيار الكاشير والحساب وإدخال مبلغ صحيح." });
             return;
         }
 
         const repCashAccount = cashAccounts.find((acc: CashAccount) => acc.salesRepId === selectedRepId);
         if (!repCashAccount) {
-            toast({ variant: "destructive", title: "خطأ", description: "لم يتم العثور على خزينة المندوب." });
+            toast({ variant: "destructive", title: "خطأ", description: "لم يتم العثور على خزينة الكاشير." });
             return;
         }
 
         const repName = users.find((u:User) => u.id === selectedRepId)?.name || 'غير معروف';
 
         try {
-            // Record the remittance itself for reporting
             const remittanceId = await getNextId('remittance');
             await dbAction('repRemittances', 'add', {
                 salesRepId: selectedRepId,
@@ -64,7 +62,7 @@ export default function RemitFromRepPage() {
                 amount: Number(amount),
                 notes,
                 receiptNumber: `ت-ن-${remittanceId}`,
-                type: 'sales_rep', // Differentiate from cashier remittance
+                type: 'cashier', // Differentiate from rep remittance
             });
 
             // Create two treasury transactions to reflect the accounting entry
@@ -86,7 +84,7 @@ export default function RemitFromRepPage() {
                 amount: Number(amount),
                 accountId: toAccountId,
                 type: 'deposit',
-                description: `توريد من المندوب ${repName}`,
+                description: `توريد من الكاشير ${repName}`,
                 receiptNumber: `ح-خ-${depositId}`,
             });
 
@@ -99,13 +97,13 @@ export default function RemitFromRepPage() {
 
   return (
     <>
-      <PageHeader title="توريد نقدية من مندوب" />
+      <PageHeader title="توريد نقدية من كاشير" />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
         <Card className="max-w-2xl mx-auto">
           <CardHeader>
             <CardTitle>إيصال توريد نقدية</CardTitle>
             <CardDescription>
-                تسجيل المبالغ النقدية المحولة من عهدة المندوب المالية إلى خزينة الشركة الرئيسية أو البنك.
+                تسجيل المبالغ النقدية المحولة من عهدة الكاشير المالية إلى خزينة الشركة الرئيسية أو البنك.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -114,11 +112,11 @@ export default function RemitFromRepPage() {
             ) : (
                 <div className="space-y-4">
                     <div className="space-y-2">
-                        <Label htmlFor="rep">من المندوب</Label>
+                        <Label htmlFor="rep">من الكاشير</Label>
                         <Select value={selectedRepId} onValueChange={setSelectedRepId}>
-                            <SelectTrigger id="rep"><SelectValue placeholder="اختر المندوب" /></SelectTrigger>
+                            <SelectTrigger id="rep"><SelectValue placeholder="اختر الكاشير" /></SelectTrigger>
                             <SelectContent>
-                                {reps.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
+                                {cashiers.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
