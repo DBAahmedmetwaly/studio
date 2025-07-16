@@ -169,11 +169,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <NavLink href="/" icon={<LayoutDashboard />} module="dashboard">لوحة التحكم</NavLink>
             <NavLink href="/analytics" icon={<BarChart />} module="analytics">التحليلات</NavLink>
 
-            <NavCollapsible title="نقاط البيع" icon={<Receipt />} modules={['pos', 'pos_itemGroups', 'pos_remit', 'pos_closing']}>
+            <NavCollapsible title="نقاط البيع" icon={<Receipt />} modules={['pos', 'pos_itemGroups', 'pos_remit', 'pos_closing', 'reports_pos']}>
                 <NavSubLink href="/pos" module="pos">شاشة الكاشير</NavSubLink>
                 <NavSubLink href="/master-data/item-groups" module="pos_itemGroups">مجموعات الأصناف</NavSubLink>
                 <NavSubLink href="/pos/remit" module="pos_remit">توريد نقدية الكاشير</NavSubLink>
                 <NavSubLink href="/pos/closing" module="pos_closing">إقفال وردية الكاشير</NavSubLink>
+                 <NavSubLink href="/reports/pos-reports" module="reports_pos">تقارير نقاط البيع</NavSubLink>
             </NavCollapsible>
 
             <NavCollapsible title="الأصناف والمخزون" icon={<Warehouse />} modules={['inventory_items', 'inventory_warehouses', 'inventory_stockIn', 'inventory_stockOut', 'inventory_transfer', 'inventory_adjustment', 'inventory_movements', 'inventory_stockStatus', 'reports_itemProfitLoss']}>

@@ -26,6 +26,7 @@ export const permissionsConfig = {
     pos_itemGroups: { label: "مجموعات الأصناف", group: "pos", actions: ["view", "add", "edit", "delete"] },
     pos_closing: { label: "إقفال وردية الكاشير", group: "pos", actions: ["view"] },
     pos_remit: { label: "توريد نقدية الكاشير", group: "pos", actions: ["view"] },
+    reports_pos: { label: "تقارير نقاط البيع", group: "pos", actions: ["view", "generate"] },
     
     inventory_items: { label: "بطاقة الأصناف", group: "inventory", actions: ["view", "add", "edit", "delete"] },
     inventory_warehouses: { label: "المخازن", group: "inventory", actions: ["view", "add", "edit", "delete"] },
