@@ -20,6 +20,8 @@ export type PermissionModule = {
 
 export const permissionsConfig = {
     dashboard: { label: "لوحة التحكم", group: "general", actions: ["view"] },
+    pos: { label: "نقطة البيع (الكاشير)", group: "general", actions: ["view"] },
+    pos_closing: { label: "إقفال وردية الكاشير", group: "settings", actions: ["view"] },
     
     masterData_items: { label: "الأصناف", group: "masterData", actions: ["view", "add", "edit", "delete"] },
     masterData_warehouses: { label: "المخازن", group: "masterData", actions: ["view", "add", "edit", "delete"] },

@@ -49,6 +49,7 @@ import {
   FileCheck,
   Monitor,
   List,
+  Laptop,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -159,6 +160,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <SidebarContent>
           <SidebarMenu>
             <NavLink href="/" icon={<LayoutDashboard />} module="dashboard">لوحة التحكم</NavLink>
+            <NavLink href="/pos" icon={<Laptop />} module="pos">نقطة البيع (الكاشير)</NavLink>
             
             <NavCollapsible title="البيانات الرئيسية" icon={<Package />} modules={['masterData_items', 'masterData_warehouses', 'masterData_customers', 'masterData_suppliers', 'masterData_partners', 'masterData_cashAccounts', 'masterData_salesReps']}>
                 <NavSubLink href="/master-data/items" module="masterData_items">الأصناف</NavSubLink>
@@ -233,6 +235,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <NavSubLink href="/settings" module="settings_general">الإعدادات العامة</NavSubLink>
               <NavSubLink href="/settings/backup" module="settings_backup">النسخ الاحتياطي</NavSubLink>
               <NavSubLink href="/settings/period-closing" module="settings_periodClosing">إقفال الفترات</NavSubLink>
+              <NavSubLink href="/pos/closing" module="pos_closing">إقفال وردية الكاشير</NavSubLink>
             </NavCollapsible>
 
           </SidebarMenu>

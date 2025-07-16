@@ -30,6 +30,8 @@ interface DataContextType {
     salesReturns: any[];
     purchaseInvoices: any[];
     purchaseReturns: any[];
+    posSales: any[];
+    posSessions: any[];
 
     // Accounting
     expenses: any[];
@@ -37,6 +39,7 @@ interface DataContextType {
     customerPayments: any[];
     supplierPayments: any[];
     treasuryTransactions: any[];
+    profitDistributions: any[];
     
     // HR
     employees: any[];
@@ -78,13 +81,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const { data: salesReturns, loading: l_salesReturns, add: add_salesReturn } = useFirebase('salesReturns');
     const { data: purchaseInvoices, loading: l_purchaseInvoices, add: add_purchaseInvoice } = useFirebase('purchaseInvoices');
     const { data: purchaseReturns, loading: l_purchaseReturns, add: add_purchaseReturn } = useFirebase('purchaseReturns');
-    
+    const { data: posSales, loading: l_posSales, add: add_posSale } = useFirebase('posSales');
+    const { data: posSessions, loading: l_posSessions, add: add_posSession, update: update_posSession } = useFirebase('posSessions');
+
     // Accounting
     const { data: expenses, loading: l_expenses, add: add_expense, remove: remove_expense } = useFirebase('expenses');
     const { data: exceptionalIncomes, loading: l_exceptionalIncomes, add: add_exceptionalIncome, remove: remove_exceptionalIncome } = useFirebase('exceptionalIncomes');
     const { data: customerPayments, loading: l_customerPayments, add: add_customerPayment, remove: remove_customerPayment } = useFirebase('customerPayments');
     const { data: supplierPayments, loading: l_supplierPayments, add: add_supplierPayment, remove: remove_supplierPayment } = useFirebase('supplierPayments');
     const { data: treasuryTransactions, loading: l_treasuryTransactions, add: add_treasuryTransaction } = useFirebase('treasuryTransactions');
+    const { data: profitDistributions, loading: l_profitDistributions, add: add_profitDistribution, remove: remove_profitDistribution } = useFirebase('profitDistributions');
 
     // HR
     const { data: employees, loading: l_employees, add: add_employee, update: update_employee, remove: remove_employee } = useFirebase('employees');
@@ -96,7 +102,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const { getNextId } = useFirebase('counters');
 
 
-    const loading = l_items || l_customers || l_suppliers || l_warehouses || l_cashAccounts || l_partners || l_users || l_roles || l_settings || l_stockInRecords || l_stockOutRecords || l_stockTransferRecords || l_stockAdjustmentRecords || l_stockIssuesToReps || l_stockReturnsFromReps || l_salesInvoices || l_salesReturns || l_purchaseInvoices || l_purchaseReturns || l_expenses || l_exceptionalIncomes || l_customerPayments || l_supplierPayments || l_treasuryTransactions || l_employees || l_employeeAdvances || l_employeeAdjustments || l_repRemittances;
+    const loading = l_items || l_customers || l_suppliers || l_warehouses || l_cashAccounts || l_partners || l_users || l_roles || l_settings || l_stockInRecords || l_stockOutRecords || l_stockTransferRecords || l_stockAdjustmentRecords || l_stockIssuesToReps || l_stockReturnsFromReps || l_salesInvoices || l_salesReturns || l_purchaseInvoices || l_purchaseReturns || l_expenses || l_exceptionalIncomes || l_customerPayments || l_supplierPayments || l_treasuryTransactions || l_employees || l_employeeAdvances || l_employeeAdjustments || l_repRemittances || l_posSales || l_posSessions || l_profitDistributions;
     
     // A single function to dispatch actions to the correct hook
     const dbAction = async (path: string, action: 'add' | 'update' | 'remove', payload?: any) => {
@@ -112,6 +118,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             'salesReturns': { add: add_salesReturn },
             'purchaseInvoices': { add: add_purchaseInvoice },
             'purchaseReturns': { add: add_purchaseReturn },
+            'posSales': { add: add_posSale },
+            'posSessions': { add: add_posSession, update: update_posSession },
             'stockInRecords': { add: add_stockInRecord },
             'stockOutRecords': { add: add_stockOutRecord },
             'stockTransferRecords': { add: add_stockTransferRecord },
@@ -123,6 +131,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             'customerPayments': { add: add_customerPayment, remove: remove_customerPayment },
             'supplierPayments': { add: add_supplierPayment, remove: remove_supplierPayment },
             'treasuryTransactions': { add: add_treasuryTransaction },
+            'profitDistributions': { add: add_profitDistribution, remove: remove_profitDistribution },
             'employees': { add: add_employee, update: update_employee, remove: remove_employee },
             'employeeAdvances': { add: add_employeeAdvance, remove: remove_employeeAdvance },
             'employeeAdjustments': { add: add_employeeAdjustment, remove: remove_employeeAdjustment },
@@ -143,8 +152,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const value = {
         items, customers, suppliers, warehouses, cashAccounts, partners, users, roles, settings,
         stockInRecords, stockOutRecords, stockTransferRecords, stockAdjustmentRecords, stockIssuesToReps, stockReturnsFromReps,
-        salesInvoices, salesReturns, purchaseInvoices, purchaseReturns,
-        expenses, exceptionalIncomes, customerPayments, supplierPayments, treasuryTransactions,
+        salesInvoices, salesReturns, purchaseInvoices, purchaseReturns, posSales, posSessions,
+        expenses, exceptionalIncomes, customerPayments, supplierPayments, treasuryTransactions, profitDistributions,
         employees, employeeAdvances, employeeAdjustments, repRemittances,
         dbAction, getNextId,
         loading
