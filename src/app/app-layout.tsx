@@ -51,6 +51,7 @@ import {
   List,
   Laptop,
   Group,
+  Receipt,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -161,11 +162,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <SidebarContent>
           <SidebarMenu>
             <NavLink href="/" icon={<LayoutDashboard />} module="dashboard">لوحة التحكم</NavLink>
-            <NavLink href="/pos" icon={<Laptop />} module="pos">نقطة البيع (الكاشير)</NavLink>
             
-            <NavCollapsible title="البيانات الرئيسية" icon={<Package />} modules={['masterData_items', 'masterData_itemGroups', 'masterData_warehouses', 'masterData_customers', 'masterData_suppliers', 'masterData_partners', 'masterData_cashAccounts', 'masterData_salesReps']}>
+            <NavCollapsible title="البيانات الرئيسية" icon={<Package />} modules={['masterData_items', 'masterData_warehouses', 'masterData_customers', 'masterData_suppliers', 'masterData_partners', 'masterData_cashAccounts', 'masterData_salesReps']}>
                 <NavSubLink href="/master-data/items" module="masterData_items">الأصناف</NavSubLink>
-                <NavSubLink href="/master-data/item-groups" module="masterData_itemGroups">مجموعات الأصناف</NavSubLink>
                 <NavSubLink href="/master-data/warehouses" module="masterData_warehouses">المخازن</NavSubLink>
                 <NavSubLink href="/master-data/customers" module="masterData_customers">العملاء</NavSubLink>
                 <NavSubLink href="/master-data/suppliers" module="masterData_suppliers">الموردون</NavSubLink>
@@ -174,6 +173,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <NavSubLink href="/master-data/sales-reps" module="masterData_salesReps">مناديب المبيعات</NavSubLink>
             </NavCollapsible>
 
+            <NavCollapsible title="نقاط البيع" icon={<Receipt />} modules={['pos', 'masterData_itemGroups', 'sales_remitFromRep', 'pos_closing']}>
+                <NavSubLink href="/pos" module="pos">شاشة الكاشير</NavSubLink>
+                <NavSubLink href="/master-data/item-groups" module="masterData_itemGroups">مجموعات الأصناف</NavSubLink>
+                <NavSubLink href="/sales/remit-from-rep" module="sales_remitFromRep">توريد نقدية الكاشير</NavSubLink>
+                <NavSubLink href="/pos/closing" module="pos_closing">إقفال وردية الكاشير</NavSubLink>
+            </NavCollapsible>
+            
             <NavCollapsible title="المخزون" icon={<Boxes />} modules={['inventory_stockIn', 'inventory_stockOut', 'inventory_transfer', 'inventory_adjustment', 'inventory_movements', 'inventory_stockStatus']}>
                 <NavSubLink href="/inventory/stock-in/new" module="inventory_stockIn">استلام مخزون</NavSubLink>
                 <NavSubLink href="/inventory/stock-out/new" module="inventory_stockOut">صرف مخزون</NavSubLink>
@@ -189,10 +195,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <NavSubLink href="/sales/returns/new" module="sales_returns">مرتجعات البيع</NavSubLink>
             </NavCollapsible>
 
-            <NavCollapsible title="عمليات المناديب" icon={<Truck />} modules={['sales_issueToRep', 'sales_returnFromRep', 'sales_remitFromRep', 'sales_repInvoices', 'sales_repOperations']}>
+            <NavCollapsible title="عمليات المناديب" icon={<Truck />} modules={['sales_issueToRep', 'sales_returnFromRep', 'sales_repInvoices', 'sales_repOperations']}>
                 <NavSubLink href="/sales/issue-to-rep/list" module="sales_issueToRep">صرف بضاعة لمندوب</NavSubLink>
                 <NavSubLink href="/sales/return-from-rep/list" module="sales_returnFromRep">مرتجع بضاعة من مندوب</NavSubLink>
-                <NavSubLink href="/sales/remit-from-rep" module="sales_remitFromRep">توريد نقدية من مندوب</NavSubLink>
                 <NavSubLink href="/sales/rep-invoices" module="sales_repInvoices">اعتماد فواتير المناديب</NavSubLink>
                 <NavSubLink href="/sales/rep-operations" module="sales_repOperations">مراقبة أداء المناديب</NavSubLink>
             </NavCollapsible>
@@ -237,7 +242,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <NavSubLink href="/settings" module="settings_general">الإعدادات العامة</NavSubLink>
               <NavSubLink href="/settings/backup" module="settings_backup">النسخ الاحتياطي</NavSubLink>
               <NavSubLink href="/settings/period-closing" module="settings_periodClosing">إقفال الفترات</NavSubLink>
-              <NavSubLink href="/pos/closing" module="pos_closing">إقفال وردية الكاشير</NavSubLink>
             </NavCollapsible>
 
           </SidebarMenu>
