@@ -274,38 +274,40 @@ export default function PosPage() {
                         <CardHeader className="shrink-0">
                             <CardTitle className="flex items-center gap-2"><ShoppingCart/> سلة المبيعات</CardTitle>
                         </CardHeader>
-                        <ScrollArea className="flex-grow border-t border-b">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead className="w-[50%]">الصنف</TableHead>
-                                        <TableHead className="text-center">الكمية</TableHead>
-                                        <TableHead className="text-center">الإجمالي</TableHead>
-                                        <TableHead></TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {cart.map(item => (
-                                        <TableRow key={item.uniqueId}>
-                                            <TableCell className='py-2'>
-                                                <div>{item.name}</div>
-                                                <div className='text-xs text-muted-foreground'>{item.price.toFixed(2)} ج.م</div>
-                                            </TableCell>
-                                            <TableCell className='py-2'><Input type="number" value={item.qty} onChange={e => updateQty(item.uniqueId, Number(e.target.value))} className="w-16 text-center mx-auto" /></TableCell>
-                                            <TableCell className="text-center font-bold py-2">{item.total.toFixed(2)}</TableCell>
-                                            <TableCell className='py-2'>
-                                                <Button variant="ghost" size="icon" onClick={() => updateQty(item.uniqueId, 0)}>
-                                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                                </Button>
-                                            </TableCell>
+                        <div className="flex-grow border-t border-b overflow-hidden">
+                           <ScrollArea className="h-full">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead className="w-[50%]">الصنف</TableHead>
+                                            <TableHead className="text-center">الكمية</TableHead>
+                                            <TableHead className="text-center">الإجمالي</TableHead>
+                                            <TableHead></TableHead>
                                         </TableRow>
-                                    ))}
-                                        {cart.length === 0 && (
-                                        <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground h-24">السلة فارغة</TableCell></TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </ScrollArea>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {cart.map(item => (
+                                            <TableRow key={item.uniqueId}>
+                                                <TableCell className='py-2'>
+                                                    <div>{item.name}</div>
+                                                    <div className='text-xs text-muted-foreground'>{item.price.toFixed(2)} ج.م</div>
+                                                </TableCell>
+                                                <TableCell className='py-2'><Input type="number" value={item.qty} onChange={e => updateQty(item.uniqueId, Number(e.target.value))} className="w-16 text-center mx-auto" /></TableCell>
+                                                <TableCell className="text-center font-bold py-2">{item.total.toFixed(2)}</TableCell>
+                                                <TableCell className='py-2'>
+                                                    <Button variant="ghost" size="icon" onClick={() => updateQty(item.uniqueId, 0)}>
+                                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                            {cart.length === 0 && (
+                                            <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground h-24">السلة فارغة</TableCell></TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                           </ScrollArea>
+                        </div>
                          <div className="p-4 bg-muted/50 shrink-0">
                              <div className="w-full space-y-3 text-lg">
                                 <div className="flex justify-between items-center">
