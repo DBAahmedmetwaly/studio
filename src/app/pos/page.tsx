@@ -215,7 +215,6 @@ export default function PosPage() {
 
     return (
         <div className="h-screen bg-muted flex flex-col">
-            {/* Header */}
             <header className="bg-card h-14 flex items-center justify-between px-4 shadow-sm shrink-0">
                 <div className='font-bold text-lg'>
                     فاتورة: <span className="font-mono">{currentInvoiceNumber}</span>
@@ -225,7 +224,7 @@ export default function PosPage() {
                 </div>
             </header>
 
-            <main className="flex-grow grid grid-cols-12 gap-4 p-4 overflow-hidden" style={{ height: 'calc(100vh - 3.5rem)' }}>
+            <main className="flex-1 grid grid-cols-12 gap-4 p-4 overflow-hidden">
                 
                 {/* Right Side - Item Selection */}
                 <div className="col-span-7 flex flex-col gap-4 overflow-hidden">
@@ -238,7 +237,7 @@ export default function PosPage() {
                         </form>
                     </div>
                     
-                    <Card className="flex-grow flex flex-col overflow-hidden">
+                    <Card className="flex-1 flex flex-col overflow-hidden">
                          <CardHeader className="p-2 border-b shrink-0">
                             <ScrollArea className="w-full whitespace-nowrap">
                                 <div className="flex gap-2 p-2">
@@ -254,7 +253,7 @@ export default function PosPage() {
                                 </div>
                             </ScrollArea>
                          </CardHeader>
-                         <ScrollArea className="flex-grow">
+                         <ScrollArea className="flex-1">
                             <div className="p-4 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
                                 {itemsToShow.map((item: any) => (
                                     <button key={item.id} onClick={() => handleGridItemClick(item)} className="aspect-square flex flex-col items-center justify-center gap-2 rounded-lg bg-card text-card-foreground shadow-sm hover:bg-accent focus:ring-2 ring-primary transition-all p-1">
@@ -270,11 +269,11 @@ export default function PosPage() {
 
                 {/* Left Side - Cart and Payment */}
                 <div className="col-span-5 flex flex-col gap-4 overflow-hidden">
-                    <Card className="flex-grow flex flex-col overflow-hidden">
+                    <Card className="flex-1 flex flex-col overflow-hidden">
                         <CardHeader className="shrink-0">
                             <CardTitle className="flex items-center gap-2"><ShoppingCart/> سلة المبيعات</CardTitle>
                         </CardHeader>
-                        <ScrollArea className="flex-grow border-t border-b">
+                        <ScrollArea className="flex-1 border-t border-b max-h-[40vh]">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
