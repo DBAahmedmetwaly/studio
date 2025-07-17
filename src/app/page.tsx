@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
@@ -40,16 +39,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import useFirebase from "@/hooks/use-firebase";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
+import { useData } from "@/contexts/data-provider";
 
 // Interfaces for Firebase data
 interface SaleInvoice {
   id: string;
   total: number;
-  paidAmount: number;
+  paidAmount?: number;
   customerName: string;
   date: string;
   warehouseId: string;
@@ -59,18 +57,21 @@ interface SaleInvoice {
 interface CustomerPayment {
     id: string;
     amount: number;
-    paidToAccountId: string; // We can use this to filter by warehouse if cash accounts are linked
+    paidToAccountId: string;
+    date: string;
 }
 interface ExceptionalIncome {
     id: string;
     amount: number;
     warehouseId?: string;
+    date: string;
 }
 interface PurchaseInvoice {
   id: string;
   warehouseId: string;
   items: { id: string; qty: number; }[];
   total: number;
+  date: string;
 }
 interface Customer { id: string; }
 interface Item {
@@ -81,35 +82,30 @@ interface Item {
   reorderPoint?: number;
 }
 interface WarehouseData { id: string; name: string; }
-interface StockInRecord { id: string; warehouseId: string; items: { id: string; name: string; qty: number; }[]; }
-interface StockOutRecord { id: string; sourceId: string; items: { id: string; name: string; qty: number; }[]; }
-interface StockTransferRecord { id: string; fromSourceId: string; toSourceId: string; items: { id: string; qty: number; }[]; }
-interface StockAdjustmentRecord { id: string; warehouseId: string; items: { itemId: string; difference: number; }[]; }
-interface SalesReturn { id: string; warehouseId: string; items: { id: string; name: string; qty: number; }[]; }
-interface PurchaseReturn { id: string; warehouseId: string; items: { id: string; name: string; qty: number; }[]; }
+interface StockInRecord { id: string; warehouseId: string; items: { id: string; name: string; qty: number; }[]; date: string; }
+interface StockOutRecord { id: string; sourceId: string; items: { id: string; name: string; qty: number; }[]; date: string; }
+interface StockTransferRecord { id: string; fromSourceId: string; toSourceId: string; items: { id: string; qty: number; }[]; date: string; }
+interface StockAdjustmentRecord { id: string; warehouseId: string; items: { itemId: string; difference: number; }[]; date: string; }
+interface SalesReturn { id: string; warehouseId: string; items: { id: string; name: string; qty: number; }[]; date: string; }
+interface PurchaseReturn { id: string; warehouseId: string; items: { id: string; name: string; qty: number; }[]; date: string; }
 interface CashAccount { id: string; name: string; warehouseId?: string }
+interface IssueToRep { id: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
+interface ReturnFromRep { id: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
 
 export default function Dashboard() {
-  const { data: sales, loading: l1 } = useFirebase<SaleInvoice>("salesInvoices");
-  const { data: purchases, loading: l2 } = useFirebase<PurchaseInvoice>("purchaseInvoices");
-  const { data: customers, loading: l3 } = useFirebase<Customer>("customers");
-  const { data: allItems, loading: l4 } = useFirebase<Item>("items");
-  const { data: warehouses, loading: l5 } = useFirebase<WarehouseData>("warehouses");
-  const { data: stockIns, loading: l6 } = useFirebase<StockInRecord>('stockInRecords');
-  const { data: stockOuts, loading: l7 } = useFirebase<StockOutRecord>('stockOutRecords');
-  const { data: transfers, loading: l8 } = useFirebase<StockTransferRecord>('stockTransferRecords');
-  const { data: adjustments, loading: l9 } = useFirebase<StockAdjustmentRecord>('stockAdjustmentRecords');
-  const { data: salesReturns, loading: l10 } = useFirebase<SalesReturn>('salesReturns');
-  const { data: purchaseReturns, loading: l11 } = useFirebase<PurchaseReturn>('purchaseReturns');
-  const { data: customerPayments, loading: l12 } = useFirebase<CustomerPayment>('customerPayments');
-  const { data: exceptionalIncomes, loading: l13 } = useFirebase<ExceptionalIncome>('exceptionalIncomes');
-  const { data: cashAccounts, loading: l14 } = useFirebase<CashAccount>('cashAccounts');
+  const { 
+    salesInvoices: sales, customers, allItems, warehouses,
+    cashAccounts, customerPayments, exceptionalIncomes,
+    purchaseInvoices: purchases, stockInRecords: stockIns, stockOutRecords: stockOuts, 
+    stockTransferRecords: transfers, stockAdjustmentRecords: adjustments, 
+    salesReturns, purchaseReturns, stockIssuesToReps: issuesToReps,
+    stockReturnsFromReps: returnsFromReps,
+    loading 
+  } = useData();
   
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<string>('all');
   const [dateRange, setDateRange] = useState({ from: '', to: '' });
 
-  const loading = l1 || l2 || l3 || l4 || l5 || l6 || l7 || l8 || l9 || l10 || l11 || l12 || l13 || l14;
-  
   React.useEffect(() => {
     if (warehouses.length > 0 && selectedWarehouseId === 'all') {
       setSelectedWarehouseId(warehouses[0].id);
@@ -124,6 +120,8 @@ export default function Dashboard() {
         const itemDate = new Date(item.date);
         const from = dateRange.from ? new Date(dateRange.from) : null;
         const to = dateRange.to ? new Date(dateRange.to) : null;
+        if (from) from.setHours(0,0,0,0);
+        if (to) to.setHours(23,59,59,999);
         if (from && itemDate < from) return false;
         if (to && itemDate > to) return false;
         return true;
@@ -137,49 +135,51 @@ export default function Dashboard() {
     
     // Get cash accounts linked to the selected warehouse
     const warehouseCashAccountIds = cashAccounts
-        .filter(acc => acc.warehouseId === selectedWarehouseId)
-        .map(acc => acc.id);
+        .filter((acc:any) => acc.warehouseId === selectedWarehouseId)
+        .map((acc:any) => acc.id);
 
-    const approvedSales = sales.filter(s => s.status === 'approved');
+    const approvedSales = sales.filter((s:any) => s.status === 'approved');
     const filteredSales = filterByWarehouse(filterByDate(approvedSales), 'warehouseId');
 
-    const receiptsFromInvoicePayments = filteredSales.reduce((acc, sale) => acc + (sale.paidAmount || 0), 0);
+    const receiptsFromInvoicePayments = filteredSales.reduce((acc:number, sale:any) => acc + (sale.paidAmount || 0), 0);
     const receiptsFromCustomerPayments = filterByDate(customerPayments)
-        .filter(p => selectedWarehouseId === 'all' || warehouseCashAccountIds.includes(p.paidToAccountId))
-        .reduce((acc, payment) => acc + payment.amount, 0);
-    const receiptsFromExceptionalIncomes = filterByWarehouse(filterByDate(exceptionalIncomes), 'warehouseId').reduce((acc, income) => acc + income.amount, 0);
+        .filter((p:any) => selectedWarehouseId === 'all' || warehouseCashAccountIds.includes(p.paidToAccountId))
+        .reduce((acc:number, payment:any) => acc + payment.amount, 0);
+    const receiptsFromExceptionalIncomes = filterByWarehouse(filterByDate(exceptionalIncomes), 'warehouseId').reduce((acc:number, income:any) => acc + income.amount, 0);
     
     const totalReceipts = receiptsFromInvoicePayments + receiptsFromCustomerPayments + receiptsFromExceptionalIncomes;
     
     const totalSalesCount = filteredSales.length;
     const totalCustomers = customers.length; // This is not warehouse-specific
 
-    const warehouseItems = allItems.map(item => {
-        let stock = 0; // Start from zero
+    const warehouseItems = allItems.map((item:any) => {
+        let stock = 0;
         
         // Increases
-        purchases.filter(p => p.warehouseId === selectedWarehouseId).forEach(p => p.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
-        stockIns.filter(si => si.warehouseId === selectedWarehouseId).forEach(si => si.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
-        transfers.filter(t => t.toSourceId === selectedWarehouseId).forEach(t => t.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
-        adjustments.filter(adj => adj.warehouseId === selectedWarehouseId).forEach(adj => adj.items.filter(i => i.itemId === item.id && i.difference > 0).forEach(i => stock += i.difference));
-        salesReturns.filter(sr => sr.warehouseId === selectedWarehouseId).forEach(sr => sr.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
+        purchases.filter((p:any) => p.warehouseId === selectedWarehouseId).forEach((p:any) => p.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
+        stockIns.filter((si:any) => si.warehouseId === selectedWarehouseId).forEach((si:any) => si.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
+        transfers.filter((t:any) => t.toSourceId === selectedWarehouseId).forEach((t:any) => t.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
+        adjustments.filter((adj:any) => adj.warehouseId === selectedWarehouseId).forEach((adj:any) => adj.items.filter((i:any) => i.itemId === item.id && i.difference > 0).forEach((i:any) => stock += i.difference));
+        salesReturns.filter((sr:any) => sr.warehouseId === selectedWarehouseId).forEach((sr:any) => sr.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
+        returnsFromReps.filter((rfr:any) => rfr.warehouseId === selectedWarehouseId).forEach((rfr:any) => rfr.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
 
         // Decreases
-        sales.filter(s => s.warehouseId === selectedWarehouseId && s.status === 'approved').forEach(s => s.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
-        stockOuts.filter(so => so.sourceId === selectedWarehouseId).forEach(so => so.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
-        transfers.filter(t => t.fromSourceId === selectedWarehouseId).forEach(t => t.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
-        adjustments.filter(adj => adj.warehouseId === selectedWarehouseId).forEach(adj => adj.items.filter(i => i.itemId === item.id && i.difference < 0).forEach(i => stock += i.difference));
-        purchaseReturns.filter(pr => pr.warehouseId === selectedWarehouseId).forEach(pr => pr.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
+        sales.filter((s:any) => s.warehouseId === selectedWarehouseId && s.status === 'approved').forEach((s:any) => s.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
+        stockOuts.filter((so:any) => so.sourceId === selectedWarehouseId).forEach((so:any) => so.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
+        transfers.filter((t:any) => t.fromSourceId === selectedWarehouseId).forEach((t:any) => t.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
+        adjustments.filter((adj:any) => adj.warehouseId === selectedWarehouseId).forEach((adj:any) => adj.items.filter((i:any) => i.itemId === item.id && i.difference < 0).forEach((i:any) => stock += i.difference));
+        purchaseReturns.filter((pr:any) => pr.warehouseId === selectedWarehouseId).forEach((pr:any) => pr.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
+        issuesToReps.filter((itr:any) => itr.warehouseId === selectedWarehouseId).forEach((itr:any) => itr.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
 
         return { ...item, currentStock: stock };
     });
 
-    const inventoryValue = warehouseItems.reduce((acc, item) => acc + (item.currentStock * (item.cost || item.price || 0)), 0);
-    const lowStockItems = warehouseItems.filter(item => item.currentStock <= (item.reorderPoint || 0)).slice(0, 5);
+    const inventoryValue = warehouseItems.reduce((acc:number, item:any) => acc + (item.currentStock * (item.cost || 0)), 0);
+    const lowStockItems = warehouseItems.filter((item:any) => item.currentStock <= (item.reorderPoint || 0) && item.currentStock > -Infinity).slice(0, 5);
     const recentTransactions = filteredSales.slice(-5).reverse();
 
     return { totalReceipts, totalSalesCount, totalCustomers, inventoryValue, lowStockItems, recentTransactions };
-  }, [selectedWarehouseId, dateRange, sales, purchases, customers, allItems, warehouses, stockIns, stockOuts, transfers, adjustments, salesReturns, purchaseReturns, customerPayments, exceptionalIncomes, cashAccounts]);
+  }, [selectedWarehouseId, dateRange, sales, customers, allItems, warehouses, cashAccounts, customerPayments, exceptionalIncomes, purchases, stockIns, stockOuts, transfers, adjustments, salesReturns, purchaseReturns, issuesToReps, returnsFromReps]);
 
 
   if (loading && !warehouses.length) {
@@ -200,7 +200,7 @@ export default function Dashboard() {
               <SelectValue placeholder="اختر مخزنًا" />
             </SelectTrigger>
             <SelectContent>
-                {warehouses.map(warehouse => ( <SelectItem key={warehouse.id} value={warehouse.id}>{warehouse.name}</SelectItem> ))}
+                {warehouses.map((warehouse: any) => ( <SelectItem key={warehouse.id} value={warehouse.id}>{warehouse.name}</SelectItem> ))}
             </SelectContent>
           </Select>
         </div>
@@ -311,7 +311,7 @@ export default function Dashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {dashboardData.recentTransactions.length > 0 ? dashboardData.recentTransactions.map((sale) => (
+                    {dashboardData.recentTransactions.length > 0 ? dashboardData.recentTransactions.map((sale:any) => (
                       <TableRow key={sale.id}>
                         <TableCell>
                           <div className="font-medium">{sale.customerName || 'عميل غير محدد'}</div>
