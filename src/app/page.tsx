@@ -5,11 +5,9 @@ import React, { useState, useMemo, useEffect } from "react";
 import {
   ArrowUpRight,
   CreditCard,
-  DollarSign,
   Package,
   Users,
   Loader2,
-  Warehouse,
   Coins,
 } from "lucide-react";
 import Link from "next/link";
@@ -94,7 +92,7 @@ interface ReturnFromRep { id: string; warehouseId: string; items: { id: string; 
 
 export default function Dashboard() {
   const { 
-    salesInvoices: sales, customers, allItems, warehouses,
+    salesInvoices: sales, customers, items, warehouses,
     cashAccounts, customerPayments, exceptionalIncomes,
     purchaseInvoices: purchases, stockInRecords: stockIns, stockOutRecords: stockOuts, 
     stockTransferRecords: transfers, stockAdjustmentRecords: adjustments, 
@@ -152,7 +150,7 @@ export default function Dashboard() {
     const totalSalesCount = filteredSales.length;
     const totalCustomers = customers.length; // This is not warehouse-specific
 
-    const warehouseItems = allItems.map((item:any) => {
+    const warehouseItems = items.map((item:any) => {
         let stock = 0;
         
         // Increases
@@ -179,7 +177,7 @@ export default function Dashboard() {
     const recentTransactions = filteredSales.slice(-5).reverse();
 
     return { totalReceipts, totalSalesCount, totalCustomers, inventoryValue, lowStockItems, recentTransactions };
-  }, [selectedWarehouseId, dateRange, sales, customers, allItems, warehouses, cashAccounts, customerPayments, exceptionalIncomes, purchases, stockIns, stockOuts, transfers, adjustments, salesReturns, purchaseReturns, issuesToReps, returnsFromReps]);
+  }, [selectedWarehouseId, dateRange, sales, customers, items, warehouses, cashAccounts, customerPayments, exceptionalIncomes, purchases, stockIns, stockOuts, transfers, adjustments, salesReturns, purchaseReturns, issuesToReps, returnsFromReps]);
 
 
   if (loading && !warehouses.length) {
