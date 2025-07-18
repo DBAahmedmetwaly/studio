@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import useFirebase from '@/hooks/use-firebase';
 import PageHeader from '@/components/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -29,10 +29,9 @@ interface Warehouse {
   name: string;
 }
 
-export default function IssueToRepDetailsPage() {
+export default function IssueToRepDetailsPage({ params }: { params: { id: string } }) {
   const router = useRouter();
-  const params = useParams();
-  const id = params.id as string;
+  const id = params.id;
 
   const [record, setRecord] = useState<IssueToRep | null>(null);
   const [loading, setLoading] = useState(true);
