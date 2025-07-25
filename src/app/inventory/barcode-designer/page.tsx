@@ -49,7 +49,7 @@ const DEFAULT_DESIGN: Design = {
 
 const SAMPLE_ITEM = {
     name: "صنف افتراضي للمعاينة",
-    code: "123456789012", // Changed to be valid for EAN13
+    code: "123456789012",
     price: 99.99
 };
 
@@ -128,32 +128,32 @@ const BarcodeDesignerPage = () => {
                     حفظ التصميم الحالي
                 </Button>
             </PageHeader>
-            <main className="flex flex-1 gap-4 p-4 md:gap-8 md:p-6">
-                <div className="w-80 flex-shrink-0 space-y-6">
-                    <Card>
-                        <CardHeader>
-                            <div className='flex justify-between items-center'>
-                                <CardTitle>قوالب التصاميم</CardTitle>
-                                <Button size="sm" variant="outline" onClick={handleNewDesign}>
-                                    <PlusCircle className="ml-2 h-4 w-4"/> تصميم جديد
-                                </Button>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                             <ScrollArea className="h-40 border rounded-md p-2">
-                                {barcodeDesigns.map((design: Design) => (
+            <main className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 p-4 md:p-6">
+                <Card className="md:col-span-1 flex flex-col h-full">
+                    <CardHeader>
+                        <div className='flex justify-between items-center'>
+                            <CardTitle>الإعدادات</CardTitle>
+                            <Button size="sm" variant="outline" onClick={handleNewDesign}>
+                                <PlusCircle className="ml-2 h-4 w-4"/> تصميم جديد
+                            </Button>
+                        </div>
+                    </CardHeader>
+                     <CardContent className="flex-grow space-y-6">
+                        {/* Saved Designs */}
+                        <div className="space-y-2">
+                            <Label>قوالب محفوظة</Label>
+                            <ScrollArea className="h-32 border rounded-md p-2">
+                                {barcodeDesigns.length > 0 ? barcodeDesigns.map((design: Design) => (
                                     <div key={design.id} className="flex items-center justify-between gap-2 p-1 hover:bg-muted rounded-md">
                                         <Button variant="link" className="p-0 h-auto flex-1 justify-start" onClick={() => setSelectedDesignId(design.id!)}>{design.name}</Button>
                                         <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => handleDeleteDesign(design.id!)}><Trash2 className="h-3 w-3"/></Button>
                                     </div>
-                                ))}
+                                )) : <p className="text-sm text-muted-foreground text-center p-4">لا توجد تصاميم محفوظة.</p>}
                             </ScrollArea>
-                        </CardContent>
-                    </Card>
+                        </div>
 
-                    <Card>
-                        <CardHeader><CardTitle>إعدادات الملصق</CardTitle></CardHeader>
-                        <CardContent className="space-y-4">
+                        {/* Design Settings */}
+                        <div className="space-y-4">
                              <div className="space-y-2">
                                 <Label>اسم التصميم</Label>
                                 <Input value={currentDesign.name} onChange={e => handleSettingChange('name', e.target.value)} placeholder="مثال: ملصق 5x2.5" />
@@ -186,12 +186,6 @@ const BarcodeDesignerPage = () => {
                                 <Label>إظهار الكود</Label>
                                 <Switch checked={currentDesign.showCode} onCheckedChange={v => handleSettingChange('showCode', v)} />
                             </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader><CardTitle>الأبعاد والخطوط</CardTitle></CardHeader>
-                        <CardContent className="space-y-4">
                              <div className="grid grid-cols-2 gap-2">
                                 <div className="space-y-2">
                                     <Label>عرض الملصق (mm)</Label>
@@ -206,18 +200,20 @@ const BarcodeDesignerPage = () => {
                                 <Label>حجم الخط (px)</Label>
                                 <Input type="number" value={currentDesign.fontSize} onChange={e => handleSettingChange('fontSize', Number(e.target.value))} />
                             </div>
-                        </CardContent>
-                    </Card>
-                </div>
+                        </div>
+                    </CardContent>
+                </Card>
                 
-                <Card className="flex-1">
+                <Card className="md:col-span-2 flex flex-col">
                     <CardHeader><CardTitle>معاينة التصميم</CardTitle></CardHeader>
-                    <CardContent className="bg-gray-100 p-4 flex items-center justify-center h-full">
+                    <CardContent className="bg-muted flex-grow p-4 flex items-center justify-center">
                         <div 
                             className="bg-white p-1 flex flex-col items-center justify-center overflow-hidden shadow-lg"
                             style={{
                                 width: `${currentDesign.labelWidth}mm`,
                                 height: `${currentDesign.labelHeight}mm`,
+                                transform: 'scale(2)', // Scale up for better visibility in smaller area
+                                transformOrigin: 'center'
                             }}
                         >
                             {currentDesign.showCompanyName && <p className="text-center font-bold" style={{fontSize: `${currentDesign.fontSize-2}px`}}>{currentDesign.companyName}</p>}
@@ -225,7 +221,7 @@ const BarcodeDesignerPage = () => {
                             <Barcode 
                                 value={sampleBarcodeValue} 
                                 width={1} 
-                                height={currentDesign.labelHeight / 2.5}
+                                height={currentDesign.labelHeight / 3}
                                 fontSize={currentDesign.fontSize}
                                 margin={2}
                                 displayValue={currentDesign.showCode}
@@ -241,4 +237,3 @@ const BarcodeDesignerPage = () => {
 };
 
 export default BarcodeDesignerPage;
-
