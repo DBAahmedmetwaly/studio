@@ -23,16 +23,16 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import useFirebase from "@/hooks/use-firebase";
-import { Loader2, Save, Bluetooth, Wifi } from "lucide-react";
+import { Loader2, Save, Bluetooth, Wifi, Laptop } from "lucide-react";
 import { usePermissions } from "@/contexts/permissions-context";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 interface PrinterSettings {
-  posPrinterType: 'bluetooth' | 'ip';
+  posPrinterType: 'bluetooth' | 'ip' | 'system';
   posPrinterAddress: string;
-  purchasePrinterType: 'bluetooth' | 'ip';
+  purchasePrinterType: 'bluetooth' | 'ip' | 'system';
   purchasePrinterAddress: string;
-  barcodePrinterType: 'bluetooth' | 'ip';
+  barcodePrinterType: 'bluetooth' | 'ip' | 'system';
   barcodePrinterAddress: string;
 }
 
@@ -41,11 +41,11 @@ export default function PrintersPage() {
     const { can } = usePermissions();
     const { data: settingsData, update: updateSettings, loading } = useFirebase<PrinterSettings>('settings/printers');
     const [settings, setSettings] = useState<PrinterSettings>({
-        posPrinterType: 'bluetooth',
+        posPrinterType: 'system',
         posPrinterAddress: '',
-        purchasePrinterType: 'bluetooth',
+        purchasePrinterType: 'system',
         purchasePrinterAddress: '',
-        barcodePrinterType: 'bluetooth',
+        barcodePrinterType: 'system',
         barcodePrinterAddress: '',
     });
     
@@ -54,7 +54,6 @@ export default function PrintersPage() {
 
     useEffect(() => {
         if (settingsData && settingsData.length > 0) {
-            // Data is an array, we need to find the main settings object
             const mainSettings = settingsData.find((s: any) => s.id === 'main');
             if (mainSettings) {
                 setSettings(mainSettings);
@@ -100,13 +99,14 @@ export default function PrintersPage() {
         }
     }
 
-    const PrinterSelector = ({ type, address, onTypeChange, onAddressChange, title }: { type: 'bluetooth' | 'ip', address: string, onTypeChange: (value: any) => void, onAddressChange: (value: string) => void, title: string }) => (
+    const PrinterSelector = ({ type, address, onTypeChange, onAddressChange, title }: { type: 'bluetooth' | 'ip' | 'system', address: string, onTypeChange: (value: any) => void, onAddressChange: (value: string) => void, title: string }) => (
         <Card>
             <CardHeader><CardTitle>{title}</CardTitle></CardHeader>
             <CardContent className="space-y-4">
                 <Select value={type} onValueChange={onTypeChange}>
                     <SelectTrigger><SelectValue placeholder="اختر نوع الاتصال" /></SelectTrigger>
                     <SelectContent>
+                        <SelectItem value="system">طابعة النظام (طباعة يدوية)</SelectItem>
                         <SelectItem value="bluetooth">بلوتوث (Bluetooth)</SelectItem>
                         <SelectItem value="ip">شبكة (IP Address)</SelectItem>
                     </SelectContent>
@@ -124,15 +124,20 @@ export default function PrintersPage() {
                                         </SelectItem>
                                     ))
                                 ) : (
-                                    <div className="text-center text-sm text-muted-foreground p-2">لم يتم العثور على أجهزة</div>
+                                    <div className="text-center text-sm text-muted-foreground p-2">لم يتم العثور على أجهزة. استخدم زر البحث.</div>
                                 )}
                              </SelectContent>
                         </Select>
                     </div>
-                ) : (
+                ) : type === 'ip' ? (
                     <div className="space-y-2">
                         <Label>عنوان IP للطابعة</Label>
                         <Input value={address} onChange={e => onAddressChange(e.target.value)} placeholder="e.g., 192.168.1.100" />
+                    </div>
+                ) : (
+                    <div className="p-2 text-sm text-muted-foreground flex items-center gap-2">
+                        <Laptop className="h-4 w-4" />
+                        سيتم فتح نافذة الطباعة الخاصة بالمتصفح.
                     </div>
                 )}
             </CardContent>
