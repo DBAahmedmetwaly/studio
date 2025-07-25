@@ -239,7 +239,7 @@ export default function PosPage() {
              {/* Top Section - Catalog */}
             <div className="flex-1 flex flex-col overflow-hidden">
                  <div className="shrink-0 mb-3 flex items-center gap-2">
-                     <Button variant="ghost" size="icon" className="md:hidden" onClick={toggleSidebar}>
+                     <Button variant="ghost" size="icon" onClick={toggleSidebar}>
                         <PanelLeft />
                     </Button>
                     <form onSubmit={handleBarcodeSubmit} className="flex-1">
