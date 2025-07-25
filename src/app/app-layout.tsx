@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React from "react";
@@ -62,6 +61,7 @@ import {
   Printer,
   QrCode,
   PowerOff,
+  ClipboardList,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -174,11 +174,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <NavLink href="/" icon={<LayoutDashboard />} module="dashboard">لوحة التحكم</NavLink>
             <NavLink href="/analytics" icon={<BarChart />} module="analytics">التحليلات الرسومية</NavLink>
 
-            <NavCollapsible title="نقاط البيع" icon={<Receipt />} modules={['pos', 'pos_itemGroups', 'pos_remit', 'pos_closing', 'reports_pos']}>
+            <NavCollapsible title="نقاط البيع" icon={<Receipt />} modules={['pos', 'pos_itemGroups', 'pos_sessions', 'reports_pos']}>
                 <NavSubLink href="/pos" module="pos">شاشة الكاشير</NavSubLink>
                 <NavSubLink href="/master-data/item-groups" module="pos_itemGroups">مجموعات الأصناف</NavSubLink>
-                <NavSubLink href="/pos/remit" module="pos_remit">توريد نقدية الكاشير</NavSubLink>
-                <NavSubLink href="/pos/closing" module="pos_closing">إدارة ورديات الكاشير</NavSubLink>
+                <NavSubLink href="/pos/sessions" module="pos_sessions">إدارة يومية الكاشير</NavSubLink>
                  <NavSubLink href="/reports/pos-reports" module="reports_pos">تقارير نقاط البيع</NavSubLink>
             </NavCollapsible>
 
@@ -281,3 +280,5 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     </SidebarProvider>
   );
 }
+
+    

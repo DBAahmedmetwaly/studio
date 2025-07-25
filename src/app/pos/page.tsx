@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
@@ -41,7 +40,7 @@ export default function PosPage() {
     const { user } = useAuth();
     const { toast } = useToast();
     const { generateInvoiceNumber, currentInvoiceNumber, loading: loadingCounter } = usePosInvoiceCounter();
-    const { setOpen, toggleSidebar } = useSidebar();
+    const { setOpen } = useSidebar();
 
     const barcodeInputRef = useRef<HTMLInputElement>(null);
     
@@ -54,10 +53,7 @@ export default function PosPage() {
     const [activeGroupId, setActiveGroupId] = useState<string | 'all'>('all');
     const [searchTerm, setSearchTerm] = useState("");
     
-    const hasOpenSession = useMemo(() => {
-        if (!user) return false;
-        return posSessions.some((s: any) => s.cashierId === user.id && !s.isClosed);
-    }, [posSessions, user]);
+    const hasOpenSession = useMemo(() => posSessions.some((s: any) => !s.isClosed), [posSessions]);
 
 
     // Collapse sidebar when component mounts
@@ -183,7 +179,7 @@ export default function PosPage() {
                 invoiceNumber: currentInvoiceNumber,
                 date: new Date().toISOString(),
                 customerId: 'cash-customer', // Generic cash customer
-                customerName: 'عميل نقدي',
+                customerName: 'عميل نقاط بيع',
                 warehouseId: user?.warehouse, // Assumes cashier is tied to a warehouse
                 status: 'approved', // POS sales are always approved
                 items: cart.map(item => ({ id: item.id.split('-')[0], qty: item.qty, price: item.price, cost: 0 })),
@@ -246,13 +242,13 @@ export default function PosPage() {
             <div className="flex h-screen w-full flex-col items-center justify-center bg-muted">
                 <Card className="w-full max-w-md">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-amber-600"><Ban /> لا توجد وردية مفتوحة</CardTitle>
+                        <CardTitle className="flex items-center gap-2 text-amber-600"><Ban /> يومية العمل مغلقة</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <Alert>
-                            <AlertTitle>الوردية مغلقة</AlertTitle>
+                            <AlertTitle>لا يوجد يوم عمل مفتوح</AlertTitle>
                             <AlertDescription>
-                                لا يمكنك بدء عمليات البيع لأنه لا توجد وردية مفتوحة لك. يرجى الطلب من مسؤول النظام فتح وردية جديدة لك من شاشة إدارة ورديات الكاشير.
+                                لا يمكنك بدء عمليات البيع لأنه لا توجد يومية عمل مفتوحة. يرجى الطلب من مسؤول النظام فتح يوم عمل جديد.
                             </AlertDescription>
                         </Alert>
                     </CardContent>
