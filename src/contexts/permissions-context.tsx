@@ -77,6 +77,7 @@ export const permissionsConfig = {
     settings_roles: { label: "الأدوار والصلاحيات", group: "settings", actions: ["view", "edit"] },
     settings_cashAccounts: { label: "الخزائن والبنوك", group: "settings", actions: ["view", "add", "edit", "delete"] },
     settings_general: { label: "الإعدادات العامة", group: "settings", actions: ["view", "edit"] },
+    settings_printers: { label: "إعدادات الطباعة", group: "settings", actions: ["view", "edit"] },
     settings_backup: { label: "النسخ الاحتياطي", group: "settings", actions: ["view", "generate"] },
     settings_periodClosing: { label: "إقفال الفترات", group: "settings", actions: ["view", "generate"] },
 };
