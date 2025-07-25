@@ -5,7 +5,7 @@
 import React, { useState } from "react";
 import PageHeader from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, MoreHorizontal, Edit, Trash2, Loader2 } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Edit, Trash2, Loader2, QrCode } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -31,11 +31,13 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
+  DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/contexts/permissions-context";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { BarcodePrintDialog } from "@/components/barcode-print-dialog";
 
 
 interface Item {
@@ -133,7 +135,7 @@ const ItemForm = ({ item, onSave, onClose }: { item?: Item, onSave: (item: Omit<
 };
 
 export default function ItemsPage() {
-    const { items, loading, dbAction, getNextId } = useData();
+    const { items, loading, dbAction, getNextId, barcodeDesigns } = useData();
     const { toast } = useToast();
     const { can } = usePermissions();
     const moduleName = 'inventory_items';
@@ -255,13 +257,28 @@ export default function ItemsPage() {
                                                     <ItemForm item={item} onSave={handleSave} onClose={()=>{}} />
                                                     </AddEntityDialog>
                                                 )}
+                                                
+                                                <BarcodePrintDialog
+                                                    item={item}
+                                                    barcodeDesigns={barcodeDesigns}
+                                                    trigger={
+                                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                            <QrCode className="ml-2 h-4 w-4" />
+                                                            طباعة باركود
+                                                        </DropdownMenuItem>
+                                                    }
+                                                />
+                                                    
                                                 {can('delete', moduleName) && (
+                                                    <>
+                                                     <DropdownMenuSeparator />
                                                      <AlertDialogTrigger asChild>
                                                         <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}>
                                                             <Trash2 className="ml-2 h-4 w-4" />
                                                             حذف
                                                         </DropdownMenuItem>
                                                     </AlertDialogTrigger>
+                                                    </>
                                                 )}
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
