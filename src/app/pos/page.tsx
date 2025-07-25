@@ -16,7 +16,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import Image from 'next/image';
 import { usePosInvoiceCounter } from '@/hooks/use-pos-invoice-counter';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-
+import { useSidebar } from '@/components/ui/sidebar';
 
 interface PosItem {
   id: string; // The database ID of the item
@@ -41,6 +41,7 @@ export default function PosPage() {
     const { user } = useAuth();
     const { toast } = useToast();
     const { generateInvoiceNumber, currentInvoiceNumber, loading: loadingCounter } = usePosInvoiceCounter();
+    const { setOpen } = useSidebar();
 
     const barcodeInputRef = useRef<HTMLInputElement>(null);
     
@@ -52,6 +53,11 @@ export default function PosPage() {
     const [change, setChange] = useState(0);
     const [activeGroupId, setActiveGroupId] = useState<string | 'all'>('all');
     const [searchTerm, setSearchTerm] = useState("");
+
+    // Collapse sidebar when component mounts
+    useEffect(() => {
+      setOpen(false);
+    }, [setOpen]);
 
     const resetSale = useCallback(async () => {
         if (cart.length > 0) {
@@ -229,10 +235,10 @@ export default function PosPage() {
     }
 
     return (
-        <div className="h-screen bg-muted/40 flex flex-col">
-            {/* Top Section - Catalog */}
-            <div className="flex-[5] flex flex-col overflow-hidden p-4">
-                <div className="shrink-0 mb-3">
+        <div className="h-screen bg-background flex flex-col p-4 gap-4">
+             {/* Top Section - Catalog */}
+            <div className="flex-1 flex flex-col overflow-hidden">
+                 <div className="shrink-0 mb-3">
                     <form onSubmit={handleBarcodeSubmit}>
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -244,7 +250,7 @@ export default function PosPage() {
                      <CardHeader className="p-2 border-b shrink-0">
                         <ScrollArea className="w-full whitespace-nowrap">
                             <div className="flex gap-2 p-2">
-                                    <Button size="lg" variant={activeGroupId === 'all' ? 'secondary' : 'ghost'} onClick={() => setActiveGroupId('all')} className="h-16 px-6 shrink-0">
+                                <Button size="lg" variant={activeGroupId === 'all' ? 'secondary' : 'ghost'} onClick={() => setActiveGroupId('all')} className="h-16 px-6 shrink-0">
                                     <Grip className="ml-2 h-5 w-5" /> كل الأصناف
                                 </Button>
                                 {itemGroups.map((group: ItemGroup) => (
@@ -257,7 +263,7 @@ export default function PosPage() {
                         </ScrollArea>
                      </CardHeader>
                      <ScrollArea className="flex-1">
-                        <div className="p-3 grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-3">
+                        <div className="p-3 grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-3">
                             {itemsToShow.map((item: any) => (
                                 <button key={item.id} onClick={() => handleGridItemClick(item)} className="aspect-square flex flex-col items-center justify-center gap-2 rounded-lg bg-card text-card-foreground shadow-sm hover:bg-accent focus:ring-2 ring-primary transition-all p-1">
                                     <Image src={item.image || `https://placehold.co/100x100.png`} data-ai-hint="product item" alt={item.name} width={100} height={100} className="h-full max-h-[60%] w-auto object-contain rounded-md" />
@@ -268,10 +274,8 @@ export default function PosPage() {
                     </ScrollArea>
                 </Card>
             </div>
-
-            {/* Bottom Section - Cart & Payment */}
-            <div className="flex-[5] flex gap-4 overflow-hidden p-4 pt-0">
-                {/* Cart */}
+             {/* Bottom Section - Cart & Payment */}
+            <div className="shrink-0 h-2/5 flex gap-4 overflow-hidden">
                 <Card className="flex-[7] flex flex-col overflow-hidden">
                     <CardHeader className="shrink-0">
                         <CardTitle className="flex items-center gap-2"><ShoppingCart/> سلة المبيعات</CardTitle>
