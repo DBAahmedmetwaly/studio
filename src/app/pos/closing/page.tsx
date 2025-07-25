@@ -29,7 +29,7 @@ import { Label } from '@/components/ui/label';
 const CloseSessionDialog = ({ session, onConfirm, onClose }: { session: any, onConfirm: (toAccountId: string) => void, onClose: () => void }) => {
     const { cashAccounts } = useData();
     const [toAccountId, setToAccountId] = useState('');
-    const mainCashAccounts = cashAccounts.filter(acc => !acc.userId);
+    const mainCashAccounts = cashAccounts.filter((acc:any) => !acc.salesRepId);
 
     const handleConfirm = () => {
         if(!toAccountId) {
@@ -49,7 +49,7 @@ const CloseSessionDialog = ({ session, onConfirm, onClose }: { session: any, onC
                 <Select value={toAccountId} onValueChange={setToAccountId}>
                     <SelectTrigger id="to-account"><SelectValue placeholder="اختر حساب الاستلام" /></SelectTrigger>
                     <SelectContent>
-                        {mainCashAccounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
+                        {mainCashAccounts.map((acc:any) => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
                     </SelectContent>
                 </Select>
             </div>
@@ -61,7 +61,7 @@ const CloseSessionDialog = ({ session, onConfirm, onClose }: { session: any, onC
 }
 
 export default function PosClosingPage() {
-    const { posSales, posSessions, dbAction, users, loading, cashAccounts } = useData();
+    const { posSales, posSessions, dbAction, users, loading, cashAccounts, getNextId } = useData();
     const { toast } = useToast();
 
     const openSessions = useMemo(() => {
@@ -79,13 +79,13 @@ export default function PosClosingPage() {
             }
         });
         
-        const openCashiers = cashiers.filter(cashier => {
+        const openCashiers = cashiers.filter((cashier:any) => {
             const hasOpenSales = posSales.some((sale:any) => sale.cashierId === cashier.id && !closedSessionCashierIds.has(sale.cashierId));
             return hasOpenSales;
         });
 
 
-        return openCashiers.map(cashier => {
+        return openCashiers.map((cashier:any) => {
             const expectedCash = cashierSales.get(cashier.id) || 0;
             return { cashierId: cashier.id, cashierName: cashier.name, expectedCash };
         });
@@ -102,19 +102,19 @@ export default function PosClosingPage() {
             }
 
             // Step 1: Create a treasury transaction for the withdrawal from the rep's cash account.
-            const withdrawalId = await dbAction('getNextId', { counterName: 'treasuryTransaction' });
+            const withdrawalId = await getNextId('treasuryTransaction');
             await dbAction('treasuryTransactions', 'add', {
                 date: new Date().toISOString(),
                 amount: session.expectedCash,
                 accountId: repCashAccount.id,
                 type: 'withdrawal',
-                description: `إقفال وردية وتوريد إلى ${cashAccounts.find(c => c.id === toAccountId)?.name}`,
+                description: `إقفال وردية وتوريد إلى ${cashAccounts.find((c:any) => c.id === toAccountId)?.name}`,
                 receiptNumber: `ح-خ-${withdrawalId}`,
                 linkedTransaction: true, // Mark as part of an internal transfer
             });
 
             // Step 2: Create a treasury transaction for the deposit into the main account.
-            const depositId = await dbAction('getNextId', { counterName: 'treasuryTransaction' });
+            const depositId = await getNextId('treasuryTransaction');
              await dbAction('treasuryTransactions', 'add', {
                 date: new Date().toISOString(),
                 amount: session.expectedCash,
