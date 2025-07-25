@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import PageHeader from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import {
@@ -94,29 +94,31 @@ const BarcodeDesignerPage = () => {
     const [currentDesign, setCurrentDesign] = useState<Design>(DEFAULT_DESIGN);
     const [selectedDesignId, setSelectedDesignId] = useState<string | null>(null);
 
+    const deepMergeWithDefaults = useCallback((loadedDesign: Partial<Design>): Design => {
+        return {
+            ...DEFAULT_DESIGN,
+            ...loadedDesign,
+            positions: {
+                ...DEFAULT_DESIGN.positions,
+                ...(loadedDesign.positions || {})
+            },
+            fontSizes: {
+                ...DEFAULT_DESIGN.fontSizes,
+                ...(loadedDesign.fontSizes || {})
+            }
+        };
+    }, []);
+
     useEffect(() => {
         if (selectedDesignId) {
             const loadedDesign = barcodeDesigns.find((d: Design) => d.id === selectedDesignId);
             if (loadedDesign) {
-                // Deep merge the loaded design with the default design
-                const mergedDesign = {
-                    ...DEFAULT_DESIGN,
-                    ...loadedDesign,
-                    positions: {
-                        ...DEFAULT_DESIGN.positions,
-                        ...(loadedDesign.positions || {})
-                    },
-                    fontSizes: {
-                        ...DEFAULT_DESIGN.fontSizes,
-                        ...(loadedDesign.fontSizes || {})
-                    }
-                };
-                setCurrentDesign(mergedDesign);
+                setCurrentDesign(deepMergeWithDefaults(loadedDesign));
             }
         } else {
             setCurrentDesign(DEFAULT_DESIGN);
         }
-    }, [selectedDesignId, barcodeDesigns]);
+    }, [selectedDesignId, barcodeDesigns, deepMergeWithDefaults]);
     
     const handleSettingChange = (key: keyof Design, value: any) => {
         setCurrentDesign(prev => ({ ...prev, [key]: value }));
@@ -203,34 +205,28 @@ const BarcodeDesignerPage = () => {
                     حفظ التصميم الحالي
                 </Button>
             </PageHeader>
-            <main className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 md:p-6 h-[calc(100vh-100px)]">
-                <Card className="md:col-span-1 flex flex-col h-full">
-                    <CardHeader>
-                        <div className='flex justify-between items-center'>
-                            <CardTitle>الإعدادات</CardTitle>
-                            <Button size="sm" variant="outline" onClick={handleNewDesign}>
-                                <PlusCircle className="ml-2 h-4 w-4"/> تصميم جديد
-                            </Button>
-                        </div>
-                    </CardHeader>
-                     <ScrollArea className="flex-grow">
-                        <CardContent className="space-y-4">
-                            <div className="space-y-2">
-                                <Label>قوالب محفوظة</Label>
-                                <div className="h-32 border rounded-md p-2 space-y-1">
-                                    <ScrollArea className="h-full">
-                                    {barcodeDesigns.length > 0 ? barcodeDesigns.map((design: Design) => (
-                                        <div key={design.id} className="flex items-center justify-between gap-2 p-1 hover:bg-muted rounded-md">
-                                            <Button variant="link" className="p-0 h-auto flex-1 justify-start" onClick={() => setSelectedDesignId(design.id!)}>{design.name}</Button>
-                                            <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => handleDeleteDesign(design.id!)}><Trash2 className="h-3 w-3"/></Button>
-                                        </div>
-                                    )) : <p className="text-sm text-muted-foreground text-center p-4">لا توجد تصاميم محفوظة.</p>}
-                                    </ScrollArea>
-                                </div>
+            <main className="flex flex-col h-[calc(100vh-120px)] p-4 md:p-6 gap-4">
+                <Card className="flex-none">
+                    <ScrollArea className="h-full max-h-80">
+                    <CardContent className="p-4 grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* Column 1: Templates & Main Settings */}
+                        <div className="space-y-4">
+                            <div className='flex justify-between items-center'>
+                                <Label className="font-semibold">قوالب محفوظة</Label>
+                                <Button size="sm" variant="outline" onClick={handleNewDesign}>
+                                    <PlusCircle className="ml-2 h-4 w-4"/> تصميم جديد
+                                </Button>
                             </div>
-                            
-                            <Separator />
-                            <Label className="font-semibold">إعدادات الملصق</Label>
+                            <div className="h-32 border rounded-md p-2 space-y-1">
+                                <ScrollArea className="h-full">
+                                {barcodeDesigns.length > 0 ? barcodeDesigns.map((design: Design) => (
+                                    <div key={design.id} className="flex items-center justify-between gap-2 p-1 hover:bg-muted rounded-md">
+                                        <Button variant="link" className="p-0 h-auto flex-1 justify-start" onClick={() => setSelectedDesignId(design.id!)}>{design.name}</Button>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => handleDeleteDesign(design.id!)}><Trash2 className="h-3 w-3"/></Button>
+                                    </div>
+                                )) : <p className="text-sm text-muted-foreground text-center p-4">لا توجد تصاميم محفوظة.</p>}
+                                </ScrollArea>
+                            </div>
                              <div className="space-y-2">
                                 <Label className="text-xs">اسم التصميم</Label>
                                 <Input value={currentDesign.name} onChange={e => handleSettingChange('name', e.target.value)} placeholder="مثال: ملصق 5x2.5" />
@@ -239,6 +235,11 @@ const BarcodeDesignerPage = () => {
                                 <Label className="text-xs">اسم الشركة</Label>
                                 <Input value={currentDesign.companyName} onChange={e => handleSettingChange('companyName', e.target.value)} />
                             </div>
+                        </div>
+
+                        {/* Column 2: Dimensions & Display Settings */}
+                        <div className="space-y-4">
+                             <Label className="font-semibold">إعدادات الملصق</Label>
                              <div className="space-y-2">
                                 <Label className="text-xs">نوع الباركود</Label>
                                 <Select value={currentDesign.barcodeType} onValueChange={v => handleSettingChange('barcodeType', v)}>
@@ -252,42 +253,42 @@ const BarcodeDesignerPage = () => {
                                     </SelectContent>
                                 </Select>
                             </div>
-                            <div className="flex items-center justify-between"><Label className="text-xs">إظهار اسم الشركة</Label><Switch checked={currentDesign.showCompanyName} onCheckedChange={v => handleSettingChange('showCompanyName', v)} /></div>
-                            <div className="flex items-center justify-between"><Label className="text-xs">إظهار السعر</Label><Switch checked={currentDesign.showPrice} onCheckedChange={v => handleSettingChange('showPrice', v)} /></div>
-                             <div className="flex items-center justify-between"><Label className="text-xs">إظهار رسم الباركود</Label><Switch checked={currentDesign.showBarcode} onCheckedChange={v => handleSettingChange('showBarcode', v)} /></div>
-                             <div className="flex items-center justify-between"><Label className="text-xs">إظهار الكود (نص)</Label><Switch checked={currentDesign.showCode} onCheckedChange={v => handleSettingChange('showCode', v)} /></div>
                              <div className="grid grid-cols-2 gap-2">
                                 <div className="space-y-2"><Label className="text-xs">عرض الملصق (mm)</Label><Input type="number" value={currentDesign.labelWidth} onChange={e => handleSettingChange('labelWidth', Number(e.target.value))} /></div>
                                 <div className="space-y-2"><Label className="text-xs">ارتفاع الملصق (mm)</Label><Input type="number" value={currentDesign.labelHeight} onChange={e => handleSettingChange('labelHeight', Number(e.target.value))} /></div>
                             </div>
-                           
-                            <Separator />
-                             <div className='flex justify-between items-center'><Label className="font-semibold">أحجام الخطوط</Label><Button size="sm" variant="ghost" onClick={resetFontSizes}><RotateCcw className="ml-2 h-3 w-3" />إعادة تعيين</Button></div>
-                            {(Object.keys(currentDesign.fontSizes || {}) as Array<keyof DesignFontSizes>).map(element => (
-                                <div key={element} className="grid grid-cols-2 items-center gap-2">
-                                    <Label className="text-xs">{element}</Label>
-                                    <Input type="number" value={currentDesign.fontSizes[element]} onChange={e => handleFontSizeChange(element, Number(e.target.value))} className="h-8"/>
-                                </div>
-                            ))}
-
-
-                            <Separator />
-                            <div className='flex justify-between items-center'><Label className="font-semibold">موضع العناصر</Label><Button size="sm" variant="ghost" onClick={resetPositions}><RotateCcw className="ml-2 h-3 w-3" />إعادة تعيين</Button></div>
-                             {(Object.keys(currentDesign.positions || {}) as Array<keyof Design['positions']>).map(element => (
+                            <div className="space-y-2 pt-2">
+                                <div className="flex items-center justify-between"><Label className="text-xs">إظهار اسم الشركة</Label><Switch checked={currentDesign.showCompanyName} onCheckedChange={v => handleSettingChange('showCompanyName', v)} /></div>
+                                <div className="flex items-center justify-between"><Label className="text-xs">إظهار السعر</Label><Switch checked={currentDesign.showPrice} onCheckedChange={v => handleSettingChange('showPrice', v)} /></div>
+                                <div className="flex items-center justify-between"><Label className="text-xs">إظهار رسم الباركود</Label><Switch checked={currentDesign.showBarcode} onCheckedChange={v => handleSettingChange('showBarcode', v)} /></div>
+                                <div className="flex items-center justify-between"><Label className="text-xs">إظهار الكود (نص)</Label><Switch checked={currentDesign.showCode} onCheckedChange={v => handleSettingChange('showCode', v)} /></div>
+                            </div>
+                        </div>
+                        
+                        {/* Column 3: Positions & Fonts */}
+                        <div className="space-y-4">
+                            <div className='flex justify-between items-center'><Label className="font-semibold">موضع وحجم العناصر</Label><Button size="sm" variant="ghost" onClick={() => { resetPositions(); resetFontSizes(); }}><RotateCcw className="ml-2 h-3 w-3" />إعادة تعيين</Button></div>
+                            {(Object.keys(currentDesign.positions || {}) as Array<keyof Design['positions']>).map(element => (
                                 <div key={element} className="space-y-2 border p-2 rounded-md">
                                     <Label className="text-xs">{element}</Label>
-                                    <div className='grid grid-cols-2 gap-2 text-xs'><div>أعلى/أسفل: {currentDesign.positions[element].y}%</div><div>يمين/يسار: {currentDesign.positions[element].x}%</div></div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <Slider defaultValue={[currentDesign.positions[element].y]} max={100} step={1} onValueChange={(v) => handlePositionChange(element, 'y', v[0])} />
-                                        <Slider defaultValue={[currentDesign.positions[element].x]} max={100} step={1} onValueChange={(v) => handlePositionChange(element, 'x', v[0])} />
+                                    <div className='grid grid-cols-2 gap-2 text-xs'>
+                                        <div>فوق/تحت: {currentDesign.positions[element].y}%</div>
+                                        <div className="flex items-center gap-2">
+                                            <Label>خط:</Label>
+                                            <Input type="number" value={currentDesign.fontSizes[element as keyof DesignFontSizes]} onChange={e => handleFontSizeChange(element as keyof DesignFontSizes, Number(e.target.value))} className="h-6 w-12"/>
+                                        </div>
                                     </div>
+                                    <Slider defaultValue={[currentDesign.positions[element].y]} max={100} step={1} onValueChange={(v) => handlePositionChange(element, 'y', v[0])} />
+                                    <div className='text-xs'>يمين/يسار: {currentDesign.positions[element].x}%</div>
+                                    <Slider defaultValue={[currentDesign.positions[element].x]} max={100} step={1} onValueChange={(v) => handlePositionChange(element, 'x', v[0])} />
                                 </div>
                             ))}
-                        </CardContent>
+                        </div>
+                    </CardContent>
                     </ScrollArea>
                 </Card>
                 
-                <div className="md:col-span-2 flex flex-col h-full bg-muted rounded-lg items-center justify-center p-4">
+                <div className="flex-1 flex bg-muted rounded-lg items-center justify-center p-4 overflow-hidden">
                     <div 
                         className="bg-white shadow-lg overflow-hidden relative"
                         style={{
