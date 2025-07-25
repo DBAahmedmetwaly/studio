@@ -98,10 +98,19 @@ const BarcodeDesignerPage = () => {
         if (selectedDesignId) {
             const loadedDesign = barcodeDesigns.find((d: Design) => d.id === selectedDesignId);
             if (loadedDesign) {
-                // Ensure loaded design has all fields, fallback to default if not
-                const mergedDesign = {...DEFAULT_DESIGN, ...loadedDesign};
-                mergedDesign.positions = {...DEFAULT_DESIGN.positions, ...loadedDesign.positions};
-                mergedDesign.fontSizes = {...DEFAULT_DESIGN.fontSizes, ...loadedDesign.fontSizes};
+                // Deep merge the loaded design with the default design
+                const mergedDesign = {
+                    ...DEFAULT_DESIGN,
+                    ...loadedDesign,
+                    positions: {
+                        ...DEFAULT_DESIGN.positions,
+                        ...(loadedDesign.positions || {})
+                    },
+                    fontSizes: {
+                        ...DEFAULT_DESIGN.fontSizes,
+                        ...(loadedDesign.fontSizes || {})
+                    }
+                };
                 setCurrentDesign(mergedDesign);
             }
         } else {
@@ -254,7 +263,7 @@ const BarcodeDesignerPage = () => {
                            
                             <Separator />
                              <div className='flex justify-between items-center'><Label className="font-semibold">أحجام الخطوط</Label><Button size="sm" variant="ghost" onClick={resetFontSizes}><RotateCcw className="ml-2 h-3 w-3" />إعادة تعيين</Button></div>
-                            {(Object.keys(currentDesign.fontSizes) as Array<keyof DesignFontSizes>).map(element => (
+                            {(Object.keys(currentDesign.fontSizes || {}) as Array<keyof DesignFontSizes>).map(element => (
                                 <div key={element} className="grid grid-cols-2 items-center gap-2">
                                     <Label className="text-xs">{element}</Label>
                                     <Input type="number" value={currentDesign.fontSizes[element]} onChange={e => handleFontSizeChange(element, Number(e.target.value))} className="h-8"/>
@@ -264,7 +273,7 @@ const BarcodeDesignerPage = () => {
 
                             <Separator />
                             <div className='flex justify-between items-center'><Label className="font-semibold">موضع العناصر</Label><Button size="sm" variant="ghost" onClick={resetPositions}><RotateCcw className="ml-2 h-3 w-3" />إعادة تعيين</Button></div>
-                             {(Object.keys(currentDesign.positions) as Array<keyof Design['positions']>).map(element => (
+                             {(Object.keys(currentDesign.positions || {}) as Array<keyof Design['positions']>).map(element => (
                                 <div key={element} className="space-y-2 border p-2 rounded-md">
                                     <Label className="text-xs">{element}</Label>
                                     <div className='grid grid-cols-2 gap-2 text-xs'><div>أعلى/أسفل: {currentDesign.positions[element].y}%</div><div>يمين/يسار: {currentDesign.positions[element].x}%</div></div>
@@ -325,3 +334,4 @@ const BarcodeDesignerPage = () => {
 };
 
 export default BarcodeDesignerPage;
+
