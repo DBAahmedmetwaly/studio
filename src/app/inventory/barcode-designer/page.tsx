@@ -35,6 +35,7 @@ interface Design {
     showCompanyName: boolean;
     showPrice: boolean;
     showCode: boolean;
+    showBarcode: boolean;
     labelWidth: number;
     labelHeight: number;
     barcodeType: string;
@@ -48,10 +49,10 @@ interface Design {
 }
 
 const DEFAULT_POSITIONS = {
-    companyName: { y: 5, x: 0 },
-    itemName: { y: 20, x: 0 },
-    barcode: { y: 40, x: 0 },
-    price: { y: 80, x: 0 },
+    companyName: { y: 10, x: 50 },
+    itemName: { y: 30, x: 50 },
+    barcode: { y: 60, x: 50 },
+    price: { y: 85, x: 50 },
 };
 
 const DEFAULT_DESIGN: Design = {
@@ -60,6 +61,7 @@ const DEFAULT_DESIGN: Design = {
     showCompanyName: true,
     showPrice: true,
     showCode: true,
+    showBarcode: true,
     labelWidth: 50,
     labelHeight: 25,
     barcodeType: 'CODE128',
@@ -83,8 +85,10 @@ const BarcodeDesignerPage = () => {
         if (selectedDesignId) {
             const loadedDesign = barcodeDesigns.find((d: Design) => d.id === selectedDesignId);
             if (loadedDesign) {
-                // Ensure loaded design has positions, fallback to default if not
-                setCurrentDesign({ ...DEFAULT_DESIGN, ...loadedDesign, positions: loadedDesign.positions || DEFAULT_POSITIONS });
+                // Ensure loaded design has all fields, fallback to default if not
+                const mergedDesign = {...DEFAULT_DESIGN, ...loadedDesign};
+                mergedDesign.positions = {...DEFAULT_DESIGN.positions, ...loadedDesign.positions};
+                setCurrentDesign(mergedDesign);
             }
         } else {
             setCurrentDesign(DEFAULT_DESIGN);
@@ -162,8 +166,8 @@ const BarcodeDesignerPage = () => {
                     حفظ التصميم الحالي
                 </Button>
             </PageHeader>
-            <main className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 p-4 md:p-6">
-                <Card className="lg:col-span-1 flex flex-col h-full">
+            <main className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 md:p-6 h-[calc(100vh-100px)]">
+                <Card className="md:col-span-1 flex flex-col h-full">
                     <CardHeader>
                         <div className='flex justify-between items-center'>
                             <CardTitle>الإعدادات</CardTitle>
@@ -211,48 +215,22 @@ const BarcodeDesignerPage = () => {
                                     </SelectContent>
                                 </Select>
                             </div>
-                            <div className="flex items-center justify-between">
-                                <Label className="text-xs">إظهار اسم الشركة</Label>
-                                <Switch checked={currentDesign.showCompanyName} onCheckedChange={v => handleSettingChange('showCompanyName', v)} />
-                            </div>
-                            <div className="flex items-center justify-between">
-                                <Label className="text-xs">إظهار السعر</Label>
-                                <Switch checked={currentDesign.showPrice} onCheckedChange={v => handleSettingChange('showPrice', v)} />
-                            </div>
-                             <div className="flex items-center justify-between">
-                                <Label className="text-xs">إظهار الكود (مع الباركود)</Label>
-                                <Switch checked={currentDesign.showCode} onCheckedChange={v => handleSettingChange('showCode', v)} />
-                            </div>
+                            <div className="flex items-center justify-between"><Label className="text-xs">إظهار اسم الشركة</Label><Switch checked={currentDesign.showCompanyName} onCheckedChange={v => handleSettingChange('showCompanyName', v)} /></div>
+                            <div className="flex items-center justify-between"><Label className="text-xs">إظهار السعر</Label><Switch checked={currentDesign.showPrice} onCheckedChange={v => handleSettingChange('showPrice', v)} /></div>
+                             <div className="flex items-center justify-between"><Label className="text-xs">إظهار رسم الباركود</Label><Switch checked={currentDesign.showBarcode} onCheckedChange={v => handleSettingChange('showBarcode', v)} /></div>
+                             <div className="flex items-center justify-between"><Label className="text-xs">إظهار الكود (نص)</Label><Switch checked={currentDesign.showCode} onCheckedChange={v => handleSettingChange('showCode', v)} /></div>
                              <div className="grid grid-cols-2 gap-2">
-                                <div className="space-y-2">
-                                    <Label className="text-xs">عرض الملصق (mm)</Label>
-                                    <Input type="number" value={currentDesign.labelWidth} onChange={e => handleSettingChange('labelWidth', Number(e.target.value))} />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label className="text-xs">ارتفاع الملصق (mm)</Label>
-                                    <Input type="number" value={currentDesign.labelHeight} onChange={e => handleSettingChange('labelHeight', Number(e.target.value))} />
-                                </div>
+                                <div className="space-y-2"><Label className="text-xs">عرض الملصق (mm)</Label><Input type="number" value={currentDesign.labelWidth} onChange={e => handleSettingChange('labelWidth', Number(e.target.value))} /></div>
+                                <div className="space-y-2"><Label className="text-xs">ارتفاع الملصق (mm)</Label><Input type="number" value={currentDesign.labelHeight} onChange={e => handleSettingChange('labelHeight', Number(e.target.value))} /></div>
                             </div>
-                            <div className="space-y-2">
-                                <Label className="text-xs">حجم الخط (px)</Label>
-                                <Input type="number" value={currentDesign.fontSize} onChange={e => handleSettingChange('fontSize', Number(e.target.value))} />
-                            </div>
+                            <div className="space-y-2"><Label className="text-xs">حجم الخط (px)</Label><Input type="number" value={currentDesign.fontSize} onChange={e => handleSettingChange('fontSize', Number(e.target.value))} /></div>
 
                             <Separator />
-                            <div className='flex justify-between items-center'>
-                                <Label className="font-semibold">موضع العناصر</Label>
-                                <Button size="sm" variant="ghost" onClick={resetPositions}>
-                                    <RotateCcw className="ml-2 h-3 w-3" />
-                                    إعادة تعيين
-                                </Button>
-                            </div>
+                            <div className='flex justify-between items-center'><Label className="font-semibold">موضع العناصر</Label><Button size="sm" variant="ghost" onClick={resetPositions}><RotateCcw className="ml-2 h-3 w-3" />إعادة تعيين</Button></div>
                              {(Object.keys(currentDesign.positions) as Array<keyof Design['positions']>).map(element => (
                                 <div key={element} className="space-y-2 border p-2 rounded-md">
                                     <Label className="text-xs">{element}</Label>
-                                    <div className='grid grid-cols-2 gap-2 text-xs'>
-                                        <div>أعلى/أسفل: {currentDesign.positions[element].y}%</div>
-                                        <div>يمين/يسار: {currentDesign.positions[element].x}%</div>
-                                    </div>
+                                    <div className='grid grid-cols-2 gap-2 text-xs'><div>أعلى/أسفل: {currentDesign.positions[element].y}%</div><div>يمين/يسار: {currentDesign.positions[element].x}%</div></div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <Slider defaultValue={[currentDesign.positions[element].y]} max={100} step={1} onValueChange={(v) => handlePositionChange(element, 'y', v[0])} />
                                         <Slider defaultValue={[currentDesign.positions[element].x]} max={100} step={1} onValueChange={(v) => handlePositionChange(element, 'x', v[0])} />
@@ -263,87 +241,51 @@ const BarcodeDesignerPage = () => {
                     </ScrollArea>
                 </Card>
                 
-                <Card className="lg:col-span-2 flex flex-col">
-                    <CardHeader><CardTitle>معاينة التصميم</CardTitle></CardHeader>
-                    <CardContent className="bg-muted flex-grow p-4 flex items-center justify-center">
-                        <div 
-                            className="bg-white shadow-lg overflow-hidden relative"
-                            style={{
-                                width: `${currentDesign.labelWidth}mm`,
-                                height: `${currentDesign.labelHeight}mm`,
-                                fontFamily: 'sans-serif',
-                                transform: 'scale(2.5)',
-                                transformOrigin: 'center'
-                            }}
-                        >
-                            {currentDesign.showCompanyName && (
-                                <p style={{
-                                    position: 'absolute',
-                                    top: `${currentDesign.positions.companyName.y}%`,
-                                    left: `${currentDesign.positions.companyName.x}%`,
-                                    transform: 'translate(-50%, -50%)',
-                                    width: '100%',
-                                    textAlign: 'center',
-                                    fontSize: `${currentDesign.fontSize-2}px`,
-                                    fontWeight: 'bold',
-                                    padding: '0 2px'
-                                }}>{currentDesign.companyName}</p>
-                            )}
-                             <p style={{
-                                position: 'absolute',
-                                top: `${currentDesign.positions.itemName.y}%`,
-                                left: `${currentDesign.positions.itemName.x}%`,
-                                transform: 'translate(-50%, -50%)',
-                                width: '100%',
-                                textAlign: 'center',
-                                fontSize: `${currentDesign.fontSize-1}px`,
-                                fontWeight: '600',
-                                padding: '0 2px'
-                            }}>{SAMPLE_ITEM.name}</p>
-                             <div style={{
-                                position: 'absolute',
-                                top: `${currentDesign.positions.barcode.y}%`,
-                                left: `${currentDesign.positions.barcode.x}%`,
-                                transform: 'translate(-50%, -50%)',
-                                width: '90%',
-                                boxSizing: 'border-box'
-                            }}>
-                               {currentDesign.barcodeType === 'QR' ? (
-                                    <QRCodeSVG value={sampleBarcodeValue} width="100%" height="auto" />
-                                ) : (
-                                    <Barcode 
-                                        value={sampleBarcodeValue} 
-                                        width={1} 
-                                        height={currentDesign.labelHeight / 3}
-                                        fontSize={currentDesign.fontSize}
-                                        margin={2}
-                                        displayValue={currentDesign.showCode}
-                                        format={currentDesign.barcodeType}
-                                        renderer="svg"
-                                        background='transparent'
-                                    />
-                                )}
-                            </div>
-                           
-                            {currentDesign.showPrice && (
-                                 <p style={{
-                                    position: 'absolute',
-                                    top: `${currentDesign.positions.price.y}%`,
-                                    left: `${currentDesign.positions.price.x}%`,
-                                    transform: 'translate(-50%, -50%)',
-                                    width: '100%',
-                                    textAlign: 'center',
-                                    fontSize: `${currentDesign.fontSize}px`,
-                                    fontWeight: 'bold',
-                                    padding: '0 2px'
-                                }}>{SAMPLE_ITEM.price.toFixed(2)} EGP</p>
+                <div className="md:col-span-2 flex flex-col h-full bg-muted rounded-lg items-center justify-center p-4">
+                    <div 
+                        className="bg-white shadow-lg overflow-hidden relative"
+                        style={{
+                            width: `${currentDesign.labelWidth}mm`,
+                            height: `${currentDesign.labelHeight}mm`,
+                            fontFamily: 'sans-serif',
+                            transform: 'scale(3)',
+                            transformOrigin: 'center'
+                        }}
+                    >
+                        {currentDesign.showCompanyName && (
+                            <p style={{ position: 'absolute', top: `${currentDesign.positions.companyName.y}%`, left: `${currentDesign.positions.companyName.x}%`, transform: 'translate(-50%, -50%)', width: '100%', textAlign: 'center', fontSize: `${currentDesign.fontSize-2}px`, fontWeight: 'bold', padding: '0 2px' }}>{currentDesign.companyName}</p>
+                        )}
+                         <p style={{ position: 'absolute', top: `${currentDesign.positions.itemName.y}%`, left: `${currentDesign.positions.itemName.x}%`, transform: 'translate(-50%, -50%)', width: '100%', textAlign: 'center', fontSize: `${currentDesign.fontSize-1}px`, fontWeight: '600', padding: '0 2px' }}>{SAMPLE_ITEM.name}</p>
+                         
+                         {currentDesign.showBarcode && (
+                         <div style={{ position: 'absolute', top: `${currentDesign.positions.barcode.y}%`, left: `${currentDesign.positions.barcode.x}%`, transform: 'translate(-50%, -50%)', width: '90%', boxSizing: 'border-box' }}>
+                           {currentDesign.barcodeType === 'QR' ? (
+                                <QRCodeSVG value={sampleBarcodeValue} width="100%" height="auto" />
+                            ) : (
+                                <Barcode 
+                                    value={sampleBarcodeValue} 
+                                    width={1} 
+                                    height={currentDesign.labelHeight / 3}
+                                    fontSize={currentDesign.fontSize}
+                                    margin={2}
+                                    displayValue={currentDesign.showCode}
+                                    format={currentDesign.barcodeType}
+                                    renderer="svg"
+                                    background='transparent'
+                                />
                             )}
                         </div>
-                    </CardContent>
-                </Card>
+                        )}
+                       
+                        {currentDesign.showPrice && (
+                             <p style={{ position: 'absolute', top: `${currentDesign.positions.price.y}%`, left: `${currentDesign.positions.price.x}%`, transform: 'translate(-50%, -50%)', width: '100%', textAlign: 'center', fontSize: `${currentDesign.fontSize}px`, fontWeight: 'bold', padding: '0 2px' }}>{SAMPLE_ITEM.price.toFixed(2)} EGP</p>
+                        )}
+                    </div>
+                </div>
             </main>
         </>
     );
 };
 
 export default BarcodeDesignerPage;
+
