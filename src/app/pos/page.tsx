@@ -7,7 +7,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash2, ShoppingCart, XCircle, Printer, Grip, Dot, Search, Ban } from "lucide-react";
+import { Trash2, ShoppingCart, XCircle, Printer, Grip, Dot, Search, Ban, PanelLeft } from "lucide-react";
 import { useData } from '@/contexts/data-provider';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
@@ -41,7 +41,7 @@ export default function PosPage() {
     const { user } = useAuth();
     const { toast } = useToast();
     const { generateInvoiceNumber, currentInvoiceNumber, loading: loadingCounter } = usePosInvoiceCounter();
-    const { setOpen } = useSidebar();
+    const { setOpen, toggleSidebar } = useSidebar();
 
     const barcodeInputRef = useRef<HTMLInputElement>(null);
     
@@ -238,8 +238,11 @@ export default function PosPage() {
         <div className="h-screen bg-background flex flex-col p-4 gap-4">
              {/* Top Section - Catalog */}
             <div className="flex-1 flex flex-col overflow-hidden">
-                 <div className="shrink-0 mb-3">
-                    <form onSubmit={handleBarcodeSubmit}>
+                 <div className="shrink-0 mb-3 flex items-center gap-2">
+                     <Button variant="ghost" size="icon" className="md:hidden" onClick={toggleSidebar}>
+                        <PanelLeft />
+                    </Button>
+                    <form onSubmit={handleBarcodeSubmit} className="flex-1">
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                             <Input ref={barcodeInputRef} placeholder="امسح الباركود أو ابحث بالاسم..." className="h-12 text-lg pl-10" onChange={e => setSearchTerm(e.target.value)} />
