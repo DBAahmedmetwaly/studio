@@ -28,6 +28,12 @@ interface DesignElementPositions {
     y: number;
     x: number;
 }
+interface DesignFontSizes {
+    companyName: number;
+    itemName: number;
+    barcode: number;
+    price: number;
+}
 interface Design {
     id?: string;
     name: string;
@@ -39,7 +45,7 @@ interface Design {
     labelWidth: number;
     labelHeight: number;
     barcodeType: string;
-    fontSize: number;
+    fontSizes: DesignFontSizes;
     positions: {
         companyName: DesignElementPositions;
         itemName: DesignElementPositions;
@@ -55,6 +61,13 @@ const DEFAULT_POSITIONS = {
     price: { y: 85, x: 50 },
 };
 
+const DEFAULT_FONTS: DesignFontSizes = {
+    companyName: 8,
+    itemName: 10,
+    barcode: 8,
+    price: 10,
+}
+
 const DEFAULT_DESIGN: Design = {
     name: "تصميم جديد",
     companyName: "اسم شركتك",
@@ -65,7 +78,7 @@ const DEFAULT_DESIGN: Design = {
     labelWidth: 50,
     labelHeight: 25,
     barcodeType: 'CODE128',
-    fontSize: 10,
+    fontSizes: DEFAULT_FONTS,
     positions: DEFAULT_POSITIONS
 };
 
@@ -88,6 +101,7 @@ const BarcodeDesignerPage = () => {
                 // Ensure loaded design has all fields, fallback to default if not
                 const mergedDesign = {...DEFAULT_DESIGN, ...loadedDesign};
                 mergedDesign.positions = {...DEFAULT_DESIGN.positions, ...loadedDesign.positions};
+                mergedDesign.fontSizes = {...DEFAULT_DESIGN.fontSizes, ...loadedDesign.fontSizes};
                 setCurrentDesign(mergedDesign);
             }
         } else {
@@ -108,9 +122,23 @@ const BarcodeDesignerPage = () => {
             }
         }))
     }
+    
+    const handleFontSizeChange = (element: keyof DesignFontSizes, value: number) => {
+        setCurrentDesign(prev => ({
+            ...prev,
+            fontSizes: {
+                ...prev.fontSizes,
+                [element]: value
+            }
+        }))
+    }
 
     const resetPositions = () => {
         setCurrentDesign(prev => ({...prev, positions: DEFAULT_POSITIONS }));
+    }
+
+    const resetFontSizes = () => {
+        setCurrentDesign(prev => ({...prev, fontSizes: DEFAULT_FONTS}));
     }
 
     const handleSaveDesign = async () => {
@@ -223,7 +251,16 @@ const BarcodeDesignerPage = () => {
                                 <div className="space-y-2"><Label className="text-xs">عرض الملصق (mm)</Label><Input type="number" value={currentDesign.labelWidth} onChange={e => handleSettingChange('labelWidth', Number(e.target.value))} /></div>
                                 <div className="space-y-2"><Label className="text-xs">ارتفاع الملصق (mm)</Label><Input type="number" value={currentDesign.labelHeight} onChange={e => handleSettingChange('labelHeight', Number(e.target.value))} /></div>
                             </div>
-                            <div className="space-y-2"><Label className="text-xs">حجم الخط (px)</Label><Input type="number" value={currentDesign.fontSize} onChange={e => handleSettingChange('fontSize', Number(e.target.value))} /></div>
+                           
+                            <Separator />
+                             <div className='flex justify-between items-center'><Label className="font-semibold">أحجام الخطوط</Label><Button size="sm" variant="ghost" onClick={resetFontSizes}><RotateCcw className="ml-2 h-3 w-3" />إعادة تعيين</Button></div>
+                            {(Object.keys(currentDesign.fontSizes) as Array<keyof DesignFontSizes>).map(element => (
+                                <div key={element} className="grid grid-cols-2 items-center gap-2">
+                                    <Label className="text-xs">{element}</Label>
+                                    <Input type="number" value={currentDesign.fontSizes[element]} onChange={e => handleFontSizeChange(element, Number(e.target.value))} className="h-8"/>
+                                </div>
+                            ))}
+
 
                             <Separator />
                             <div className='flex justify-between items-center'><Label className="font-semibold">موضع العناصر</Label><Button size="sm" variant="ghost" onClick={resetPositions}><RotateCcw className="ml-2 h-3 w-3" />إعادة تعيين</Button></div>
@@ -253,9 +290,9 @@ const BarcodeDesignerPage = () => {
                         }}
                     >
                         {currentDesign.showCompanyName && (
-                            <p style={{ position: 'absolute', top: `${currentDesign.positions.companyName.y}%`, left: `${currentDesign.positions.companyName.x}%`, transform: 'translate(-50%, -50%)', width: '100%', textAlign: 'center', fontSize: `${currentDesign.fontSize-2}px`, fontWeight: 'bold', padding: '0 2px' }}>{currentDesign.companyName}</p>
+                            <p style={{ position: 'absolute', top: `${currentDesign.positions.companyName.y}%`, left: `${currentDesign.positions.companyName.x}%`, transform: 'translate(-50%, -50%)', width: '100%', textAlign: 'center', fontSize: `${currentDesign.fontSizes.companyName}px`, fontWeight: 'bold', padding: '0 2px' }}>{currentDesign.companyName}</p>
                         )}
-                         <p style={{ position: 'absolute', top: `${currentDesign.positions.itemName.y}%`, left: `${currentDesign.positions.itemName.x}%`, transform: 'translate(-50%, -50%)', width: '100%', textAlign: 'center', fontSize: `${currentDesign.fontSize-1}px`, fontWeight: '600', padding: '0 2px' }}>{SAMPLE_ITEM.name}</p>
+                         <p style={{ position: 'absolute', top: `${currentDesign.positions.itemName.y}%`, left: `${currentDesign.positions.itemName.x}%`, transform: 'translate(-50%, -50%)', width: '100%', textAlign: 'center', fontSize: `${currentDesign.fontSizes.itemName}px`, fontWeight: '600', padding: '0 2px' }}>{SAMPLE_ITEM.name}</p>
                          
                          {currentDesign.showBarcode && (
                          <div style={{ position: 'absolute', top: `${currentDesign.positions.barcode.y}%`, left: `${currentDesign.positions.barcode.x}%`, transform: 'translate(-50%, -50%)', width: '90%', boxSizing: 'border-box' }}>
@@ -266,7 +303,7 @@ const BarcodeDesignerPage = () => {
                                     value={sampleBarcodeValue} 
                                     width={1} 
                                     height={currentDesign.labelHeight / 3}
-                                    fontSize={currentDesign.fontSize}
+                                    fontSize={currentDesign.fontSizes.barcode}
                                     margin={2}
                                     displayValue={currentDesign.showCode}
                                     format={currentDesign.barcodeType}
@@ -278,7 +315,7 @@ const BarcodeDesignerPage = () => {
                         )}
                        
                         {currentDesign.showPrice && (
-                             <p style={{ position: 'absolute', top: `${currentDesign.positions.price.y}%`, left: `${currentDesign.positions.price.x}%`, transform: 'translate(-50%, -50%)', width: '100%', textAlign: 'center', fontSize: `${currentDesign.fontSize}px`, fontWeight: 'bold', padding: '0 2px' }}>{SAMPLE_ITEM.price.toFixed(2)} EGP</p>
+                             <p style={{ position: 'absolute', top: `${currentDesign.positions.price.y}%`, left: `${currentDesign.positions.price.x}%`, transform: 'translate(-50%, -50%)', width: '100%', textAlign: 'center', fontSize: `${currentDesign.fontSizes.price}px`, fontWeight: 'bold', padding: '0 2px' }}>{SAMPLE_ITEM.price.toFixed(2)} EGP</p>
                         )}
                     </div>
                 </div>
@@ -288,4 +325,3 @@ const BarcodeDesignerPage = () => {
 };
 
 export default BarcodeDesignerPage;
-
