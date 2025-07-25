@@ -55,7 +55,7 @@ export default function PrintersPage() {
     useEffect(() => {
         if (settingsData && settingsData.length > 0) {
             // Data is an array, we need to find the main settings object
-            const mainSettings = settingsData.find(s => s.id === 'main');
+            const mainSettings = settingsData.find((s: any) => s.id === 'main');
             if (mainSettings) {
                 setSettings(mainSettings);
             }
@@ -117,12 +117,15 @@ export default function PrintersPage() {
                         <Select value={address} onValueChange={onAddressChange}>
                              <SelectTrigger><SelectValue placeholder="اختر طابعة" /></SelectTrigger>
                              <SelectContent>
-                                {discoveredDevices.map(device => (
-                                    <SelectItem key={device.id} value={device.id}>
-                                        {device.name || `جهاز غير مسمى (${device.id})`}
-                                    </SelectItem>
-                                ))}
-                                {discoveredDevices.length === 0 && <SelectItem value="" disabled>لم يتم العثور على أجهزة</SelectItem>}
+                                {discoveredDevices.length > 0 ? (
+                                    discoveredDevices.map(device => (
+                                        <SelectItem key={device.id} value={device.id}>
+                                            {device.name || `جهاز غير مسمى (${device.id})`}
+                                        </SelectItem>
+                                    ))
+                                ) : (
+                                    <div className="text-center text-sm text-muted-foreground p-2">لم يتم العثور على أجهزة</div>
+                                )}
                              </SelectContent>
                         </Select>
                     </div>
