@@ -17,6 +17,9 @@ import { Input } from '@/components/ui/input';
 import Barcode from 'react-barcode';
 import { QRCodeSVG } from 'qrcode.react';
 import { Printer } from 'lucide-react';
+import ReactDOM from 'react-dom';
+import ReactDOMServer from 'react-dom/server';
+
 
 interface Item {
   id?: string;
@@ -93,8 +96,8 @@ export const BarcodePrintDialog = ({ item, barcodeDesigns, trigger }: { item: It
     }, [isOpen, barcodeDesigns, selectedDesignId]);
 
     const activeDesign = useMemo(() => {
-        const design = barcodeDesigns.find(d => d.id === selectedDesignId);
-        if (!design) return null;
+        if (!barcodeDesigns || barcodeDesigns.length === 0) return DEFAULT_DESIGN;
+        const design = barcodeDesigns.find(d => d.id === selectedDesignId) || barcodeDesigns[0];
         
         // Deep merge with defaults to avoid errors with older designs
         return {
@@ -113,52 +116,67 @@ export const BarcodePrintDialog = ({ item, barcodeDesigns, trigger }: { item: It
 
     const handlePrint = () => {
         if (!activeDesign) return;
-        
+
         const printWindow = window.open('', '_blank', 'height=600,width=800');
         if (printWindow) {
-            printWindow.document.write('<html><head><title>Print Barcode</title>');
-            printWindow.document.write('<style>@media print { @page { size: auto; margin: 0mm; } body { margin: 0; } .label-container { display: flex; flex-wrap: wrap; gap: 0; } .label { display: inline-block; vertical-align: top; overflow: hidden; border: 1px dotted #ccc; box-sizing: border-box; } p { margin: 0; padding: 0; } svg { max-width: 100%; height: auto; } }</style>');
-            printWindow.document.write('</head><body style="font-family: sans-serif;">');
-            
-            let labelsHtml = '<div class="label-container">';
+            const barcodeValue = item.code || "NO_CODE";
+            const barcodeComponent = activeDesign.barcodeType === 'QR'
+                ? <QRCodeSVG value={barcodeValue} width="100%" height="auto" />
+                : <Barcode 
+                    value={barcodeValue} 
+                    width={1} 
+                    height={activeDesign.labelHeight / 3}
+                    fontSize={activeDesign.fontSizes.barcode}
+                    margin={2}
+                    displayValue={activeDesign.showCode}
+                    format={activeDesign.barcodeType}
+                    renderer="svg"
+                    background='transparent'
+                  />;
+
+            const barcodeHtml = ReactDOMServer.renderToStaticMarkup(barcodeComponent);
+
+            const labelStyle = `width: ${activeDesign.labelWidth}mm; height: ${activeDesign.labelHeight}mm; position: relative; display: inline-block; vertical-align: top; overflow: hidden; border: 1px dotted #ccc; box-sizing: border-box;`;
+            const companyNameStyle = `position: absolute; top: ${activeDesign.positions.companyName.y}%; left: ${activeDesign.positions.companyName.x}%; transform: translate(-50%, -50%); width: 100%; text-align: center; font-size: ${activeDesign.fontSizes.companyName}px; font-weight: bold;`;
+            const itemNameStyle = `position: absolute; top: ${activeDesign.positions.itemName.y}%; left: ${activeDesign.positions.itemName.x}%; transform: translate(-50%, -50%); width: 100%; text-align: center; font-size: ${activeDesign.fontSizes.itemName}px; font-weight: 600;`;
+            const barcodeContainerStyle = `position: absolute; top: ${activeDesign.positions.barcode.y}%; left: ${activeDesign.positions.barcode.x}%; transform: translate(-50%, -50%); width: 90%;`;
+            const priceStyle = `position: absolute; top: ${activeDesign.positions.price.y}%; left: ${activeDesign.positions.price.x}%; transform: translate(-50%, -50%); width: 100%; text-align: center; font-size: ${activeDesign.fontSizes.price}px; font-weight: bold;`;
+
+            let labelsHtml = '';
             for (let i = 0; i < quantity; i++) {
-                const labelStyle = `width: ${activeDesign.labelWidth}mm; height: ${activeDesign.labelHeight}mm; position: relative;`;
-                const companyNameStyle = `position: absolute; top: ${activeDesign.positions.companyName.y}%; left: ${activeDesign.positions.companyName.x}%; transform: translate(-50%, -50%); width: 100%; text-align: center; font-size: ${activeDesign.fontSizes.companyName}px; font-weight: bold;`;
-                const itemNameStyle = `position: absolute; top: ${activeDesign.positions.itemName.y}%; left: ${activeDesign.positions.itemName.x}%; transform: translate(-50%, -50%); width: 100%; text-align: center; font-size: ${activeDesign.fontSizes.itemName}px; font-weight: 600;`;
-                const barcodeContainerStyle = `position: absolute; top: ${activeDesign.positions.barcode.y}%; left: ${activeDesign.positions.barcode.x}%; transform: translate(-50%, -50%); width: 90%;`;
-                const priceStyle = `position: absolute; top: ${activeDesign.positions.price.y}%; left: ${activeDesign.positions.price.x}%; transform: translate(-50%, -50%); width: 100%; text-align: center; font-size: ${activeDesign.fontSizes.price}px; font-weight: bold;`;
-
-                const barcodeValue = item.code || "123456789";
-
                 labelsHtml += `<div class="label" style="${labelStyle}">`;
-                if(activeDesign.showCompanyName) labelsHtml += `<p style="${companyNameStyle}">${activeDesign.companyName}</p>`;
+                if (activeDesign.showCompanyName) labelsHtml += `<p style="${companyNameStyle}">${activeDesign.companyName}</p>`;
                 labelsHtml += `<p style="${itemNameStyle}">${item.name}</p>`;
-                if(activeDesign.showBarcode) {
-                    labelsHtml += `<div style="${barcodeContainerStyle}">`;
-                    // This part is tricky. We can't render a React component directly. We need its SVG string.
-                    const barcodeComponent = activeDesign.barcodeType === 'QR'
-                        ? new QRCodeSVG({ value: barcodeValue, width: "100%", height: "auto" })
-                        : new Barcode({ value: barcodeValue, width: 1, height: activeDesign.labelHeight / 3, fontSize: activeDesign.fontSizes.barcode, margin: 2, displayValue: activeDesign.showCode, format: activeDesign.barcodeType, renderer:"svg", background:'transparent' });
-                    // A trick to get SVG string from a React component - render it to a temporary div.
-                    const tempDiv = document.createElement('div');
-                    const ReactDOM = require('react-dom'); // Temporary, not ideal for SSR
-                    ReactDOM.render(barcodeComponent, tempDiv);
-                    labelsHtml += tempDiv.innerHTML;
-                    ReactDOM.unmountComponentAtNode(tempDiv);
-                    labelsHtml += `</div>`;
+                if (activeDesign.showBarcode) {
+                    labelsHtml += `<div style="${barcodeContainerStyle}">${barcodeHtml}</div>`;
                 }
-                if(activeDesign.showPrice) labelsHtml += `<p style="${priceStyle}">${item.price.toFixed(2)} EGP</p>`;
+                if (activeDesign.showPrice) labelsHtml += `<p style="${priceStyle}">${item.price.toFixed(2)} EGP</p>`;
                 labelsHtml += `</div>`;
             }
-            labelsHtml += '</div>';
 
-            printWindow.document.write(labelsHtml);
-            printWindow.document.write('</body></html>');
+            printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>Print Barcode</title>
+                        <style>
+                            @media print { @page { size: auto; margin: 0mm; } body { margin: 0; } }
+                            .label-container { display: flex; flex-wrap: wrap; gap: 0; }
+                            .label { page-break-inside: avoid; }
+                            p { margin: 0; padding: 0; }
+                            svg { max-width: 100%; height: auto; }
+                        </style>
+                    </head>
+                    <body style="font-family: sans-serif;">
+                        <div class="label-container">${labelsHtml}</div>
+                    </body>
+                </html>
+            `);
+            
             printWindow.document.close();
             printWindow.focus();
-            setTimeout(() => { // Timeout to ensure content is rendered
-                 printWindow.print();
-                 printWindow.close();
+            setTimeout(() => {
+                printWindow.print();
+                printWindow.close();
             }, 500);
         }
     };
@@ -245,3 +263,4 @@ export const BarcodePrintDialog = ({ item, barcodeDesigns, trigger }: { item: It
         </Dialog>
     );
 };
+
