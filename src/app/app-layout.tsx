@@ -59,6 +59,7 @@ import {
   PackageSearch,
   BookCopy,
   Printer,
+  QrCode,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -179,8 +180,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                  <NavSubLink href="/reports/pos-reports" module="reports_pos">تقارير نقاط البيع</NavSubLink>
             </NavCollapsible>
 
-            <NavCollapsible title="الأصناف والمخزون" icon={<Warehouse />} modules={['inventory_items', 'inventory_warehouses', 'inventory_stockIn', 'inventory_stockOut', 'inventory_transfer', 'inventory_adjustment', 'inventory_movements', 'inventory_stockStatus', 'reports_itemProfitLoss', 'reports_inventory']}>
+            <NavCollapsible title="الأصناف والمخزون" icon={<Warehouse />} modules={['inventory_items', 'inventory_warehouses', 'inventory_stockIn', 'inventory_stockOut', 'inventory_transfer', 'inventory_adjustment', 'inventory_movements', 'inventory_stockStatus', 'reports_itemProfitLoss', 'reports_inventory', 'inventory_barcodeDesigner']}>
                 <NavSubLink href="/master-data/items" module="inventory_items">بطاقة الأصناف</NavSubLink>
+                <NavSubLink href="/inventory/barcode-designer" module="inventory_barcodeDesigner">تصميم الباركود</NavSubLink>
                 <NavSubLink href="/master-data/warehouses" module="inventory_warehouses">المخازن</NavSubLink>
                 <NavSubLink href="/inventory/stock-in/new" module="inventory_stockIn">استلام مخزون</NavSubLink>
                 <NavSubLink href="/inventory/stock-out/new" module="inventory_stockOut">صرف مخزون</NavSubLink>

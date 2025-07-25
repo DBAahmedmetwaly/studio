@@ -29,6 +29,7 @@ export const permissionsConfig = {
     reports_pos: { label: "تقارير نقاط البيع", group: "pos", actions: ["view", "generate"] },
     
     inventory_items: { label: "بطاقة الأصناف", group: "inventory", actions: ["view", "add", "edit", "delete"] },
+    inventory_barcodeDesigner: { label: "تصميم الباركود", group: "inventory", actions: ["view", "print"] },
     inventory_warehouses: { label: "المخازن", group: "inventory", actions: ["view", "add", "edit", "delete"] },
     inventory_stockIn: { label: "استلام مخزون", group: "inventory", actions: ["view", "add", "delete", "print"] },
     inventory_stockOut: { label: "صرف مخزون", group: "inventory", actions: ["view", "add", "delete", "print"] },
