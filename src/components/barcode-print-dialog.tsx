@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -51,8 +51,23 @@ interface Design {
     }
 }
 
-const DEFAULT_DESIGN: Partial<Design> = {
-    companyName: "Your Company",
+const DEFAULT_POSITIONS = {
+    companyName: { y: 10, x: 50 },
+    itemName: { y: 30, x: 50 },
+    barcode: { y: 60, x: 50 },
+    price: { y: 85, x: 50 },
+};
+
+const DEFAULT_FONTS: DesignFontSizes = {
+    companyName: 8,
+    itemName: 10,
+    barcode: 8,
+    price: 10,
+}
+
+const DEFAULT_DESIGN: Design = {
+    name: "تصميم افتراضي",
+    companyName: "اسم شركتك",
     showCompanyName: true,
     showPrice: true,
     showCode: true,
@@ -60,6 +75,8 @@ const DEFAULT_DESIGN: Partial<Design> = {
     labelWidth: 50,
     labelHeight: 25,
     barcodeType: 'CODE128',
+    fontSizes: DEFAULT_FONTS,
+    positions: DEFAULT_POSITIONS
 };
 
 
@@ -68,10 +85,30 @@ export const BarcodePrintDialog = ({ item, barcodeDesigns, trigger }: { item: It
     const [selectedDesignId, setSelectedDesignId] = useState('');
     const [quantity, setQuantity] = useState(1);
 
+    useEffect(() => {
+        // Set a default design when the dialog opens and designs are available
+        if (isOpen && barcodeDesigns.length > 0 && !selectedDesignId) {
+            setSelectedDesignId(barcodeDesigns[0].id!);
+        }
+    }, [isOpen, barcodeDesigns, selectedDesignId]);
+
     const activeDesign = useMemo(() => {
-        if (!selectedDesignId) return null;
         const design = barcodeDesigns.find(d => d.id === selectedDesignId);
-        return design ? { ...DEFAULT_DESIGN, ...design } as Design : null;
+        if (!design) return null;
+        
+        // Deep merge with defaults to avoid errors with older designs
+        return {
+            ...DEFAULT_DESIGN,
+            ...design,
+            positions: {
+                ...DEFAULT_DESIGN.positions,
+                ...(design.positions || {})
+            },
+            fontSizes: {
+                ...DEFAULT_DESIGN.fontSizes,
+                ...(design.fontSizes || {})
+            }
+        };
     }, [selectedDesignId, barcodeDesigns]);
 
     const handlePrint = () => {
