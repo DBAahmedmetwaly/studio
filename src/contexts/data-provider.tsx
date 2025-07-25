@@ -15,6 +15,7 @@ interface DataContextType {
     partners: any[];
     users: any[];
     itemGroups: any[];
+    barcodeDesigns: any[];
     roles: any; 
     settings: any[];
 
@@ -68,6 +69,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const { data: partners, loading: l_partners, add: add_partner, update: update_partner, remove: remove_partner } = useFirebase('partners');
     const { data: users, loading: l_users, add: add_user, update: update_user, remove: remove_user } = useFirebase('users');
     const { data: itemGroups, loading: l_itemGroups, add: add_itemGroup, update: update_itemGroup, remove: remove_itemGroup } = useFirebase('itemGroups');
+    const { data: barcodeDesigns, loading: l_barcodeDesigns, add: add_barcodeDesign, update: update_barcodeDesign, remove: remove_barcodeDesign } = useFirebase('barcodeDesigns');
     const { data: roles, loading: l_roles, setData: set_roles } = useFirebase('roles'); // Special handling for roles
     const { data: settings, loading: l_settings } = useFirebase('settings');
 
@@ -95,18 +97,18 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const { data: supplierPayments, loading: l_supplierPayments, add: add_supplierPayment, remove: remove_supplierPayment } = useFirebase('supplierPayments');
     const { data: treasuryTransactions, loading: l_treasuryTransactions, add: add_treasuryTransaction } = useFirebase('treasuryTransactions');
     const { data: profitDistributions, loading: l_profitDistributions, add: add_profitDistribution, remove: remove_profitDistribution } = useFirebase('profitDistributions');
-
+    
     // HR
     const { data: employees, loading: l_employees, add: add_employee, update: update_employee, remove: remove_employee } = useFirebase('employees');
     const { data: employeeAdvances, loading: l_employeeAdvances, add: add_employeeAdvance, remove: remove_employeeAdvance } = useFirebase('employeeAdvances');
     const { data: employeeAdjustments, loading: l_employeeAdjustments, add: add_employeeAdjustment, remove: remove_employeeAdjustment } = useFirebase('employeeAdjustments');
     const { data: repRemittances, loading: l_repRemittances, add: add_repRemittance } = useFirebase('repRemittances');
-
+    
     // Generic getNextId from a single hook instance
     const { getNextId } = useFirebase('counters');
 
 
-    const loading = l_items || l_customers || l_suppliers || l_warehouses || l_cashAccounts || l_partners || l_users || l_itemGroups || l_roles || l_settings || l_stockInRecords || l_stockOutRecords || l_stockTransferRecords || l_stockAdjustmentRecords || l_stockIssuesToReps || l_stockReturnsFromReps || l_salesInvoices || l_salesReturns || l_purchaseInvoices || l_purchaseReturns || l_expenses || l_exceptionalIncomes || l_customerPayments || l_supplierPayments || l_treasuryTransactions || l_employees || l_employeeAdvances || l_employeeAdjustments || l_repRemittances || l_posSales || l_posSessions || l_profitDistributions || l_posAuditLogs;
+    const loading = l_items || l_customers || l_suppliers || l_warehouses || l_cashAccounts || l_partners || l_users || l_itemGroups || l_roles || l_settings || l_stockInRecords || l_stockOutRecords || l_stockTransferRecords || l_stockAdjustmentRecords || l_stockIssuesToReps || l_stockReturnsFromReps || l_salesInvoices || l_salesReturns || l_purchaseInvoices || l_purchaseReturns || l_expenses || l_exceptionalIncomes || l_customerPayments || l_supplierPayments || l_treasuryTransactions || l_employees || l_employeeAdvances || l_employeeAdjustments || l_repRemittances || l_posSales || l_posSessions || l_profitDistributions || l_posAuditLogs || l_barcodeDesigns;
     
     // A single function to dispatch actions to the correct hook
     const dbAction = async (path: string, action: 'add' | 'update' | 'remove', payload?: any) => {
@@ -119,6 +121,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             'partners': { add: add_partner, update: update_partner, remove: remove_partner },
             'users': { add: add_user, update: update_user, remove: remove_user },
             'itemGroups': { add: add_itemGroup, update: update_itemGroup, remove: remove_itemGroup },
+            'barcodeDesigns': { add: add_barcodeDesign, update: update_barcodeDesign, remove: remove_barcodeDesign },
             'salesInvoices': { add: add_salesInvoice, update: update_salesInvoice, remove: remove_salesInvoice },
             'salesReturns': { add: add_salesReturn },
             'purchaseInvoices': { add: add_purchaseInvoice },
@@ -156,7 +159,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const value = {
-        items, customers, suppliers, warehouses, cashAccounts, partners, users, itemGroups, roles, settings,
+        items, customers, suppliers, warehouses, cashAccounts, partners, users, itemGroups, barcodeDesigns, roles, settings,
         stockInRecords, stockOutRecords, stockTransferRecords, stockAdjustmentRecords, stockIssuesToReps, stockReturnsFromReps,
         salesInvoices, salesReturns, purchaseInvoices, purchaseReturns, posSales, posSessions, posAuditLogs,
         expenses, exceptionalIncomes, customerPayments, supplierPayments, treasuryTransactions, profitDistributions,

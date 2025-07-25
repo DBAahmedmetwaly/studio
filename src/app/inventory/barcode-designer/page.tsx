@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import PageHeader from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,72 +13,101 @@ import {
   CardFooter,
 } from "@/components/ui/card";
 import { useData } from '@/contexts/data-provider';
-import { Loader2, Printer, Settings, Minus, Plus } from 'lucide-react';
+import { Loader2, Printer, Settings, Save, Trash2, PlusCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import Barcode from 'react-barcode';
+import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Checkbox } from '@/components/ui/checkbox';
 
-interface Item { id: string; name: string; unit: string; price: number; code?: string; }
+interface Design {
+    id?: string;
+    name: string;
+    companyName: string;
+    showCompanyName: boolean;
+    showPrice: boolean;
+    showCode: boolean;
+    labelWidth: number;
+    labelHeight: number;
+    barcodeType: string;
+    fontSize: number;
+}
+
+const DEFAULT_DESIGN: Design = {
+    name: "",
+    companyName: "اسم شركتك",
+    showCompanyName: true,
+    showPrice: true,
+    showCode: true,
+    labelWidth: 50,
+    labelHeight: 25,
+    barcodeType: 'CODE128',
+    fontSize: 10,
+};
+
+const SAMPLE_ITEM = {
+    name: "صنف افتراضي للمعاينة",
+    code: "123456789",
+    price: 99.99
+};
 
 const BarcodeDesignerPage = () => {
-    const { items, loading } = useData();
-    const [selectedItems, setSelectedItems] = useState<string[]>([]);
-    const [printCount, setPrintCount] = useState<{ [key: string]: number }>({});
-    
-    const [settings, setSettings] = useState({
-        companyName: "المحاسب الذكي",
-        showCompanyName: true,
-        showPrice: true,
-        showCode: true,
-        labelWidth: 60, // mm
-        labelHeight: 40, // mm
-        columns: 3,
-        marginTop: 10,
-        marginLeft: 10,
-        marginRight: 10,
-        marginBottom: 10,
-        barcodeType: 'CODE128',
-    });
+    const { barcodeDesigns, dbAction, loading } = useData();
+    const { toast } = useToast();
+    const [currentDesign, setCurrentDesign] = useState<Design>(DEFAULT_DESIGN);
+    const [selectedDesignId, setSelectedDesignId] = useState<string | null>(null);
 
-    const handleSettingChange = (key: keyof typeof settings, value: any) => {
-        setSettings(prev => ({ ...prev, [key]: value }));
-    };
-
-    const handleItemSelect = (itemId: string, checked: boolean) => {
-        setSelectedItems(prev => {
-            const newSelected = checked ? [...prev, itemId] : prev.filter(id => id !== itemId);
-            setPrintCount(prevCount => ({ ...prevCount, [itemId]: checked ? 1 : 0 }));
-            return newSelected;
-        });
-    };
-
-    const handlePrintCountChange = (itemId: string, count: number) => {
-        setPrintCount(prev => ({ ...prev, [itemId]: Math.max(0, count) }));
-    };
-
-    const barcodesToPrint = useMemo(() => {
-        const result: { item: Item, count: number }[] = [];
-        selectedItems.forEach(itemId => {
-            const item = items.find((i: Item) => i.id === itemId);
-            const count = printCount[itemId] || 0;
-            if (item && count > 0) {
-                result.push({ item, count });
+    useEffect(() => {
+        if (selectedDesignId) {
+            const loadedDesign = barcodeDesigns.find((d: Design) => d.id === selectedDesignId);
+            if (loadedDesign) {
+                setCurrentDesign(loadedDesign);
             }
-        });
-        return result;
-    }, [selectedItems, items, printCount]);
-    
-    const allBarcodes = useMemo(() => {
-        return barcodesToPrint.flatMap(({ item, count }) => Array(count).fill(item));
-    }, [barcodesToPrint]);
+        } else {
+            setCurrentDesign(DEFAULT_DESIGN);
+        }
+    }, [selectedDesignId, barcodeDesigns]);
 
-    const handlePrint = () => {
-        window.print();
+    const handleSettingChange = (key: keyof Design, value: any) => {
+        setCurrentDesign(prev => ({ ...prev, [key]: value }));
     };
+
+    const handleSaveDesign = async () => {
+        if (!currentDesign.name) {
+            toast({ variant: 'destructive', title: 'خطأ', description: 'يجب إدخال اسم للتصميم.' });
+            return;
+        }
+
+        try {
+            if (currentDesign.id) {
+                await dbAction('barcodeDesigns', 'update', { id: currentDesign.id, data: currentDesign });
+                toast({ title: 'تم التحديث', description: 'تم تحديث تصميم الباركود بنجاح.' });
+            } else {
+                const newId = await dbAction('barcodeDesigns', 'add', currentDesign);
+                toast({ title: 'تم الحفظ', description: 'تم حفظ تصميم الباركود الجديد.' });
+                if (newId) setSelectedDesignId(newId as string);
+            }
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'خطأ', description: 'فشل حفظ التصميم.' });
+        }
+    };
+    
+    const handleDeleteDesign = async (id: string) => {
+        if (confirm('هل أنت متأكد من حذف هذا التصميم؟')) {
+            await dbAction('barcodeDesigns', 'remove', {id});
+            if(selectedDesignId === id) {
+                setSelectedDesignId(null);
+            }
+            toast({title: 'تم الحذف بنجاح'});
+        }
+    }
+
+    const handleNewDesign = () => {
+        setSelectedDesignId(null);
+        setCurrentDesign(DEFAULT_DESIGN);
+    }
 
     if (loading) {
         return <div className="flex flex-1 justify-center items-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
@@ -86,61 +115,49 @@ const BarcodeDesignerPage = () => {
 
     return (
         <>
-            <PageHeader title="تصميم وطباعة الباركود">
-                <Button onClick={handlePrint} className="no-print">
-                    <Printer className="ml-2 h-4 w-4" />
-                    طباعة
+            <PageHeader title="مصمم ملصقات الباركود">
+                <Button onClick={handleSaveDesign}>
+                    <Save className="ml-2 h-4 w-4" />
+                    حفظ التصميم الحالي
                 </Button>
             </PageHeader>
             <main className="flex flex-1 gap-4 p-4 md:gap-8 md:p-6">
-                <div className="w-80 flex-shrink-0 space-y-6 no-print">
+                <div className="w-80 flex-shrink-0 space-y-6">
                     <Card>
-                        <CardHeader><CardTitle>1. اختيار الأصناف</CardTitle></CardHeader>
+                        <CardHeader>
+                            <div className='flex justify-between items-center'>
+                                <CardTitle>قوالب التصاميم</CardTitle>
+                                <Button size="sm" variant="outline" onClick={handleNewDesign}>
+                                    <PlusCircle className="ml-2 h-4 w-4"/> تصميم جديد
+                                </Button>
+                            </div>
+                        </CardHeader>
                         <CardContent>
-                            <ScrollArea className="h-64 border rounded-md p-2">
-                                {items.map((item: Item) => (
-                                    <div key={item.id} className="flex items-center gap-2 p-1">
-                                        <Checkbox
-                                            id={`item-${item.id}`}
-                                            checked={selectedItems.includes(item.id)}
-                                            onCheckedChange={(checked) => handleItemSelect(item.id, !!checked)}
-                                        />
-                                        <Label htmlFor={`item-${item.id}`} className="flex-1 cursor-pointer">{item.name}</Label>
-                                        {selectedItems.includes(item.id) && (
-                                             <div className="flex items-center gap-1">
-                                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handlePrintCountChange(item.id, (printCount[item.id] || 1) - 1)}><Minus className="h-3 w-3"/></Button>
-                                                <Input type="number" value={printCount[item.id] || 0} onChange={e => handlePrintCountChange(item.id, parseInt(e.target.value) || 0)} className="h-7 w-12 text-center p-0" />
-                                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handlePrintCountChange(item.id, (printCount[item.id] || 0) + 1)}><Plus className="h-3 w-3"/></Button>
-                                            </div>
-                                        )}
+                             <ScrollArea className="h-40 border rounded-md p-2">
+                                {barcodeDesigns.map((design: Design) => (
+                                    <div key={design.id} className="flex items-center justify-between gap-2 p-1 hover:bg-muted rounded-md">
+                                        <Button variant="link" className="p-0 h-auto flex-1 justify-start" onClick={() => setSelectedDesignId(design.id!)}>{design.name}</Button>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => handleDeleteDesign(design.id!)}><Trash2 className="h-3 w-3"/></Button>
                                     </div>
                                 ))}
                             </ScrollArea>
                         </CardContent>
                     </Card>
-                    
+
                     <Card>
-                        <CardHeader><CardTitle>2. إعدادات التصميم</CardTitle></CardHeader>
+                        <CardHeader><CardTitle>إعدادات الملصق</CardTitle></CardHeader>
                         <CardContent className="space-y-4">
+                             <div className="space-y-2">
+                                <Label>اسم التصميم</Label>
+                                <Input value={currentDesign.name} onChange={e => handleSettingChange('name', e.target.value)} placeholder="مثال: ملصق 5x2.5" />
+                            </div>
                             <div className="space-y-2">
                                 <Label>اسم الشركة</Label>
-                                <Input value={settings.companyName} onChange={e => handleSettingChange('companyName', e.target.value)} />
+                                <Input value={currentDesign.companyName} onChange={e => handleSettingChange('companyName', e.target.value)} />
                             </div>
-                            <div className="flex items-center justify-between">
-                                <Label>إظهار اسم الشركة</Label>
-                                <Switch checked={settings.showCompanyName} onCheckedChange={v => handleSettingChange('showCompanyName', v)} />
-                            </div>
-                            <div className="flex items-center justify-between">
-                                <Label>إظهار السعر</Label>
-                                <Switch checked={settings.showPrice} onCheckedChange={v => handleSettingChange('showPrice', v)} />
-                            </div>
-                             <div className="flex items-center justify-between">
-                                <Label>إظهار الكود</Label>
-                                <Switch checked={settings.showCode} onCheckedChange={v => handleSettingChange('showCode', v)} />
-                            </div>
-                            <div className="space-y-2">
+                             <div className="space-y-2">
                                 <Label>نوع الباركود</Label>
-                                <Select value={settings.barcodeType} onValueChange={v => handleSettingChange('barcodeType', v)}>
+                                <Select value={currentDesign.barcodeType} onValueChange={v => handleSettingChange('barcodeType', v)}>
                                     <SelectTrigger><SelectValue/></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="CODE128">Code 128</SelectItem>
@@ -150,60 +167,64 @@ const BarcodeDesignerPage = () => {
                                     </SelectContent>
                                 </Select>
                             </div>
+                            <div className="flex items-center justify-between">
+                                <Label>إظهار اسم الشركة</Label>
+                                <Switch checked={currentDesign.showCompanyName} onCheckedChange={v => handleSettingChange('showCompanyName', v)} />
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <Label>إظهار السعر</Label>
+                                <Switch checked={currentDesign.showPrice} onCheckedChange={v => handleSettingChange('showPrice', v)} />
+                            </div>
+                             <div className="flex items-center justify-between">
+                                <Label>إظهار الكود</Label>
+                                <Switch checked={currentDesign.showCode} onCheckedChange={v => handleSettingChange('showCode', v)} />
+                            </div>
                         </CardContent>
                     </Card>
 
                     <Card>
-                        <CardHeader><CardTitle>3. إعدادات الملصق والصفحة</CardTitle></CardHeader>
+                        <CardHeader><CardTitle>الأبعاد والخطوط</CardTitle></CardHeader>
                         <CardContent className="space-y-4">
                              <div className="grid grid-cols-2 gap-2">
                                 <div className="space-y-2">
                                     <Label>عرض الملصق (mm)</Label>
-                                    <Input type="number" value={settings.labelWidth} onChange={e => handleSettingChange('labelWidth', Number(e.target.value))} />
+                                    <Input type="number" value={currentDesign.labelWidth} onChange={e => handleSettingChange('labelWidth', Number(e.target.value))} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label>ارتفاع الملصق (mm)</Label>
-                                    <Input type="number" value={settings.labelHeight} onChange={e => handleSettingChange('labelHeight', Number(e.target.value))} />
+                                    <Input type="number" value={currentDesign.labelHeight} onChange={e => handleSettingChange('labelHeight', Number(e.target.value))} />
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <Label>عدد الأعمدة في الصفحة</Label>
-                                <Input type="number" value={settings.columns} onChange={e => handleSettingChange('columns', Number(e.target.value))} />
+                                <Label>حجم الخط (px)</Label>
+                                <Input type="number" value={currentDesign.fontSize} onChange={e => handleSettingChange('fontSize', Number(e.target.value))} />
                             </div>
                         </CardContent>
                     </Card>
                 </div>
                 
-                <Card className="flex-1 printable-area">
-                    <CardHeader><CardTitle>معاينة الطباعة</CardTitle></CardHeader>
-                    <CardContent>
+                <Card className="flex-1">
+                    <CardHeader><CardTitle>معاينة التصميم</CardTitle></CardHeader>
+                    <CardContent className="bg-gray-100 p-4 flex items-center justify-center h-full">
                         <div 
-                            className="bg-gray-100 p-4 grid gap-2"
-                            style={{ gridTemplateColumns: `repeat(${settings.columns}, 1fr)` }}
+                            className="bg-white p-1 flex flex-col items-center justify-center overflow-hidden shadow-lg"
+                            style={{
+                                width: `${currentDesign.labelWidth}mm`,
+                                height: `${currentDesign.labelHeight}mm`,
+                            }}
                         >
-                            {allBarcodes.map((item, index) => (
-                                <div 
-                                    key={index}
-                                    className="bg-white p-1 flex flex-col items-center justify-center overflow-hidden"
-                                    style={{
-                                        width: `${settings.labelWidth}mm`,
-                                        height: `${settings.labelHeight}mm`,
-                                    }}
-                                >
-                                    {settings.showCompanyName && <p className="text-[6px] font-bold text-center">{settings.companyName}</p>}
-                                    <p className="text-[7px] text-center font-semibold leading-tight my-0.5">{item.name}</p>
-                                    <Barcode 
-                                        value={item.code || 'NO-CODE'} 
-                                        width={1} 
-                                        height={15} 
-                                        fontSize={8} 
-                                        margin={2}
-                                        displayValue={settings.showCode}
-                                        format={settings.barcodeType}
-                                    />
-                                    {settings.showPrice && <p className="text-[8px] font-bold text-center mt-0.5">{item.price.toFixed(2)} EGP</p>}
-                                </div>
-                            ))}
+                            {currentDesign.showCompanyName && <p className="text-center font-bold" style={{fontSize: `${currentDesign.fontSize-2}px`}}>{currentDesign.companyName}</p>}
+                            <p className="text-center font-semibold leading-tight my-0.5" style={{fontSize: `${currentDesign.fontSize-1}px`}}>{SAMPLE_ITEM.name}</p>
+                            <Barcode 
+                                value={SAMPLE_ITEM.code} 
+                                width={1} 
+                                height={currentDesign.labelHeight / 2.5}
+                                fontSize={currentDesign.fontSize}
+                                margin={2}
+                                displayValue={currentDesign.showCode}
+                                format={currentDesign.barcodeType}
+                            />
+                            {currentDesign.showPrice && <p className="font-bold text-center mt-0.5" style={{fontSize: `${currentDesign.fontSize}px`}}>{SAMPLE_ITEM.price.toFixed(2)} EGP</p>}
                         </div>
                     </CardContent>
                 </Card>
