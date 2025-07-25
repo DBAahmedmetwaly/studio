@@ -60,6 +60,7 @@ import {
   BookCopy,
   Printer,
   QrCode,
+  PowerOff,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -176,7 +177,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <NavSubLink href="/pos" module="pos">شاشة الكاشير</NavSubLink>
                 <NavSubLink href="/master-data/item-groups" module="pos_itemGroups">مجموعات الأصناف</NavSubLink>
                 <NavSubLink href="/pos/remit" module="pos_remit">توريد نقدية الكاشير</NavSubLink>
-                <NavSubLink href="/pos/closing" module="pos_closing">إقفال وردية الكاشير</NavSubLink>
+                <NavSubLink href="/pos/closing" module="pos_closing">إدارة ورديات الكاشير</NavSubLink>
                  <NavSubLink href="/reports/pos-reports" module="reports_pos">تقارير نقاط البيع</NavSubLink>
             </NavCollapsible>
 

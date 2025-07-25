@@ -20,7 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useData } from "@/contexts/data-provider";
-import { Loader2, Coins } from 'lucide-react';
+import { Loader2, Coins, PlayCircle, PowerOff } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { AddEntityDialog } from '@/components/add-entity-dialog';
@@ -60,37 +60,43 @@ const CloseSessionDialog = ({ session, onConfirm, onClose }: { session: any, onC
     );
 }
 
-export default function PosClosingPage() {
+export default function PosSessionsPage() {
     const { posSales, posSessions, dbAction, users, loading, cashAccounts, getNextId } = useData();
     const { toast } = useToast();
 
+    const allCashiers = useMemo(() => users.filter((u: any) => u.isCashier), [users]);
+    const openSessionCashierIds = useMemo(() => new Set(posSessions.filter((s: any) => !s.isClosed).map((s: any) => s.cashierId)), [posSessions]);
+
     const openSessions = useMemo(() => {
-        const cashierSales = new Map<string, number>();
+        return allCashiers
+            .filter((cashier: any) => openSessionCashierIds.has(cashier.id))
+            .map((cashier: any) => {
+                const session = posSessions.find((s: any) => s.cashierId === cashier.id && !s.isClosed);
+                const sessionSales = posSales.filter((sale: any) => sale.cashierId === cashier.id && new Date(sale.date) >= new Date(session.startTime));
+                const expectedCash = sessionSales.reduce((sum: number, sale: any) => sum + sale.total, 0);
+                return { ...session, cashierName: cashier.name, expectedCash };
+            });
+    }, [allCashiers, openSessionCashierIds, posSessions, posSales]);
 
-        const cashiers = users.filter((u:any) => u.isCashier);
-
-        // Calculate total sales for all cashiers from sales not in a closed session
-        const closedSessionCashierIds = new Set(posSessions.filter((s:any) => s.isClosed).map((s:any) => s.cashierId));
-        
-        posSales.forEach((sale: any) => {
-            const session = posSessions.find((s:any) => s.cashierId === sale.cashierId && !s.isClosed);
-            if (!closedSessionCashierIds.has(sale.cashierId)) {
-                cashierSales.set(sale.cashierId, (cashierSales.get(sale.cashierId) || 0) + sale.total);
-            }
-        });
-        
-        const openCashiers = cashiers.filter((cashier:any) => {
-            const hasOpenSales = posSales.some((sale:any) => sale.cashierId === cashier.id && !closedSessionCashierIds.has(sale.cashierId));
-            return hasOpenSales;
-        });
-
-
-        return openCashiers.map((cashier:any) => {
-            const expectedCash = cashierSales.get(cashier.id) || 0;
-            return { cashierId: cashier.id, cashierName: cashier.name, expectedCash };
-        });
-    }, [posSales, posSessions, users]);
+    const availableCashiers = useMemo(() => {
+        return allCashiers.filter((cashier: any) => !openSessionCashierIds.has(cashier.id));
+    }, [allCashiers, openSessionCashierIds]);
     
+    
+    const handleOpenSession = async (cashierId: string) => {
+        try {
+            await dbAction('posSessions', 'add', {
+                cashierId: cashierId,
+                startTime: new Date().toISOString(),
+                isClosed: false,
+            });
+            toast({title: 'تم بنجاح', description: `تم فتح وردية جديدة.`});
+        } catch(error) {
+            console.error("Failed to open session:", error);
+            toast({variant: 'destructive', title: 'خطأ', description: 'فشل فتح الوردية.'});
+        }
+    }
+
     const handleCloseSession = async (session: any, toAccountId: string) => {
         try {
             const cashierName = users.find((u: any) => u.id === session.cashierId)?.name || 'كاشير';
@@ -110,7 +116,7 @@ export default function PosClosingPage() {
                 type: 'withdrawal',
                 description: `إقفال وردية وتوريد إلى ${cashAccounts.find((c:any) => c.id === toAccountId)?.name}`,
                 receiptNumber: `ح-خ-${withdrawalId}`,
-                linkedTransaction: true, // Mark as part of an internal transfer
+                linkedTransaction: true,
             });
 
             // Step 2: Create a treasury transaction for the deposit into the main account.
@@ -122,27 +128,19 @@ export default function PosClosingPage() {
                 type: 'deposit',
                 description: `استلام من وردية الكاشير ${cashierName}`,
                 receiptNumber: `ح-خ-${depositId}`,
-                linkedTransaction: true, // Mark as part of an internal transfer
+                linkedTransaction: true,
             });
 
-
             // Step 3: Mark the session as closed
-            const existingSession = posSessions.find((s:any) => s.cashierId === session.cashierId && !s.isClosed);
-            
             const sessionData = {
-                cashierId: session.cashierId,
-                startTime: existingSession?.startTime || new Date().toISOString(),
+                ...session,
                 endTime: new Date().toISOString(),
-                expectedCash: session.expectedCash,
                 isClosed: true,
                 remittedToAccountId: toAccountId
             };
-
-            if(existingSession) {
-                await dbAction('posSessions', 'update', { id: existingSession.id, data: sessionData });
-            } else {
-                 await dbAction('posSessions', 'add', sessionData);
-            }
+            delete sessionData.cashierName; // remove client-side property before saving
+            
+            await dbAction('posSessions', 'update', { id: session.id, data: sessionData });
             
             toast({title: 'تم بنجاح', description: `تم إقفال وردية ${session.cashierName}`});
 
@@ -154,46 +152,82 @@ export default function PosClosingPage() {
 
   return (
     <>
-      <PageHeader title="إقفال ورديات الكاشير" />
+      <PageHeader title="إدارة ورديات الكاشير" />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>الورديات المفتوحة</CardTitle>
-            <CardDescription>
-              عرض الورديات التي لم يتم إقفالها وتوريد النقدية الخاصة بها.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-                 <div className="flex justify-center items-center py-10"><Loader2 className="h-8 w-8 animate-spin" /></div>
-            ) : (
-                <Table>
-                    <TableHeader><TableRow><TableHead>الكاشير</TableHead><TableHead className="text-center">النقدية المتوقعة</TableHead><TableHead className="text-center">الإجراء</TableHead></TableRow></TableHeader>
-                    <TableBody>
-                        {openSessions.length > 0 ? openSessions.map(session => (
-                            <TableRow key={session.cashierId}>
-                                <TableCell className="font-medium">{session.cashierName}</TableCell>
-                                <TableCell className="text-center font-bold text-green-600">{session.expectedCash.toFixed(2)} ج.م</TableCell>
-                                <TableCell className="text-center">
-                                    <AddEntityDialog
-                                        title="تأكيد إقفال الوردية"
-                                        description="سيتم إقفال الوردية وتوريد المبلغ إلى الخزينة الرئيسية."
-                                        triggerButton={
-                                             <Button><Coins className="ml-2"/>إقفال وتوريد</Button>
-                                        }
-                                    >
-                                        <CloseSessionDialog session={session} onConfirm={(toAccountId) => handleCloseSession(session, toAccountId)} onClose={()=>{}} />
-                                    </AddEntityDialog>
-                                </TableCell>
-                            </TableRow>
-                        )) : (
-                            <TableRow><TableCell colSpan={3} className="text-center py-10 text-muted-foreground">لا توجد ورديات مفتوحة حاليًا.</TableCell></TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-            )}
-          </CardContent>
-        </Card>
+        <div className="grid gap-6 lg:grid-cols-2">
+            <Card>
+            <CardHeader>
+                <CardTitle>الورديات المفتوحة حاليًا</CardTitle>
+                <CardDescription>
+                عرض الورديات التي لم يتم إقفالها وتوريد النقدية الخاصة بها.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                {loading ? (
+                    <div className="flex justify-center items-center py-10"><Loader2 className="h-8 w-8 animate-spin" /></div>
+                ) : (
+                    <Table>
+                        <TableHeader><TableRow><TableHead>الكاشير</TableHead><TableHead>تاريخ البدء</TableHead><TableHead className="text-center">النقدية المتوقعة</TableHead><TableHead className="text-center">الإجراء</TableHead></TableRow></TableHeader>
+                        <TableBody>
+                            {openSessions.length > 0 ? openSessions.map(session => (
+                                <TableRow key={session.cashierId}>
+                                    <TableCell className="font-medium">{session.cashierName}</TableCell>
+                                    <TableCell>{new Date(session.startTime).toLocaleString('ar-EG')}</TableCell>
+                                    <TableCell className="text-center font-bold text-green-600">{session.expectedCash.toFixed(2)} ج.م</TableCell>
+                                    <TableCell className="text-center">
+                                        <AddEntityDialog
+                                            title="تأكيد إقفال الوردية"
+                                            description="سيتم إقفال الوردية وتوريد المبلغ إلى الخزينة الرئيسية."
+                                            triggerButton={
+                                                <Button variant="destructive"><PowerOff className="ml-2 h-4 w-4"/>إقفال</Button>
+                                            }
+                                        >
+                                            <CloseSessionDialog session={session} onConfirm={(toAccountId) => handleCloseSession(session, toAccountId)} onClose={()=>{}} />
+                                        </AddEntityDialog>
+                                    </TableCell>
+                                </TableRow>
+                            )) : (
+                                <TableRow><TableCell colSpan={4} className="text-center py-10 text-muted-foreground">لا توجد ورديات مفتوحة حاليًا.</TableCell></TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                )}
+            </CardContent>
+            </Card>
+
+            <Card>
+            <CardHeader>
+                <CardTitle>فتح وردية جديدة</CardTitle>
+                <CardDescription>
+                    اختر كاشيرًا لبدء وردية جديدة له.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                 {loading ? (
+                    <div className="flex justify-center items-center py-10"><Loader2 className="h-8 w-8 animate-spin" /></div>
+                ) : (
+                    <Table>
+                        <TableHeader><TableRow><TableHead>الكاشير المتاح</TableHead><TableHead className="text-center">الإجراء</TableHead></TableRow></TableHeader>
+                        <TableBody>
+                            {availableCashiers.length > 0 ? availableCashiers.map(cashier => (
+                                <TableRow key={cashier.id}>
+                                    <TableCell className="font-medium">{cashier.name}</TableCell>
+                                    <TableCell className="text-center">
+                                        <Button variant="outline" onClick={() => handleOpenSession(cashier.id)}>
+                                            <PlayCircle className="ml-2 h-4 w-4"/>
+                                            فتح وردية
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            )) : (
+                                <TableRow><TableCell colSpan={2} className="text-center py-10 text-muted-foreground">جميع الكاشيرات لديهم ورديات مفتوحة.</TableCell></TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                )}
+            </CardContent>
+            </Card>
+        </div>
       </main>
     </>
   );

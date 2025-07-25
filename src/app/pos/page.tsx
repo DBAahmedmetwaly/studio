@@ -37,7 +37,7 @@ interface ItemGroup {
 }
 
 export default function PosPage() {
-    const { items: allItems, dbAction, itemGroups } = useData();
+    const { items: allItems, dbAction, itemGroups, posSessions } = useData();
     const { user } = useAuth();
     const { toast } = useToast();
     const { generateInvoiceNumber, currentInvoiceNumber, loading: loadingCounter } = usePosInvoiceCounter();
@@ -53,6 +53,12 @@ export default function PosPage() {
     const [change, setChange] = useState(0);
     const [activeGroupId, setActiveGroupId] = useState<string | 'all'>('all');
     const [searchTerm, setSearchTerm] = useState("");
+    
+    const hasOpenSession = useMemo(() => {
+        if (!user) return false;
+        return posSessions.some((s: any) => s.cashierId === user.id && !s.isClosed);
+    }, [posSessions, user]);
+
 
     // Collapse sidebar when component mounts
     useEffect(() => {
@@ -233,6 +239,28 @@ export default function PosPage() {
             </div>
         );
     }
+    
+    // Session check
+    if (!hasOpenSession) {
+         return (
+            <div className="flex h-screen w-full flex-col items-center justify-center bg-muted">
+                <Card className="w-full max-w-md">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-amber-600"><Ban /> لا توجد وردية مفتوحة</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <Alert>
+                            <AlertTitle>الوردية مغلقة</AlertTitle>
+                            <AlertDescription>
+                                لا يمكنك بدء عمليات البيع لأنه لا توجد وردية مفتوحة لك. يرجى الطلب من مسؤول النظام فتح وردية جديدة لك من شاشة إدارة ورديات الكاشير.
+                            </AlertDescription>
+                        </Alert>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
+
 
     return (
         <div className="h-screen bg-background flex flex-col p-4 gap-4">
