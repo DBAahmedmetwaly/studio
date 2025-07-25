@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import PageHeader from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import {
@@ -49,7 +49,7 @@ const DEFAULT_DESIGN: Design = {
 
 const SAMPLE_ITEM = {
     name: "صنف افتراضي للمعاينة",
-    code: "123456789",
+    code: "123456789012", // Changed to be valid for EAN13
     price: 99.99
 };
 
@@ -108,6 +108,13 @@ const BarcodeDesignerPage = () => {
         setSelectedDesignId(null);
         setCurrentDesign(DEFAULT_DESIGN);
     }
+    
+    const sampleBarcodeValue = useMemo(() => {
+        if (currentDesign.barcodeType === 'EAN13') return "123456789012";
+        if (currentDesign.barcodeType === 'UPC') return "12345678901";
+        return "SAMPLE12345";
+    }, [currentDesign.barcodeType]);
+
 
     if (loading) {
         return <div className="flex flex-1 justify-center items-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
@@ -216,7 +223,7 @@ const BarcodeDesignerPage = () => {
                             {currentDesign.showCompanyName && <p className="text-center font-bold" style={{fontSize: `${currentDesign.fontSize-2}px`}}>{currentDesign.companyName}</p>}
                             <p className="text-center font-semibold leading-tight my-0.5" style={{fontSize: `${currentDesign.fontSize-1}px`}}>{SAMPLE_ITEM.name}</p>
                             <Barcode 
-                                value={SAMPLE_ITEM.code} 
+                                value={sampleBarcodeValue} 
                                 width={1} 
                                 height={currentDesign.labelHeight / 2.5}
                                 fontSize={currentDesign.fontSize}
