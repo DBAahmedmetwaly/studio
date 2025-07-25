@@ -45,6 +45,7 @@ interface Design {
     labelWidth: number;
     labelHeight: number;
     barcodeType: string;
+    rotation: number;
     fontSizes: DesignFontSizes;
     positions: {
         companyName: DesignElementPositions;
@@ -78,6 +79,7 @@ const DEFAULT_DESIGN: Design = {
     labelWidth: 50,
     labelHeight: 25,
     barcodeType: 'CODE128',
+    rotation: 0,
     fontSizes: DEFAULT_FONTS,
     positions: DEFAULT_POSITIONS
 };
@@ -207,7 +209,7 @@ const BarcodeDesignerPage = () => {
             </PageHeader>
             <main className="flex flex-col h-[calc(100vh-120px)] p-4 md:p-6 gap-4">
                 <Card className="flex-none">
-                    <ScrollArea className="h-full max-h-80">
+                    <ScrollArea className="h-full max-h-[22rem]">
                     <CardContent className="p-4 grid grid-cols-1 md:grid-cols-3 gap-6">
                         {/* Column 1: Templates & Main Settings */}
                         <div className="space-y-4">
@@ -263,24 +265,35 @@ const BarcodeDesignerPage = () => {
                                 <div className="flex items-center justify-between"><Label className="text-xs">إظهار رسم الباركود</Label><Switch checked={currentDesign.showBarcode} onCheckedChange={v => handleSettingChange('showBarcode', v)} /></div>
                                 <div className="flex items-center justify-between"><Label className="text-xs">إظهار الكود (نص)</Label><Switch checked={currentDesign.showCode} onCheckedChange={v => handleSettingChange('showCode', v)} /></div>
                             </div>
+                            <Separator />
+                            <div className="space-y-2">
+                                <Label className="text-xs">تدوير الملصق: {currentDesign.rotation || 0}°</Label>
+                                <Slider defaultValue={[currentDesign.rotation || 0]} max={360} step={1} onValueChange={v => handleSettingChange('rotation', v[0])} />
+                            </div>
                         </div>
                         
                         {/* Column 3: Positions & Fonts */}
                         <div className="space-y-4">
-                            <div className='flex justify-between items-center'><Label className="font-semibold">موضع وحجم العناصر</Label><Button size="sm" variant="ghost" onClick={() => { resetPositions(); resetFontSizes(); }}><RotateCcw className="ml-2 h-3 w-3" />إعادة تعيين</Button></div>
+                            <div className='flex justify-between items-center'><Label className="font-semibold">موضع العناصر</Label><Button size="sm" variant="ghost" onClick={resetPositions}><RotateCcw className="ml-2 h-3 w-3" />إعادة تعيين</Button></div>
+                            <ScrollArea className="h-48">
                             {(Object.keys(currentDesign.positions || {}) as Array<keyof Design['positions']>).map(element => (
-                                <div key={element} className="space-y-2 border p-2 rounded-md">
+                                <div key={element} className="space-y-2 border p-2 rounded-md mb-2">
                                     <Label className="text-xs">{element}</Label>
                                     <div className='grid grid-cols-2 gap-2 text-xs'>
-                                        <div>فوق/تحت: {currentDesign.positions[element].y}%</div>
-                                        <div className="flex items-center gap-2">
-                                            <Label>خط:</Label>
-                                            <Input type="number" value={currentDesign.fontSizes[element as keyof DesignFontSizes]} onChange={e => handleFontSizeChange(element as keyof DesignFontSizes, Number(e.target.value))} className="h-6 w-12"/>
-                                        </div>
+                                        <div>فوق/تحت: {currentDesign.positions[element]?.y}%</div>
+                                        <div>يمين/يسار: {currentDesign.positions[element]?.x}%</div>
                                     </div>
-                                    <Slider defaultValue={[currentDesign.positions[element].y]} max={100} step={1} onValueChange={(v) => handlePositionChange(element, 'y', v[0])} />
-                                    <div className='text-xs'>يمين/يسار: {currentDesign.positions[element].x}%</div>
-                                    <Slider defaultValue={[currentDesign.positions[element].x]} max={100} step={1} onValueChange={(v) => handlePositionChange(element, 'x', v[0])} />
+                                    <Slider dir="rtl" defaultValue={[currentDesign.positions[element]?.y || 50]} max={100} step={1} onValueChange={(v) => handlePositionChange(element, 'y', v[0])} />
+                                    <Slider dir="rtl" defaultValue={[currentDesign.positions[element]?.x || 50]} max={100} step={1} onValueChange={(v) => handlePositionChange(element, 'x', v[0])} />
+                                </div>
+                            ))}
+                            </ScrollArea>
+                             <Separator />
+                             <div className='flex justify-between items-center'><Label className="font-semibold">أحجام الخطوط</Label><Button size="sm" variant="ghost" onClick={resetFontSizes}><RotateCcw className="ml-2 h-3 w-3" />إعادة تعيين</Button></div>
+                            {(Object.keys(currentDesign.fontSizes || {}) as Array<keyof DesignFontSizes>).map(element => (
+                                <div key={element} className="grid grid-cols-2 items-center gap-2">
+                                    <Label className="text-xs">{element}</Label>
+                                    <Input type="number" value={currentDesign.fontSizes?.[element] || 10} onChange={e => handleFontSizeChange(element, Number(e.target.value))} className="h-8"/>
                                 </div>
                             ))}
                         </div>
@@ -295,7 +308,7 @@ const BarcodeDesignerPage = () => {
                             width: `${currentDesign.labelWidth}mm`,
                             height: `${currentDesign.labelHeight}mm`,
                             fontFamily: 'sans-serif',
-                            transform: 'scale(3)',
+                            transform: `scale(2.5) rotate(${currentDesign.rotation || 0}deg)`,
                             transformOrigin: 'center'
                         }}
                     >
@@ -335,4 +348,3 @@ const BarcodeDesignerPage = () => {
 };
 
 export default BarcodeDesignerPage;
-
