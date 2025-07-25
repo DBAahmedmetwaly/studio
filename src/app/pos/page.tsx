@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
@@ -53,7 +54,12 @@ export default function PosPage() {
     const [activeGroupId, setActiveGroupId] = useState<string | 'all'>('all');
     const [searchTerm, setSearchTerm] = useState("");
     
-    const hasOpenSession = useMemo(() => posSessions.some((s: any) => !s.isClosed), [posSessions]);
+    const openWorkDay = useMemo(() => posSessions.find((s: any) => !s.isClosed), [posSessions]);
+    const hasOpenCashierSession = useMemo(() => {
+        if (!openWorkDay || !user) return false;
+        const cashierSession = openWorkDay.cashierSessions?.[user.id];
+        return cashierSession && !cashierSession.isClosed;
+    }, [openWorkDay, user]);
 
 
     // Collapse sidebar when component mounts
@@ -237,18 +243,18 @@ export default function PosPage() {
     }
     
     // Session check
-    if (!hasOpenSession) {
+    if (!openWorkDay || !hasOpenCashierSession) {
          return (
             <div className="flex h-screen w-full flex-col items-center justify-center bg-muted">
                 <Card className="w-full max-w-md">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-amber-600"><Ban /> يومية العمل مغلقة</CardTitle>
+                        <CardTitle className="flex items-center gap-2 text-amber-600"><Ban /> الوردية مغلقة</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <Alert>
-                            <AlertTitle>لا يوجد يوم عمل مفتوح</AlertTitle>
+                            <AlertTitle>{!openWorkDay ? "يوم العمل مغلق" : "لم يتم تسليم العهدة"}</AlertTitle>
                             <AlertDescription>
-                                لا يمكنك بدء عمليات البيع لأنه لا توجد يومية عمل مفتوحة. يرجى الطلب من مسؤول النظام فتح يوم عمل جديد.
+                                {!openWorkDay ? "لا يمكنك بدء عمليات البيع لأنه لا توجد يومية عمل مفتوحة. يرجى الطلب من مسؤول النظام فتح يوم عمل جديد." : "لم يتم تسليم عهدة بداية اليوم لك. يرجى الطلب من المسؤول تسليم العهدة لبدء ورديتك."}
                             </AlertDescription>
                         </Alert>
                     </CardContent>
