@@ -126,7 +126,7 @@ export default function PeriodClosingPage() {
                 closingDate: new Date(closingDate).toISOString(),
                 closedById: user?.id,
                 closedByName: user?.name,
-                balances: reviewData,
+                balances: reviewData.map(({name, code, ...rest}) => rest), // Store only itemId and balance
             });
             toast({ title: "تم الإقفال بنجاح!", description: `تم تجميد الأرصدة للمخزن المحدد حتى تاريخ ${closingDate}.` });
             setReviewData(null);
@@ -171,6 +171,11 @@ export default function PeriodClosingPage() {
                                     {warehouses.map((w: Warehouse) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
                                 </SelectContent>
                             </Select>
+                            {lastClosingDate && (
+                                <p className="text-xs text-muted-foreground pt-1">
+                                    آخر إقفال لهذا المخزن كان بتاريخ: {lastClosingDate.toLocaleDateString('ar-EG')}
+                                </p>
+                            )}
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="closing-date">تاريخ الإقفال</Label>
