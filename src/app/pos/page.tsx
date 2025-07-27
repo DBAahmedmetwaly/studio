@@ -16,7 +16,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import Image from 'next/image';
 import { usePosInvoiceCounter } from '@/hooks/use-pos-invoice-counter';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
+import { useSidebar } from '@/components/ui/sidebar';
 
 interface PosItem {
   id: string; // The database ID of the item
@@ -265,49 +265,10 @@ export default function PosPage() {
 
 
     return (
-        <div className="h-screen bg-background flex flex-col p-4 gap-4">
-             {/* Top Section - Catalog */}
-            <div className="flex-1 flex flex-col overflow-hidden">
-                 <div className="shrink-0 mb-3 flex items-center gap-2">
-                     <SidebarTrigger className="md:hidden"/>
-                    <form onSubmit={handleBarcodeSubmit} className="flex-1">
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                            <Input ref={barcodeInputRef} placeholder="امسح الباركود أو ابحث بالاسم..." className="h-12 text-lg pl-10" onChange={e => setSearchTerm(e.target.value)} />
-                        </div>
-                    </form>
-                </div>
-                 <Card className="flex-1 flex flex-col overflow-hidden">
-                     <CardHeader className="p-2 border-b shrink-0">
-                        <ScrollArea className="w-full whitespace-nowrap">
-                            <div className="flex gap-2 p-2">
-                                <Button size="lg" variant={activeGroupId === 'all' ? 'secondary' : 'ghost'} onClick={() => setActiveGroupId('all')} className="h-16 px-6 shrink-0">
-                                    <Grip className="ml-2 h-5 w-5" /> كل الأصناف
-                                </Button>
-                                {itemGroups.map((group: ItemGroup) => (
-                                    <Button key={group.id} size="lg" variant={activeGroupId === group.id ? 'secondary' : 'ghost'} onClick={() => setActiveGroupId(group.id!)} className="h-16 px-6 shrink-0">
-                                        <div className={`ml-2 h-5 w-5 rounded-full ${group.color}`} />
-                                        {group.name}
-                                    </Button>
-                                ))}
-                            </div>
-                        </ScrollArea>
-                     </CardHeader>
-                     <ScrollArea className="flex-1">
-                        <div className="p-3 grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-3">
-                            {itemsToShow.map((item: any) => (
-                                <button key={item.id} onClick={() => handleGridItemClick(item)} className="aspect-square flex flex-col items-center justify-center gap-2 rounded-lg bg-card text-card-foreground shadow-sm hover:bg-accent focus:ring-2 ring-primary transition-all p-1">
-                                    <Image src={item.image || `https://placehold.co/100x100.png`} data-ai-hint="product item" alt={item.name} width={100} height={100} className="h-full max-h-[60%] w-auto object-contain rounded-md" />
-                                    <p className="text-xs font-semibold text-center leading-tight px-1 flex-grow flex items-center">{item.name}</p>
-                                </button>
-                            ))}
-                        </div>
-                    </ScrollArea>
-                </Card>
-            </div>
-             {/* Bottom Section - Cart & Payment */}
-            <div className="shrink-0 h-2/5 flex gap-4 overflow-hidden">
-                <Card className="flex-[7] flex flex-col overflow-hidden">
+        <div className="h-screen bg-background flex flex-col lg:flex-row p-2 sm:p-4 gap-4">
+             {/* Left/Top Section - Cart & Payment */}
+            <div className="flex-none lg:w-1/3 flex flex-col gap-4">
+                <Card className="flex-1 flex flex-col overflow-hidden">
                     <CardHeader className="shrink-0">
                         <CardTitle className="flex items-center gap-2"><ShoppingCart/> سلة المبيعات</CardTitle>
                     </CardHeader>
@@ -347,9 +308,9 @@ export default function PosPage() {
                         فاتورة: <span className="font-mono">{currentInvoiceNumber}</span> | الكاشير: <span className="font-semibold">{user?.name}</span>
                     </div>
                 </Card>
-                {/* Payment */}
-                <Card className="flex-[5] flex flex-col justify-between overflow-hidden">
-                    <CardContent className="p-4 space-y-3 text-lg">
+                 {/* Payment */}
+                <Card className="shrink-0 flex flex-col justify-between overflow-hidden">
+                    <CardContent className="p-3 sm:p-4 space-y-3 text-lg">
                         <div className="flex justify-between items-center">
                             <span className="text-muted-foreground">الإجمالي الفرعي</span>
                             <span className="font-semibold">{subtotal.toFixed(2)} ج.م</span>
@@ -358,18 +319,18 @@ export default function PosPage() {
                             <Label htmlFor="discount" className="text-muted-foreground">الخصم</Label>
                             <Input id="discount" type="number" value={discount} onChange={e => setDiscount(Number(e.target.value))} className="max-w-[120px] text-left h-10 text-lg" />
                         </div>
-                        <div className="border-t pt-3 mt-3 flex justify-between items-center text-3xl font-bold text-primary">
+                        <div className="border-t pt-3 mt-3 flex justify-between items-center text-2xl sm:text-3xl font-bold text-primary">
                             <span>المبلغ المطلوب</span>
                             <span>{total.toFixed(2)} ج.م</span>
                         </div>
-                        <div className="pt-3 grid grid-cols-2 gap-4">
+                        <div className="pt-3 grid grid-cols-2 gap-2 sm:gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="paidAmount" className="text-xl">المدفوع</Label>
-                                <Input id="paidAmount" type="number" value={paidAmount} onChange={e => setPaidAmount(Number(e.target.value))} className="h-16 text-3xl font-mono text-center" />
+                                <Label htmlFor="paidAmount" className="text-lg sm:text-xl">المدفوع</Label>
+                                <Input id="paidAmount" type="number" value={paidAmount} onChange={e => setPaidAmount(Number(e.target.value))} className="h-14 sm:h-16 text-2xl sm:text-3xl font-mono text-center" />
                             </div>
                             <div className="space-y-2">
-                                <Label className="text-xl text-green-600">المتبقي</Label>
-                                <div className="h-16 text-3xl font-mono text-center flex items-center justify-center bg-muted rounded-md text-green-600">
+                                <Label className="text-lg sm:text-xl text-green-600">المتبقي</Label>
+                                <div className="h-14 sm:h-16 text-2xl sm:text-3xl font-mono text-center flex items-center justify-center bg-muted rounded-md text-green-600">
                                     {change.toFixed(2)}
                                 </div>
                             </div>
@@ -390,6 +351,45 @@ export default function PosPage() {
                             إنهاء وطباعة
                         </Button>
                     </CardFooter>
+                </Card>
+            </div>
+             {/* Right/Bottom Section - Catalog */}
+            <div className="flex-1 flex flex-col overflow-hidden">
+                 <div className="shrink-0 mb-3 flex items-center gap-2">
+                     <SidebarTrigger className="lg:hidden"/>
+                    <form onSubmit={handleBarcodeSubmit} className="flex-1">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                            <Input ref={barcodeInputRef} placeholder="امسح الباركود أو ابحث بالاسم..." className="h-12 text-lg pl-10" onChange={e => setSearchTerm(e.target.value)} />
+                        </div>
+                    </form>
+                </div>
+                 <Card className="flex-1 flex flex-col overflow-hidden">
+                     <CardHeader className="p-2 border-b shrink-0">
+                        <ScrollArea className="w-full whitespace-nowrap">
+                            <div className="flex gap-2 p-2">
+                                <Button size="lg" variant={activeGroupId === 'all' ? 'secondary' : 'ghost'} onClick={() => setActiveGroupId('all')} className="h-16 px-6 shrink-0">
+                                    <Grip className="ml-2 h-5 w-5" /> كل الأصناف
+                                </Button>
+                                {itemGroups.map((group: ItemGroup) => (
+                                    <Button key={group.id} size="lg" variant={activeGroupId === group.id ? 'secondary' : 'ghost'} onClick={() => setActiveGroupId(group.id!)} className="h-16 px-6 shrink-0">
+                                        <div className={`ml-2 h-5 w-5 rounded-full ${group.color}`} />
+                                        {group.name}
+                                    </Button>
+                                ))}
+                            </div>
+                        </ScrollArea>
+                     </CardHeader>
+                     <ScrollArea className="flex-1">
+                        <div className="p-3 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-3">
+                            {itemsToShow.map((item: any) => (
+                                <button key={item.id} onClick={() => handleGridItemClick(item)} className="aspect-square flex flex-col items-center justify-center gap-2 rounded-lg bg-card text-card-foreground shadow-sm hover:bg-accent focus:ring-2 ring-primary transition-all p-1">
+                                    <Image src={item.image || `https://placehold.co/100x100.png`} data-ai-hint="product item" alt={item.name} width={100} height={100} className="h-full max-h-[60%] w-auto object-contain rounded-md" />
+                                    <p className="text-xs font-semibold text-center leading-tight px-1 flex-grow flex items-center">{item.name}</p>
+                                </button>
+                            ))}
+                        </div>
+                    </ScrollArea>
                 </Card>
             </div>
         </div>

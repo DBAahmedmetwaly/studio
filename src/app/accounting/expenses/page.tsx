@@ -181,8 +181,8 @@ export default function ExpensesPage() {
     <>
       <PageHeader title="إدارة المصروفات" />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
-        <div className="grid gap-6 lg:grid-cols-5">
-            <Card className="lg:col-span-2">
+        <div className="grid gap-6 md:grid-cols-5">
+            <Card className="md:col-span-2">
             <CardHeader>
                 <CardTitle>إضافة مصروف جديد</CardTitle>
                 <CardDescription>
@@ -194,7 +194,7 @@ export default function ExpensesPage() {
             </CardContent>
             </Card>
             
-            <Card className="lg:col-span-3">
+            <Card className="md:col-span-3">
                 <CardHeader>
                     <CardTitle>سجل المصروفات</CardTitle>
                 </CardHeader>

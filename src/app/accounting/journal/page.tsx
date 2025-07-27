@@ -552,18 +552,18 @@ export default function JournalPage() {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead className="w-[120px]">التاريخ</TableHead>
-                                        <TableHead className="w-[120px]">رقم القيد</TableHead>
+                                        <TableHead className="w-[120px] hidden sm:table-cell">رقم القيد</TableHead>
                                         <TableHead>البيان</TableHead>
-                                        <TableHead>الحساب</TableHead>
-                                        <TableHead className="text-center w-[150px]">مدين</TableHead>
-                                        <TableHead className="text-center w-[150px]">دائن</TableHead>
+                                        <TableHead className="hidden sm:table-cell">الحساب</TableHead>
+                                        <TableHead className="text-center w-[120px]">مدين</TableHead>
+                                        <TableHead className="text-center w-[120px]">دائن</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {filteredEntries.map((entry) => (
                                         <TableRow key={entry.id}>
                                             <TableCell>{new Date(entry.date).toLocaleDateString('ar-EG')}</TableCell>
-                                            <TableCell className="font-mono">
+                                            <TableCell className="font-mono hidden sm:table-cell">
                                                 <Tooltip>
                                                     <TooltipTrigger asChild>
                                                         <span>{entry.number}</span>
@@ -574,7 +574,7 @@ export default function JournalPage() {
                                                 </Tooltip>
                                             </TableCell>
                                             <TableCell>{entry.description}</TableCell>
-                                            <TableCell>{entry.account}</TableCell>
+                                            <TableCell className="hidden sm:table-cell">{entry.account}</TableCell>
                                             <TableCell className="text-center font-mono">{entry.debit > 0 ? entry.debit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</TableCell>
                                             <TableCell className="text-center font-mono">{entry.credit > 0 ? entry.credit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</TableCell>
                                         </TableRow>
