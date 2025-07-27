@@ -18,6 +18,21 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  webpack: (config, { isServer }) => {
+    // Add a rule to handle .node files
+    config.module.rules.push({
+      test: /\.node$/,
+      use: 'node-loader',
+    });
+
+    // Fix for require.extensions error with certain packages like handlebars
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      'handlebars': 'handlebars/dist/cjs/handlebars',
+    };
+
+    return config;
+  },
 };
 
 export default nextConfig;
