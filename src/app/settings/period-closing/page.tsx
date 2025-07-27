@@ -54,6 +54,7 @@ export default function PeriodClosingPage() {
     const [warehouseId, setWarehouseId] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [reviewData, setReviewData] = useState<any[] | null>(null);
+    const [selectedClosingDetails, setSelectedClosingDetails] = useState<InventoryClosing | null>(null);
     const { user } = useAuth();
     
     const { items, warehouses, salesInvoices, purchaseInvoices, stockInRecords, stockOutRecords, stockTransferRecords, stockAdjustmentRecords, salesReturns, purchaseReturns, stockIssuesToReps, stockReturnsFromReps, inventoryClosings, dbAction, loading: dataLoading } = useData();
@@ -116,7 +117,7 @@ export default function PeriodClosingPage() {
 
     const handlePerformClosing = async () => {
         if (!closingDate || !warehouseId || !reviewData) {
-            toast({ variant: 'destructive', title: "خطأ", description: "البيانات غير جاهزة للإقفال." });
+            toast({ variant: "destructive", title: "خطأ", description: "البيانات غير جاهزة للإقفال." });
             return;
         }
         setIsLoading(true);
@@ -143,6 +144,7 @@ export default function PeriodClosingPage() {
         try {
             await dbAction('inventoryClosings', 'remove', {id: closingId});
             toast({title: "تم فك الإقفال بنجاح"});
+            setSelectedClosingDetails(null); // Close details view after deletion
         } catch (error) {
              toast({ variant: 'destructive', title: "خطأ", description: "فشلت عملية فك الإقفال." });
         } finally {
@@ -165,7 +167,7 @@ export default function PeriodClosingPage() {
                     <CardContent className="grid md:grid-cols-3 gap-4">
                        <div className="space-y-2">
                             <Label htmlFor="warehouse">المخزن</Label>
-                            <Select value={warehouseId} onValueChange={v => {setWarehouseId(v); setReviewData(null);}}>
+                            <Select value={warehouseId} onValueChange={v => {setWarehouseId(v); setReviewData(null); setSelectedClosingDetails(null);}}>
                                 <SelectTrigger><SelectValue placeholder="اختر مخزنًا" /></SelectTrigger>
                                 <SelectContent>
                                     {warehouses.map((w: Warehouse) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
@@ -269,15 +271,15 @@ export default function PeriodClosingPage() {
                                 </TableHeader>
                                 <TableBody>
                                     {closingsForSelectedWarehouse.map((closing: InventoryClosing, index) => (
-                                        <TableRow key={closing.id}>
+                                        <TableRow key={closing.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedClosingDetails(closing)}>
                                             <TableCell>{new Date(closing.closingDate).toLocaleDateString('ar-EG')}</TableCell>
                                             <TableCell>{closing.closedByName}</TableCell>
                                             <TableCell className="text-center">{closing.balances.length}</TableCell>
                                             <TableCell className="text-center">
                                                 {index === 0 && ( // Only allow deleting the most recent closing
-                                                    <AlertDialog>
+                                                    <AlertDialog onOpenChange={(e) => e.stopPropagation()}>
                                                         <AlertDialogTrigger asChild>
-                                                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={(e) => e.stopPropagation()}>
                                                                 <Trash2 className="h-4 w-4"/>
                                                             </Button>
                                                         </AlertDialogTrigger>
@@ -300,6 +302,37 @@ export default function PeriodClosingPage() {
                                     ))}
                                 </TableBody>
                             </Table>
+                        </CardContent>
+                    </Card>
+                )}
+
+                 {selectedClosingDetails && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>تفاصيل الإقفال بتاريخ: {new Date(selectedClosingDetails.closingDate).toLocaleDateString('ar-EG')}</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                             <div className="w-full overflow-auto border rounded-lg max-h-96">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>اسم الصنف</TableHead>
+                                            <TableHead className="text-center">الرصيد المقفل</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {selectedClosingDetails.balances.map(item => {
+                                            const itemDetails = items.find((i:Item) => i.id === item.itemId);
+                                            return (
+                                                <TableRow key={item.itemId}>
+                                                    <TableCell>{itemDetails?.name || 'صنف محذوف'}</TableCell>
+                                                    <TableCell className="text-center font-bold">{item.balance}</TableCell>
+                                                </TableRow>
+                                            )
+                                        })}
+                                    </TableBody>
+                                </Table>
+                             </div>
                         </CardContent>
                     </Card>
                 )}
