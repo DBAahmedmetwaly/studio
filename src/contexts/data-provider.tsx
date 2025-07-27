@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { createContext, useContext, ReactNode } from 'react';
@@ -25,6 +26,7 @@ interface DataContextType {
     stockAdjustmentRecords: any[];
     stockIssuesToReps: any[];
     stockReturnsFromReps: any[];
+    inventoryClosings: any[];
 
     // Sales & Purchases
     salesInvoices: any[];
@@ -79,6 +81,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const { data: stockAdjustmentRecords, loading: l_stockAdjustmentRecords, add: add_stockAdjustmentRecord } = useFirebase('stockAdjustmentRecords');
     const { data: stockIssuesToReps, loading: l_stockIssuesToReps, add: add_stockIssueToRep } = useFirebase('stockIssuesToReps');
     const { data: stockReturnsFromReps, loading: l_stockReturnsFromReps, add: add_stockReturnFromRep } = useFirebase('stockReturnsFromReps');
+    const { data: inventoryClosings, loading: l_inventoryClosings, add: add_inventoryClosing } = useFirebase('inventoryClosings');
+
 
     // Sales & Purchases
     const { data: salesInvoices, loading: l_salesInvoices, add: add_salesInvoice, update: update_salesInvoice, remove: remove_salesInvoice } = useFirebase('salesInvoices');
@@ -107,7 +111,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const { getNextId } = useFirebase('counters');
 
 
-    const loading = l_items || l_customers || l_suppliers || l_warehouses || l_cashAccounts || l_partners || l_users || l_itemGroups || l_roles || l_settings || l_stockInRecords || l_stockOutRecords || l_stockTransferRecords || l_stockAdjustmentRecords || l_stockIssuesToReps || l_stockReturnsFromReps || l_salesInvoices || l_salesReturns || l_purchaseInvoices || l_purchaseReturns || l_expenses || l_exceptionalIncomes || l_customerPayments || l_supplierPayments || l_treasuryTransactions || l_employees || l_employeeAdvances || l_employeeAdjustments || l_repRemittances || l_posSales || l_posSessions || l_profitDistributions || l_posAuditLogs || l_barcodeDesigns;
+    const loading = l_items || l_customers || l_suppliers || l_warehouses || l_cashAccounts || l_partners || l_users || l_itemGroups || l_roles || l_settings || l_stockInRecords || l_stockOutRecords || l_stockTransferRecords || l_stockAdjustmentRecords || l_stockIssuesToReps || l_stockReturnsFromReps || l_salesInvoices || l_salesReturns || l_purchaseInvoices || l_purchaseReturns || l_expenses || l_exceptionalIncomes || l_customerPayments || l_supplierPayments || l_treasuryTransactions || l_employees || l_employeeAdvances || l_employeeAdjustments || l_repRemittances || l_posSales || l_posSessions || l_profitDistributions || l_posAuditLogs || l_barcodeDesigns || l_inventoryClosings;
     
     // A single function to dispatch actions to the correct hook
     const dbAction = async (path: string, action: 'add' | 'update' | 'remove', payload?: any) => {
@@ -134,6 +138,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             'stockAdjustmentRecords': { add: add_stockAdjustmentRecord },
             'stockIssuesToReps': { add: add_stockIssueToRep },
             'stockReturnsFromReps': { add: add_stockReturnFromRep },
+            'inventoryClosings': { add: add_inventoryClosing },
             'expenses': { add: add_expense, remove: remove_expense },
             'exceptionalIncomes': { add: add_exceptionalIncome, remove: remove_exceptionalIncome },
             'customerPayments': { add: add_customerPayment, remove: remove_customerPayment },
@@ -159,7 +164,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const value = {
         items, customers, suppliers, warehouses, cashAccounts, partners, users, itemGroups, barcodeDesigns, roles, settings,
-        stockInRecords, stockOutRecords, stockTransferRecords, stockAdjustmentRecords, stockIssuesToReps, stockReturnsFromReps,
+        stockInRecords, stockOutRecords, stockTransferRecords, stockAdjustmentRecords, stockIssuesToReps, stockReturnsFromReps, inventoryClosings,
         salesInvoices, salesReturns, purchaseInvoices, purchaseReturns, posSales, posSessions, posAuditLogs,
         expenses, exceptionalIncomes, customerPayments, supplierPayments, treasuryTransactions, profitDistributions,
         employees, employeeAdvances, employeeAdjustments, repRemittances,
