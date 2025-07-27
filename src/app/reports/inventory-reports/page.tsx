@@ -25,16 +25,16 @@ import { Badge } from "@/components/ui/badge";
 // Data Interfaces
 interface Item { id: string; name: string; unit: string; price: number; reorderPoint?: number; code?: string; cost?: number; }
 interface Warehouse { id: string; name: string; }
-interface SaleInvoice { id: string; warehouseId: string; items: { id: string; qty: number; }[]; status?: 'approved' | 'pending'; date: string;}
-interface PurchaseInvoice { id: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
-interface StockInRecord { id: string; warehouseId: string; reason: string; items: { id: string; qty: number; }[]; date: string; }
-interface StockOutRecord { id: string; sourceId: string; items: { id: string; qty: number; }[]; date: string; }
-interface StockTransferRecord { id: string; fromSourceId: string; toSourceId: string; items: { id: string; qty: number; }[]; date: string; }
-interface StockAdjustmentRecord { id: string; warehouseId: string; items: { itemId: string; difference: number; }[]; date: string; }
-interface SalesReturn { id: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
-interface PurchaseReturn { id: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
-interface IssueToRep { id: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
-interface ReturnFromRep { id: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
+interface SaleInvoice { id: string; invoiceNumber: string; warehouseId: string; items: { id: string; qty: number; }[]; status?: 'approved' | 'pending'; date: string;}
+interface PurchaseInvoice { id: string; invoiceNumber: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
+interface StockInRecord { id: string; receiptNumber: string; warehouseId: string; reason: string; items: { id: string; qty: number; }[]; date: string; }
+interface StockOutRecord { id: string; receiptNumber: string; sourceId: string; items: { id: string; qty: number; }[]; date: string; }
+interface StockTransferRecord { id: string; receiptNumber: string; fromSourceId: string; toSourceId: string; items: { id: string; qty: number; }[]; date: string; }
+interface StockAdjustmentRecord { id: string; receiptNumber: string; warehouseId: string; items: { itemId: string; difference: number; }[]; date: string; }
+interface SalesReturn { id: string; receiptNumber: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
+interface PurchaseReturn { id: string; receiptNumber: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
+interface IssueToRep { id: string; receiptNumber: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
+interface ReturnFromRep { id: string; receiptNumber: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
 
 
 const ReportFilters = ({ onGenerate, hideItemFilter = false }: { onGenerate: (filters: any) => void, hideItemFilter?: boolean }) => {
@@ -118,7 +118,7 @@ const ReportContainer = ({ title, description, children, onPrint }: { title: str
 )
 
 const StockStatusReport = ({ filters, data }: any) => {
-    const { items: allItems, warehouses, sales, purchases, stockIns, stockOuts, transfers, adjustments, salesReturns, purchaseReturns, issuesToReps, returnsFromReps } = data;
+    const { items: allItems, warehouses, salesInvoices, purchaseInvoices, stockInRecords, stockOutRecords, stockTransferRecords, stockAdjustmentRecords, salesReturns, purchaseReturns, stockIssuesToReps, stockReturnsFromReps } = data;
     
     const stockData = useMemo(() => {
         let targetWarehouses = filters.warehouseId === 'all'
@@ -134,19 +134,19 @@ const StockStatusReport = ({ filters, data }: any) => {
         return targetWarehouses.flatMap((warehouse:any) => 
             targetItems.map((item:any) => {
                 let stock = 0;
-                purchases.filter((p:any) => p.warehouseId === warehouse.id && new Date(p.date) <= new Date(filters.toDate || Date.now())).forEach((p:any) => p.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
-                stockIns.filter((si:any) => si.warehouseId === warehouse.id && new Date(si.date) <= new Date(filters.toDate || Date.now())).forEach((si:any) => si.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
-                transfers.filter((t:any) => t.toSourceId === warehouse.id && new Date(t.date) <= new Date(filters.toDate || Date.now())).forEach((t:any) => t.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
-                adjustments.filter((adj:any) => adj.warehouseId === warehouse.id && new Date(adj.date) <= new Date(filters.toDate || Date.now())).forEach((adj:any) => adj.items.filter((i:any) => i.itemId === item.id && i.difference > 0).forEach((i:any) => stock += i.difference));
+                purchaseInvoices.filter((p:any) => p.warehouseId === warehouse.id && new Date(p.date) <= new Date(filters.toDate || Date.now())).forEach((p:any) => p.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
+                stockInRecords.filter((si:any) => si.warehouseId === warehouse.id && new Date(si.date) <= new Date(filters.toDate || Date.now())).forEach((si:any) => si.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
+                stockTransferRecords.filter((t:any) => t.toSourceId === warehouse.id && new Date(t.date) <= new Date(filters.toDate || Date.now())).forEach((t:any) => t.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
+                stockAdjustmentRecords.filter((adj:any) => adj.warehouseId === warehouse.id && new Date(adj.date) <= new Date(filters.toDate || Date.now())).forEach((adj:any) => adj.items.filter((i:any) => i.itemId === item.id && i.difference > 0).forEach((i:any) => stock += i.difference));
                 salesReturns.filter((sr:any) => sr.warehouseId === warehouse.id && new Date(sr.date) <= new Date(filters.toDate || Date.now())).forEach((sr:any) => sr.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
-                returnsFromReps.filter((rfr:any) => rfr.warehouseId === warehouse.id && new Date(rfr.date) <= new Date(filters.toDate || Date.now())).forEach((rfr:any) => rfr.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
+                stockReturnsFromReps.filter((rfr:any) => rfr.warehouseId === warehouse.id && new Date(rfr.date) <= new Date(filters.toDate || Date.now())).forEach((rfr:any) => rfr.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
 
-                sales.filter((s:any) => s.warehouseId === warehouse.id && s.status === 'approved' && new Date(s.date) <= new Date(filters.toDate || Date.now())).forEach((s:any) => s.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
-                stockOuts.filter((so:any) => so.sourceId === warehouse.id && new Date(so.date) <= new Date(filters.toDate || Date.now())).forEach((so:any) => so.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
-                transfers.filter((t:any) => t.fromSourceId === warehouse.id && new Date(t.date) <= new Date(filters.toDate || Date.now())).forEach((t:any) => t.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
-                adjustments.filter((adj:any) => adj.warehouseId === warehouse.id && new Date(adj.date) <= new Date(filters.toDate || Date.now())).forEach((adj:any) => adj.items.filter((i:any) => i.itemId === item.id && i.difference < 0).forEach((i:any) => stock += i.difference));
+                salesInvoices.filter((s:any) => s.warehouseId === warehouse.id && s.status === 'approved' && new Date(s.date) <= new Date(filters.toDate || Date.now())).forEach((s:any) => s.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
+                stockOutRecords.filter((so:any) => so.sourceId === warehouse.id && new Date(so.date) <= new Date(filters.toDate || Date.now())).forEach((so:any) => so.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
+                stockTransferRecords.filter((t:any) => t.fromSourceId === warehouse.id && new Date(t.date) <= new Date(filters.toDate || Date.now())).forEach((t:any) => t.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
+                stockAdjustmentRecords.filter((adj:any) => adj.warehouseId === warehouse.id && new Date(adj.date) <= new Date(filters.toDate || Date.now())).forEach((adj:any) => adj.items.filter((i:any) => i.itemId === item.id && i.difference < 0).forEach((i:any) => stock += i.difference));
                 purchaseReturns.filter((pr:any) => pr.warehouseId === warehouse.id && new Date(pr.date) <= new Date(filters.toDate || Date.now())).forEach((pr:any) => pr.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
-                issuesToReps.filter((itr:any) => itr.warehouseId === warehouse.id && new Date(itr.date) <= new Date(filters.toDate || Date.now())).forEach((itr:any) => itr.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
+                stockIssuesToReps.filter((itr:any) => itr.warehouseId === warehouse.id && new Date(itr.date) <= new Date(filters.toDate || Date.now())).forEach((itr:any) => itr.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
 
                 return { id: `${warehouse.id}-${item.id}`, warehouseName: warehouse.name, itemName: item.name, code: item.code, currentStock: stock, reorderPoint: item.reorderPoint || 0 };
             })
@@ -175,7 +175,7 @@ const StockStatusReport = ({ filters, data }: any) => {
 }
 
 const ItemLedgerReport = ({ filters, data }: any) => {
-    const { items: allItems, warehouses, sales, purchases, stockIns, stockOuts, transfers, adjustments, salesReturns, purchaseReturns, issuesToReps, returnsFromReps } = data;
+    const { items: allItems, warehouses, salesInvoices, purchaseInvoices, stockInRecords, stockOutRecords, stockTransferRecords, stockAdjustmentRecords, salesReturns, purchaseReturns, stockIssuesToReps, stockReturnsFromReps } = data;
     const { fromDate, toDate, warehouseId, itemId } = filters;
 
     const ledgerData = useMemo(() => {
@@ -188,37 +188,37 @@ const ItemLedgerReport = ({ filters, data }: any) => {
         // Calculate Opening Balance
         allTargetWarehouses.forEach(whId => {
             // Additions
-            purchases.filter((t:any) => t.warehouseId === whId && new Date(t.date) < new Date(fromDate)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => openingBalance += i.qty));
-            stockIns.filter((t:any) => t.warehouseId === whId && new Date(t.date) < new Date(fromDate)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => openingBalance += i.qty));
-            transfers.filter((t:any) => t.toSourceId === whId && new Date(t.date) < new Date(fromDate)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => openingBalance += i.qty));
+            purchaseInvoices.filter((t:any) => t.warehouseId === whId && new Date(t.date) < new Date(fromDate)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => openingBalance += i.qty));
+            stockInRecords.filter((t:any) => t.warehouseId === whId && new Date(t.date) < new Date(fromDate)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => openingBalance += i.qty));
+            stockTransferRecords.filter((t:any) => t.toSourceId === whId && new Date(t.date) < new Date(fromDate)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => openingBalance += i.qty));
             salesReturns.filter((t:any) => t.warehouseId === whId && new Date(t.date) < new Date(fromDate)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => openingBalance += i.qty));
-            returnsFromReps.filter((t:any) => t.warehouseId === whId && new Date(t.date) < new Date(fromDate)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => openingBalance += i.qty));
-            adjustments.filter((t:any) => t.warehouseId === whId && new Date(t.date) < new Date(fromDate)).forEach((t:any) => t.items.filter((i:any)=>i.itemId === itemId).forEach((i:any) => openingBalance += i.difference > 0 ? i.difference : 0));
+            stockReturnsFromReps.filter((t:any) => t.warehouseId === whId && new Date(t.date) < new Date(fromDate)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => openingBalance += i.qty));
+            stockAdjustmentRecords.filter((t:any) => t.warehouseId === whId && new Date(t.date) < new Date(fromDate)).forEach((t:any) => t.items.filter((i:any)=>i.itemId === itemId).forEach((i:any) => openingBalance += i.difference > 0 ? i.difference : 0));
             // Subtractions
-            sales.filter((t:any) => t.warehouseId === whId && new Date(t.date) < new Date(fromDate) && t.status==='approved').forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => openingBalance -= i.qty));
-            stockOuts.filter((t:any) => t.sourceId === whId && new Date(t.date) < new Date(fromDate)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => openingBalance -= i.qty));
-            transfers.filter((t:any) => t.fromSourceId === whId && new Date(t.date) < new Date(fromDate)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => openingBalance -= i.qty));
+            salesInvoices.filter((t:any) => t.warehouseId === whId && new Date(t.date) < new Date(fromDate) && t.status==='approved').forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => openingBalance -= i.qty));
+            stockOutRecords.filter((t:any) => t.sourceId === whId && new Date(t.date) < new Date(fromDate)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => openingBalance -= i.qty));
+            stockTransferRecords.filter((t:any) => t.fromSourceId === whId && new Date(t.date) < new Date(fromDate)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => openingBalance -= i.qty));
             purchaseReturns.filter((t:any) => t.warehouseId === whId && new Date(t.date) < new Date(fromDate)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => openingBalance -= i.qty));
-            issuesToReps.filter((t:any) => t.warehouseId === whId && new Date(t.date) < new Date(fromDate)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => openingBalance -= i.qty));
-            adjustments.filter((t:any) => t.warehouseId === whId && new Date(t.date) < new Date(fromDate)).forEach((t:any) => t.items.filter((i:any)=>i.itemId === itemId).forEach((i:any) => openingBalance += i.difference < 0 ? i.difference : 0));
+            stockIssuesToReps.filter((t:any) => t.warehouseId === whId && new Date(t.date) < new Date(fromDate)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => openingBalance -= i.qty));
+            stockAdjustmentRecords.filter((t:any) => t.warehouseId === whId && new Date(t.date) < new Date(fromDate)).forEach((t:any) => t.items.filter((i:any)=>i.itemId === itemId).forEach((i:any) => openingBalance += i.difference < 0 ? i.difference : 0));
         });
 
         transactions.push({ date: fromDate, description: "رصيد افتتاحي", incoming: 0, outgoing: 0, balance: openingBalance });
 
         const withinPeriodTransactions = [
-            ...purchases.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'in', qty: i.qty, warehouseId: t.warehouseId, source: "فاتورة شراء"}))),
-            ...stockIns.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'in', qty: i.qty, warehouseId: t.warehouseId, source: "إذن استلام"}))),
-            ...salesReturns.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'in', qty: i.qty, warehouseId: t.warehouseId, source: "مرتجع بيع"}))),
-            ...returnsFromReps.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'in', qty: i.qty, warehouseId: t.warehouseId, source: "مرتجع مندوب"}))),
-            ...transfers.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'in', qty: i.qty, warehouseId: t.toSourceId, source: "تحويل مخزني"}))),
-            ...adjustments.flatMap((t:any) => t.items.filter((i:any)=>i.itemId===itemId && i.difference > 0).map((i:any) => ({...t, type: 'in', qty: i.difference, warehouseId: t.warehouseId, source: "تسوية مخزون"}))),
+            ...purchaseInvoices.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'in', qty: i.qty, warehouseId: t.warehouseId, source: `فاتورة شراء #${t.invoiceNumber}`}))),
+            ...stockInRecords.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'in', qty: i.qty, warehouseId: t.warehouseId, source: `إذن استلام #${t.receiptNumber}`}))),
+            ...salesReturns.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'in', qty: i.qty, warehouseId: t.warehouseId, source: `مرتجع بيع #${t.receiptNumber}`}))),
+            ...stockReturnsFromReps.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'in', qty: i.qty, warehouseId: t.warehouseId, source: `مرتجع مندوب #${t.receiptNumber}`}))),
+            ...stockTransferRecords.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'in', qty: i.qty, warehouseId: t.toSourceId, source: `تحويل مخزني #${t.receiptNumber}`}))),
+            ...stockAdjustmentRecords.flatMap((t:any) => t.items.filter((i:any)=>i.itemId===itemId && i.difference > 0).map((i:any) => ({...t, type: 'in', qty: i.difference, warehouseId: t.warehouseId, source: `تسوية مخزون #${t.receiptNumber}`}))),
 
-            ...sales.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId && t.status==='approved').map((i:any) => ({...t, type: 'out', qty: i.qty, warehouseId: t.warehouseId, source: "فاتورة بيع"}))),
-            ...stockOuts.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'out', qty: i.qty, warehouseId: t.sourceId, source: "إذن صرف"}))),
-            ...purchaseReturns.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'out', qty: i.qty, warehouseId: t.warehouseId, source: "مرتجع شراء"}))),
-            ...issuesToReps.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'out', qty: i.qty, warehouseId: t.warehouseId, source: "صرف للمندوب"}))),
-            ...transfers.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'out', qty: i.qty, warehouseId: t.fromSourceId, source: "تحويل مخزني"}))),
-            ...adjustments.flatMap((t:any) => t.items.filter((i:any)=>i.itemId===itemId && i.difference < 0).map((i:any) => ({...t, type: 'out', qty: Math.abs(i.difference), warehouseId: t.warehouseId, source: "تسوية مخزون"}))),
+            ...salesInvoices.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId && t.status==='approved').map((i:any) => ({...t, type: 'out', qty: i.qty, warehouseId: t.warehouseId, source: `فاتورة بيع #${t.invoiceNumber}`}))),
+            ...stockOutRecords.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'out', qty: i.qty, warehouseId: t.sourceId, source: `إذن صرف #${t.receiptNumber}`}))),
+            ...purchaseReturns.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'out', qty: i.qty, warehouseId: t.warehouseId, source: `مرتجع شراء #${t.receiptNumber}`}))),
+            ...stockIssuesToReps.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'out', qty: i.qty, warehouseId: t.warehouseId, source: `صرف للمندوب #${t.receiptNumber}`}))),
+            ...stockTransferRecords.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'out', qty: i.qty, warehouseId: t.fromSourceId, source: `تحويل مخزني #${t.receiptNumber}`}))),
+            ...stockAdjustmentRecords.flatMap((t:any) => t.items.filter((i:any)=>i.itemId===itemId && i.difference < 0).map((i:any) => ({...t, type: 'out', qty: Math.abs(i.difference), warehouseId: t.warehouseId, source: `تسوية مخزون #${t.receiptNumber}`}))),
         ]
         .filter((t:any) => {
             const tDate = new Date(t.date);
@@ -266,7 +266,7 @@ const ItemLedgerReport = ({ filters, data }: any) => {
 };
 
 const ReorderListReport = ({ filters, data }: any) => {
-    const { items: allItems, warehouses, sales, purchases, stockIns, stockOuts, transfers, adjustments, salesReturns, purchaseReturns, issuesToReps, returnsFromReps } = data;
+    const { items: allItems, warehouses, salesInvoices, purchaseInvoices, stockInRecords, stockOutRecords, stockTransferRecords, stockAdjustmentRecords, salesReturns, purchaseReturns, stockIssuesToReps, stockReturnsFromReps } = data;
 
     const stockData = useMemo(() => {
         return allItems
@@ -276,8 +276,8 @@ const ReorderListReport = ({ filters, data }: any) => {
                 let targetWarehouses = filters.warehouseId === 'all' ? warehouses : warehouses.filter((w: any) => w.id === filters.warehouseId);
                 
                 targetWarehouses.forEach((wh: any) => {
-                    purchases.filter((p:any) => p.warehouseId === wh.id).forEach((p:any) => p.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
-                    sales.filter((s:any) => s.warehouseId === wh.id && s.status === 'approved').forEach((s:any) => s.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
+                    purchaseInvoices.filter((p:any) => p.warehouseId === wh.id).forEach((p:any) => p.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
+                    salesInvoices.filter((s:any) => s.warehouseId === wh.id && s.status === 'approved').forEach((s:any) => s.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
                     // Add other movements if needed...
                 });
 
