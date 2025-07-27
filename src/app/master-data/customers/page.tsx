@@ -112,13 +112,13 @@ export default function CustomersPage() {
   const customersWithBalance = useMemo(() => {
     return customers.map((customer: Customer) => {
         const customerSales = salesInvoices.filter((s: SaleInvoice) => s.customerId === customer.id && s.status === 'approved');
-        const customerPayments = customerPayments.filter((p: CustomerPayment) => p.customerId === customer.id);
-        const customerReturns = salesReturns.filter((r: SalesReturn) => r.customerId === customer.id);
+        const filteredPayments = customerPayments.filter((p: CustomerPayment) => p.customerId === customer.id);
+        const filteredReturns = salesReturns.filter((r: SalesReturn) => r.customerId === customer.id);
 
         const totalSales = customerSales.reduce((acc: number, s: SaleInvoice) => acc + s.total, 0);
         const totalPaidOnInvoice = customerSales.reduce((acc: number, s: SaleInvoice) => acc + (s.paidAmount || 0), 0);
-        const totalSeparatePayments = customerPayments.reduce((acc: number, p: CustomerPayment) => acc + p.amount, 0);
-        const totalReturns = customerReturns.reduce((acc: number, r: SalesReturn) => acc + r.total, 0);
+        const totalSeparatePayments = filteredPayments.reduce((acc: number, p: CustomerPayment) => acc + p.amount, 0);
+        const totalReturns = filteredReturns.reduce((acc: number, r: SalesReturn) => acc + r.total, 0);
 
         const currentBalance = (customer.openingBalance || 0) + totalSales - totalPaidOnInvoice - totalSeparatePayments - totalReturns;
         return { ...customer, currentBalance };

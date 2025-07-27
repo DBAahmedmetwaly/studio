@@ -96,13 +96,13 @@ export default function SuppliersPage() {
   const suppliersWithBalance = useMemo(() => {
     return suppliers.map((supplier: Supplier) => {
         const supplierPurchases = purchaseInvoices.filter((p: PurchaseInvoice) => p.supplierId === supplier.id);
-        const supplierPayments = supplierPayments.filter((p: SupplierPayment) => p.supplierId === supplier.id);
-        const supplierReturns = purchaseReturns.filter((r: PurchaseReturn) => r.supplierId === supplier.id);
+        const filteredPayments = supplierPayments.filter((p: SupplierPayment) => p.supplierId === supplier.id);
+        const filteredReturns = purchaseReturns.filter((r: PurchaseReturn) => r.supplierId === supplier.id);
 
         const totalPurchases = supplierPurchases.reduce((acc: number, p: PurchaseInvoice) => acc + p.total, 0);
         const totalPaidOnInvoice = supplierPurchases.reduce((acc: number, p: PurchaseInvoice) => acc + (p.paidAmount || 0), 0);
-        const totalSeparatePayments = supplierPayments.reduce((acc: number, p: SupplierPayment) => acc + p.amount, 0);
-        const totalReturns = supplierReturns.reduce((acc: number, r: PurchaseReturn) => acc + r.total, 0);
+        const totalSeparatePayments = filteredPayments.reduce((acc: number, p: SupplierPayment) => acc + p.amount, 0);
+        const totalReturns = filteredReturns.reduce((acc: number, r: PurchaseReturn) => acc + r.total, 0);
 
         const currentBalance = (supplier.openingBalance || 0) + totalPurchases - totalPaidOnInvoice - totalSeparatePayments - totalReturns;
         return { ...supplier, currentBalance };
