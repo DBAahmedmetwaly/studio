@@ -34,6 +34,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { useData } from '@/contexts/data-provider';
 
 interface PurchaseInvoice {
   id: string;
@@ -47,12 +48,11 @@ interface PurchaseInvoice {
 }
 interface Supplier { id: string; name: string; }
 interface Warehouse { id: string; name: string; }
+interface InventoryClosing { id: string; warehouseId: string; closingDate: string; }
 
 
 export default function PurchaseInvoicesListPage() {
-  const { data: invoices, loading: loadingInvoices } = useFirebase<PurchaseInvoice>("purchaseInvoices");
-  const { data: suppliers, loading: loadingSuppliers } = useFirebase<Supplier>("suppliers");
-  const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>("warehouses");
+  const { purchaseInvoices: invoices, suppliers, warehouses, inventoryClosings, loading } = useData();
   const router = useRouter();
 
   const [filters, setFilters] = useState({
@@ -62,14 +62,29 @@ export default function PurchaseInvoicesListPage() {
     toDate: "",
   });
 
-  const loading = loadingInvoices || loadingSuppliers || loadingWarehouses;
-
   const handleFilterChange = (key: keyof typeof filters, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
 
+  const lastClosingDates = useMemo(() => {
+    const dates = new Map<string, Date>();
+    warehouses.forEach((wh: Warehouse) => {
+        const closings = inventoryClosings.filter((c: InventoryClosing) => c.warehouseId === wh.id);
+        if (closings.length > 0) {
+            const lastDate = new Date(Math.max(...closings.map(c => new Date(c.closingDate).getTime())));
+            dates.set(wh.id, lastDate);
+        }
+    });
+    return dates;
+  }, [warehouses, inventoryClosings]);
+
   const filteredInvoices = useMemo(() => {
-    return invoices.filter(invoice => {
+    return invoices.map(invoice => {
+        const lastClosingDate = lastClosingDates.get(invoice.warehouseId);
+        const isLocked = lastClosingDate && new Date(invoice.date) <= lastClosingDate;
+        return { ...invoice, isLocked };
+    })
+    .filter((invoice:any) => {
       const invoiceDate = new Date(invoice.date);
       const from = filters.fromDate ? new Date(filters.fromDate) : null;
       const to = filters.toDate ? new Date(filters.toDate) : null;
@@ -80,8 +95,8 @@ export default function PurchaseInvoicesListPage() {
       if (filters.warehouseId !== 'all' && invoice.warehouseId !== filters.warehouseId) return false;
       
       return true;
-    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [invoices, filters]);
+    }).sort((a:any, b:any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [invoices, filters, lastClosingDates]);
 
 
   return (
@@ -107,7 +122,7 @@ export default function PurchaseInvoicesListPage() {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">كل الموردين</SelectItem>
-                                {suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                                {suppliers.map((s:any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
@@ -119,7 +134,7 @@ export default function PurchaseInvoicesListPage() {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">كل المخازن</SelectItem>
-                                {warehouses.map(w => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
+                                {warehouses.map((w:any) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
@@ -162,8 +177,8 @@ export default function PurchaseInvoicesListPage() {
                   </TableHeader>
                   <TableBody>
                     {filteredInvoices && filteredInvoices.length > 0 ? (
-                      filteredInvoices.map((invoice) => (
-                        <TableRow key={invoice.id}>
+                      filteredInvoices.map((invoice:any) => (
+                        <TableRow key={invoice.id} className={invoice.isLocked ? 'bg-muted/30' : ''}>
                           <TableCell className="font-mono">{invoice.invoiceNumber}</TableCell>
                           <TableCell>{invoice.supplierName}</TableCell>
                           <TableCell>{new Date(invoice.date).toLocaleDateString('ar-EG')}</TableCell>
@@ -184,13 +199,13 @@ export default function PurchaseInvoicesListPage() {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                     <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                                    <DropdownMenuItem>
+                                    <DropdownMenuItem disabled={invoice.isLocked}>
                                         عرض التفاصيل
                                     </DropdownMenuItem>
-                                     <DropdownMenuItem>
+                                     <DropdownMenuItem disabled={invoice.isLocked}>
                                         طباعة
                                     </DropdownMenuItem>
-                                     <DropdownMenuItem onClick={() => router.push(`/purchases/returns/new?invoiceId=${invoice.id}`)}>
+                                     <DropdownMenuItem onClick={() => router.push(`/purchases/returns/new?invoiceId=${invoice.id}`)} disabled={invoice.isLocked}>
                                         <Undo2 className="ml-2 h-4 w-4" />
                                         مرتجع
                                     </DropdownMenuItem>

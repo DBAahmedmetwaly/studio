@@ -19,25 +19,26 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Loader2 } from "lucide-react";
-import useFirebase from "@/hooks/use-firebase";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { useData } from '@/contexts/data-provider';
 
 // Data Interfaces
 interface Item { id: string; name: string; unit: string; price: number; reorderPoint?: number; }
 interface Warehouse { id: string; name: string; }
-interface SaleInvoice { id: string; warehouseId: string; items: { id: string; qty: number; }[]; status?: 'approved' | 'pending'; }
-interface PurchaseInvoice { id: string; warehouseId: string; items: { id: string; qty: number; }[]; }
-interface StockInRecord { id: string; warehouseId: string; reason: string; items: { id: string; qty: number; }[]; }
-interface StockOutRecord { id: string; sourceId: string; items: { id: string; qty: number; }[]; }
-interface StockTransferRecord { id: string; fromSourceId: string; toSourceId: string; items: { id: string; qty: number; }[]; }
-interface StockAdjustmentRecord { id: string; warehouseId: string; items: { itemId: string; difference: number; }[]; }
-interface SalesReturn { id: string; warehouseId: string; items: { id: string; qty: number; }[]; }
-interface PurchaseReturn { id: string; warehouseId: string; items: { id: string; qty: number; }[]; }
-interface IssueToRep { id: string; warehouseId: string; items: { id: string; qty: number; }[]; }
-interface ReturnFromRep { id: string; warehouseId: string; items: { id: string; qty: number; }[]; }
+interface SaleInvoice { id: string; warehouseId: string; items: { id: string; qty: number; }[]; status?: 'approved' | 'pending'; date: string; }
+interface PurchaseInvoice { id: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
+interface StockInRecord { id: string; warehouseId: string; reason: string; items: { id: string; qty: number; }[]; date: string; }
+interface StockOutRecord { id: string; sourceId: string; items: { id: string; qty: number; }[]; date: string; }
+interface StockTransferRecord { id: string; fromSourceId: string; toSourceId: string; items: { id: string; qty: number; }[]; date: string; }
+interface StockAdjustmentRecord { id: string; warehouseId: string; items: { itemId: string; difference: number; }[]; date: string; }
+interface SalesReturn { id: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
+interface PurchaseReturn { id: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
+interface IssueToRep { id: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
+interface ReturnFromRep { id: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
+interface InventoryClosing { id: string; warehouseId: string; closingDate: string; balances: { itemId: string, balance: number }[] }
 
 export default function StockStatusPage() {
     const [filters, setFilters] = useState({
@@ -45,20 +46,13 @@ export default function StockStatusPage() {
         itemName: ""
     });
 
-    const { data: allItems, loading: l1 } = useFirebase<Item>('items');
-    const { data: warehouses, loading: l2 } = useFirebase<Warehouse>('warehouses');
-    const { data: sales, loading: l3 } = useFirebase<SaleInvoice>('salesInvoices');
-    const { data: purchases, loading: l4 } = useFirebase<PurchaseInvoice>('purchaseInvoices');
-    const { data: stockIns, loading: l5 } = useFirebase<StockInRecord>('stockInRecords');
-    const { data: stockOuts, loading: l6 } = useFirebase<StockOutRecord>('stockOutRecords');
-    const { data: transfers, loading: l7 } = useFirebase<StockTransferRecord>('stockTransferRecords');
-    const { data: adjustments, loading: l8 } = useFirebase<StockAdjustmentRecord>('stockAdjustmentRecords');
-    const { data: salesReturns, loading: l9 } = useFirebase<SalesReturn>('salesReturns');
-    const { data: purchaseReturns, loading: l10 } = useFirebase<PurchaseReturn>('purchaseReturns');
-    const { data: issuesToReps, loading: l11 } = useFirebase<IssueToRep>('stockIssuesToReps');
-    const { data: returnsFromReps, loading: l12 } = useFirebase<ReturnFromRep>('stockReturnsFromReps');
-
-    const loading = l1 || l2 || l3 || l4 || l5 || l6 || l7 || l8 || l9 || l10 || l11 || l12;
+    const { 
+        items: allItems, warehouses, salesInvoices: sales, purchaseInvoices: purchases, 
+        stockInRecords: stockIns, stockOutRecords: stockOuts, stockTransferRecords: transfers, 
+        stockAdjustmentRecords: adjustments, salesReturns, purchaseReturns, 
+        stockIssuesToReps: issuesToReps, stockReturnsFromReps: returnsFromReps,
+        inventoryClosings, loading 
+    } = useData();
 
     const handleFilterChange = (key: keyof typeof filters, value: string) => {
         setFilters(prev => ({...prev, [key]: value}));
@@ -69,34 +63,37 @@ export default function StockStatusPage() {
         
         const targetWarehouses = filters.warehouseId === 'all'
             ? warehouses
-            : warehouses.filter(w => w.id === filters.warehouseId);
+            : warehouses.filter((w:any) => w.id === filters.warehouseId);
 
-        targetWarehouses.forEach(warehouse => {
-            allItems.forEach(item => {
-                let stock = 0; // Start from zero
-                let openingStock = 0;
+        targetWarehouses.forEach((warehouse: Warehouse) => {
+            // Find the last closing date for the current warehouse
+            const closingsForWarehouse = inventoryClosings.filter((c: InventoryClosing) => c.warehouseId === warehouse.id);
+            const lastClosing = closingsForWarehouse.length > 0
+                ? closingsForWarehouse.reduce((latest, current) => new Date(latest.closingDate) > new Date(current.closingDate) ? latest : current)
+                : null;
+            const lastClosingDate = lastClosing ? new Date(lastClosing.closingDate) : new Date(0);
 
-                // Increases
-                purchases.filter(p => p.warehouseId === warehouse.id).forEach(p => p.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
-                // Handle both opening_stock and other reasons from stock-in records
-                stockIns.filter(si => si.warehouseId === warehouse.id).forEach(si => si.items.filter(i => i.id === item.id).forEach(i => {
-                    stock += i.qty;
-                    if (si.reason === 'opening_stock') {
-                        openingStock += i.qty;
-                    }
-                }));
-                transfers.filter(t => t.toSourceId === warehouse.id).forEach(t => t.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
-                adjustments.filter(adj => adj.warehouseId === warehouse.id).forEach(adj => adj.items.filter(i => i.itemId === item.id && i.difference > 0).forEach(i => stock += i.difference));
-                salesReturns.filter(sr => sr.warehouseId === warehouse.id).forEach(sr => sr.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
-                returnsFromReps.filter(rfr => rfr.warehouseId === warehouse.id).forEach(rfr => rfr.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
+            allItems.forEach((item: Item) => {
+                // Get opening balance from the last closing record
+                let stock = lastClosing?.balances.find(b => b.itemId === item.id)?.balance || 0;
 
-                // Decreases
-                sales.filter(s => s.warehouseId === warehouse.id && s.status === 'approved').forEach(s => s.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
-                stockOuts.filter(so => so.sourceId === warehouse.id).forEach(so => so.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
-                transfers.filter(t => t.fromSourceId === warehouse.id).forEach(t => t.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
-                adjustments.filter(adj => adj.warehouseId === warehouse.id).forEach(adj => adj.items.filter(i => i.itemId === item.id && i.difference < 0).forEach(i => stock += i.difference));
-                purchaseReturns.filter(pr => pr.warehouseId === warehouse.id).forEach(pr => pr.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
-                issuesToReps.filter(itr => itr.warehouseId === warehouse.id).forEach(itr => itr.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
+                const filterTransactions = (t: any) => new Date(t.date) > lastClosingDate;
+
+                // Increases since last closing
+                purchases.filter(p => p.warehouseId === warehouse.id && filterTransactions(p)).forEach(p => p.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
+                stockIns.filter(si => si.warehouseId === warehouse.id && filterTransactions(si)).forEach(si => si.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
+                transfers.filter(t => t.toSourceId === warehouse.id && filterTransactions(t)).forEach(t => t.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
+                adjustments.filter(adj => adj.warehouseId === warehouse.id && filterTransactions(adj)).forEach(adj => adj.items.filter(i => i.itemId === item.id && i.difference > 0).forEach(i => stock += i.difference));
+                salesReturns.filter(sr => sr.warehouseId === warehouse.id && filterTransactions(sr)).forEach(sr => sr.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
+                returnsFromReps.filter(rfr => rfr.warehouseId === warehouse.id && filterTransactions(rfr)).forEach(rfr => rfr.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
+
+                // Decreases since last closing
+                sales.filter(s => s.warehouseId === warehouse.id && s.status === 'approved' && filterTransactions(s)).forEach(s => s.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
+                stockOuts.filter(so => so.sourceId === warehouse.id && filterTransactions(so)).forEach(so => so.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
+                transfers.filter(t => t.fromSourceId === warehouse.id && filterTransactions(t)).forEach(t => t.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
+                adjustments.filter(adj => adj.warehouseId === warehouse.id && filterTransactions(adj)).forEach(adj => adj.items.filter(i => i.itemId === item.id && i.difference < 0).forEach(i => stock += i.difference));
+                purchaseReturns.filter(pr => pr.warehouseId === warehouse.id && filterTransactions(pr)).forEach(pr => pr.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
+                issuesToReps.filter(itr => itr.warehouseId === warehouse.id && filterTransactions(itr)).forEach(itr => itr.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
                 
                 results.push({
                     id: `${warehouse.id}-${item.id}`,
@@ -104,7 +101,6 @@ export default function StockStatusPage() {
                     itemName: item.name,
                     unit: item.unit,
                     price: item.price,
-                    openingStock: openingStock,
                     currentStock: stock,
                     reorderPoint: item.reorderPoint || 0,
                 });
@@ -113,12 +109,10 @@ export default function StockStatusPage() {
         
         return results.filter(item => {
             const matchesName = item.itemName.toLowerCase().includes(filters.itemName.toLowerCase());
-            // Optionally, filter out items with zero opening and current stock to declutter
-            const hasStockActivity = item.openingStock > 0 || item.currentStock !== 0;
-            return matchesName && hasStockActivity;
+            return matchesName && item.currentStock !== 0;
         });
 
-    }, [filters, allItems, warehouses, sales, purchases, stockIns, stockOuts, transfers, adjustments, salesReturns, purchaseReturns, issuesToReps, returnsFromReps]);
+    }, [filters, allItems, warehouses, sales, purchases, stockIns, stockOuts, transfers, adjustments, salesReturns, purchaseReturns, issuesToReps, returnsFromReps, inventoryClosings]);
     
     const getUnitLabel = (unit: string) => {
         const units = { piece: "قطعة", weight: "لتر ", meter: "متر", kilo: "كيلو", gram: "جرام" };
@@ -143,7 +137,7 @@ export default function StockStatusPage() {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">كل المخازن</SelectItem>
-                                {warehouses.map(w => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
+                                {warehouses.map((w:any) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
@@ -159,7 +153,7 @@ export default function StockStatusPage() {
           <CardHeader>
             <CardTitle>الأرصدة الحالية</CardTitle>
             <CardDescription>
-              عرض تفصيلي للأرصدة الافتتاحية والحالية لكل صنف في المخازن.
+              عرض تفصيلي للأرصدة الحالية لكل صنف في المخازن بناءً على آخر فترة مقفلة.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -176,7 +170,6 @@ export default function StockStatusPage() {
                                 <TableHead>الصنف</TableHead>
                                 <TableHead className="text-center">الوحدة</TableHead>
                                 <TableHead className="text-center">السعر</TableHead>
-                                <TableHead className="text-center">رصيد أول المدة</TableHead>
                                 <TableHead className="text-center">الرصيد الحالي</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -187,7 +180,6 @@ export default function StockStatusPage() {
                                 <TableCell className="font-medium">{item.itemName}</TableCell>
                                 <TableCell className="text-center">{getUnitLabel(item.unit)}</TableCell>
                                 <TableCell className="text-center">{item.price.toLocaleString()} ج.م</TableCell>
-                                <TableCell className="text-center">{item.openingStock.toLocaleString()}</TableCell>
                                 <TableCell className="text-center font-bold">
                                     <Badge variant={item.currentStock <= item.reorderPoint ? 'destructive' : 'default'}>
                                         {item.currentStock.toLocaleString()}
@@ -196,7 +188,7 @@ export default function StockStatusPage() {
                             </TableRow>
                             )) : (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                                    <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
                                         لا توجد بيانات تطابق الفلاتر المحددة.
                                     </TableCell>
                                 </TableRow>

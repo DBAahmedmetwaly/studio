@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useData } from "@/contexts/data-provider";
-import { Loader2, Lock, FileSearch } from "lucide-react";
+import { Loader2, Lock, FileSearch, Unlock, Trash2 } from "lucide-react";
 import React, { useState, useMemo } from "react";
 import {
   AlertDialog,
@@ -45,6 +45,7 @@ interface SalesReturn { id: string; warehouseId: string; items: { id: string; qt
 interface PurchaseReturn { id: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
 interface IssueToRep { id: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
 interface ReturnFromRep { id: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
+interface InventoryClosing { id: string; warehouseId: string; closingDate: string; closedByName: string; balances: { itemId: string, balance: number }[] }
 
 
 export default function PeriodClosingPage() {
@@ -57,13 +58,18 @@ export default function PeriodClosingPage() {
     
     const { items, warehouses, salesInvoices, purchaseInvoices, stockInRecords, stockOutRecords, stockTransferRecords, stockAdjustmentRecords, salesReturns, purchaseReturns, stockIssuesToReps, stockReturnsFromReps, inventoryClosings, dbAction, loading: dataLoading } = useData();
 
-    const lastClosingDate = useMemo(() => {
-        if (!warehouseId) return null;
-        const closingsForWarehouse = inventoryClosings.filter(c => c.warehouseId === warehouseId);
-        if (closingsForWarehouse.length === 0) return null;
-        return new Date(Math.max(...closingsForWarehouse.map(c => new Date(c.closingDate).getTime())));
+    const closingsForSelectedWarehouse = useMemo(() => {
+        if (!warehouseId) return [];
+        return inventoryClosings
+            .filter((c: InventoryClosing) => c.warehouseId === warehouseId)
+            .sort((a,b) => new Date(b.closingDate).getTime() - new Date(a.closingDate).getTime());
     }, [warehouseId, inventoryClosings]);
 
+    const lastClosingDate = useMemo(() => {
+        if (closingsForSelectedWarehouse.length === 0) return null;
+        return new Date(closingsForSelectedWarehouse[0].closingDate);
+    }, [closingsForSelectedWarehouse]);
+    
     const handleCalculateBalances = () => {
         if (!closingDate || !warehouseId) {
             toast({ variant: "destructive", title: "بيانات ناقصة", description: "يرجى اختيار المخزن وتاريخ الإقفال." });
@@ -78,16 +84,11 @@ export default function PeriodClosingPage() {
 
         setIsLoading(true);
 
-        const balances = items.map(item => {
-            let stock = 0;
-            // Find opening balance from last closing if available
-            const lastClosing = inventoryClosings.find(c => c.warehouseId === warehouseId && new Date(c.closingDate).getTime() === lastClosingDate?.getTime());
-            const openingBalanceRecord = lastClosing?.balances.find((b: any) => b.itemId === item.id);
-            stock = openingBalanceRecord ? openingBalanceRecord.balance : 0;
-            
+        const balances = items.map((item: Item) => {
             const startDate = lastClosingDate || new Date(0);
-
-            // Filter transactions between last closing date and new closing date
+            const openingBalanceRecord = lastClosingDate ? closingsForSelectedWarehouse[0].balances.find((b: any) => b.itemId === item.id) : null;
+            let stock = openingBalanceRecord ? openingBalanceRecord.balance : 0;
+            
             const filterTransactions = (t: any) => new Date(t.date) > startDate && new Date(t.date) <= closingDateObj;
             
             // Increases
@@ -130,13 +131,24 @@ export default function PeriodClosingPage() {
             toast({ title: "تم الإقفال بنجاح!", description: `تم تجميد الأرصدة للمخزن المحدد حتى تاريخ ${closingDate}.` });
             setReviewData(null);
             setClosingDate("");
-            setWarehouseId("");
         } catch (error) {
             toast({ variant: 'destructive', title: "خطأ", description: "فشلت عملية الإقفال." });
         } finally {
             setIsLoading(false);
         }
     };
+    
+    const handleDeleteClosing = async (closingId: string) => {
+        setIsLoading(true);
+        try {
+            await dbAction('inventoryClosings', 'remove', {id: closingId});
+            toast({title: "تم فك الإقفال بنجاح"});
+        } catch (error) {
+             toast({ variant: 'destructive', title: "خطأ", description: "فشلت عملية فك الإقفال." });
+        } finally {
+            setIsLoading(false);
+        }
+    }
 
 
     return (
@@ -145,7 +157,7 @@ export default function PeriodClosingPage() {
             <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
                 <Card>
                     <CardHeader>
-                        <CardTitle>تحديد فترة الإقفال</CardTitle>
+                        <CardTitle>إقفال فترة جديدة</CardTitle>
                         <CardDescription>
                             اختر المخزن والتاريخ لإقفال الفترة المحاسبية للمخزون.
                         </CardDescription>
@@ -153,15 +165,12 @@ export default function PeriodClosingPage() {
                     <CardContent className="grid md:grid-cols-3 gap-4">
                        <div className="space-y-2">
                             <Label htmlFor="warehouse">المخزن</Label>
-                            <Select value={warehouseId} onValueChange={setWarehouseId} disabled={dataLoading}>
+                            <Select value={warehouseId} onValueChange={v => {setWarehouseId(v); setReviewData(null);}}>
                                 <SelectTrigger><SelectValue placeholder="اختر مخزنًا" /></SelectTrigger>
                                 <SelectContent>
                                     {warehouses.map((w: Warehouse) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
                                 </SelectContent>
                             </Select>
-                            {lastClosingDate && (
-                                <p className="text-xs text-muted-foreground">آخر تاريخ إقفال لهذا المخزن: {lastClosingDate.toLocaleDateString('ar-EG')}</p>
-                            )}
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="closing-date">تاريخ الإقفال</Label>
@@ -170,7 +179,6 @@ export default function PeriodClosingPage() {
                                 type="date"
                                 value={closingDate}
                                 onChange={(e) => setClosingDate(e.target.value)}
-                                disabled={dataLoading}
                             />
                         </div>
                     </CardContent>
@@ -226,7 +234,7 @@ export default function PeriodClosingPage() {
                                         <AlertDialogTitle>هل أنت متأكد تمامًا؟</AlertDialogTitle>
                                         <AlertDialogDescription>
                                             سيتم إقفال جميع الحركات للمخزن المحدد حتى تاريخ <span className="font-bold">{new Date(closingDate).toLocaleDateString('ar-EG')}</span>.
-                                            هذا الإجراء نهائي ولا يمكن التراجع عنه.
+                                            هذا الإجراء نهائي ولا يمكن التراجع عنه إلا بحذف سجل الإقفال.
                                         </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
@@ -238,9 +246,60 @@ export default function PeriodClosingPage() {
                          </CardFooter>
                      </Card>
                 )}
+                
+                 {closingsForSelectedWarehouse.length > 0 && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>سجل الإقفالات السابقة للمخزن المحدد</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>تاريخ الإقفال</TableHead>
+                                        <TableHead>المستخدم</TableHead>
+                                        <TableHead className="text-center">عدد الأصناف</TableHead>
+                                        <TableHead className="text-center">الإجراء</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {closingsForSelectedWarehouse.map((closing: InventoryClosing, index) => (
+                                        <TableRow key={closing.id}>
+                                            <TableCell>{new Date(closing.closingDate).toLocaleDateString('ar-EG')}</TableCell>
+                                            <TableCell>{closing.closedByName}</TableCell>
+                                            <TableCell className="text-center">{closing.balances.length}</TableCell>
+                                            <TableCell className="text-center">
+                                                {index === 0 && ( // Only allow deleting the most recent closing
+                                                    <AlertDialog>
+                                                        <AlertDialogTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                                                <Trash2 className="h-4 w-4"/>
+                                                            </Button>
+                                                        </AlertDialogTrigger>
+                                                        <AlertDialogContent>
+                                                            <AlertDialogHeader>
+                                                                <AlertDialogTitle>فك الإقفال؟</AlertDialogTitle>
+                                                                <AlertDialogDescription>
+                                                                    هل أنت متأكد من حذف هذا الإقفال؟ سيؤدي هذا إلى إعادة فتح الفترة للتعديل. يجب عليك إعادة إقفالها مرة أخرى لاحقًا.
+                                                                </AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                                <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                                                                <AlertDialogAction onClick={() => handleDeleteClosing(closing.id)}>نعم، قم بالحذف</AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
+                                                )}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                )}
 
             </main>
         </>
     );
 }
-

@@ -33,6 +33,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { useData } from '@/contexts/data-provider';
 
 interface SaleInvoice {
   id: string;
@@ -48,11 +49,10 @@ interface SaleInvoice {
 }
 interface Customer { id: string; name: string; }
 interface Warehouse { id: string; name: string; }
+interface InventoryClosing { id: string; warehouseId: string; closingDate: string; }
 
 export default function SalesInvoicesListPage() {
-  const { data: invoices, loading: loadingInvoices } = useFirebase<SaleInvoice>("salesInvoices");
-  const { data: customers, loading: loadingCustomers } = useFirebase<Customer>("customers");
-  const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>("warehouses");
+  const { salesInvoices: invoices, customers, warehouses, inventoryClosings, loading } = useData();
   const router = useRouter();
   
   const [filters, setFilters] = useState({
@@ -62,16 +62,31 @@ export default function SalesInvoicesListPage() {
     toDate: "",
   });
 
-  const loading = loadingInvoices || loadingCustomers || loadingWarehouses;
-
   const handleFilterChange = (key: keyof typeof filters, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
+  
+  const lastClosingDates = useMemo(() => {
+    const dates = new Map<string, Date>();
+    warehouses.forEach((wh: Warehouse) => {
+        const closings = inventoryClosings.filter((c: InventoryClosing) => c.warehouseId === wh.id);
+        if (closings.length > 0) {
+            const lastDate = new Date(Math.max(...closings.map(c => new Date(c.closingDate).getTime())));
+            dates.set(wh.id, lastDate);
+        }
+    });
+    return dates;
+  }, [warehouses, inventoryClosings]);
 
   const filteredInvoices = useMemo(() => {
     return invoices
-      .filter(invoice => invoice.status === 'approved') // Only show approved invoices
-      .filter(invoice => {
+      .filter((invoice: SaleInvoice) => invoice.status === 'approved') // Only show approved invoices
+      .map((invoice: SaleInvoice) => {
+        const lastClosingDate = lastClosingDates.get(invoice.warehouseId);
+        const isLocked = lastClosingDate && new Date(invoice.date) <= lastClosingDate;
+        return { ...invoice, isLocked };
+      })
+      .filter((invoice: any) => {
         const invoiceDate = new Date(invoice.date);
         const from = filters.fromDate ? new Date(filters.fromDate) : null;
         const to = filters.toDate ? new Date(filters.toDate) : null;
@@ -82,8 +97,8 @@ export default function SalesInvoicesListPage() {
         if (filters.warehouseId !== 'all' && invoice.warehouseId !== filters.warehouseId) return false;
         
         return true;
-      }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [invoices, filters]);
+      }).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [invoices, filters, lastClosingDates]);
 
   return (
     <>
@@ -108,7 +123,7 @@ export default function SalesInvoicesListPage() {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">كل العملاء</SelectItem>
-                                {customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                                {customers.map((c:any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
@@ -120,7 +135,7 @@ export default function SalesInvoicesListPage() {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">كل المخازن</SelectItem>
-                                {warehouses.map(w => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
+                                {warehouses.map((w:any) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
@@ -164,11 +179,11 @@ export default function SalesInvoicesListPage() {
                   </TableHeader>
                   <TableBody>
                     {filteredInvoices.length > 0 ? (
-                      filteredInvoices.map((invoice) => {
+                      filteredInvoices.map((invoice:any) => {
                         const paid = invoice.paidAmount || 0;
                         const remaining = invoice.total - paid;
                         return (
-                            <TableRow key={invoice.id}>
+                            <TableRow key={invoice.id} className={invoice.isLocked ? 'bg-muted/30' : ''}>
                             <TableCell className="font-mono">{invoice.invoiceNumber}</TableCell>
                             <TableCell>{invoice.customerName}</TableCell>
                             <TableCell>{new Date(invoice.date).toLocaleDateString('ar-EG')}</TableCell>
@@ -185,13 +200,13 @@ export default function SalesInvoicesListPage() {
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
                                         <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                                        <DropdownMenuItem>
+                                        <DropdownMenuItem disabled={invoice.isLocked}>
                                             عرض التفاصيل
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem>
+                                        <DropdownMenuItem disabled={invoice.isLocked}>
                                             طباعة
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => router.push(`/sales/returns/new?invoiceId=${invoice.id}`)}>
+                                        <DropdownMenuItem onClick={() => router.push(`/sales/returns/new?invoiceId=${invoice.id}`)} disabled={invoice.isLocked}>
                                             <Undo2 className="ml-2 h-4 w-4" />
                                             مرتجع
                                         </DropdownMenuItem>
