@@ -81,7 +81,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const { data: stockAdjustmentRecords, loading: l_stockAdjustmentRecords, add: add_stockAdjustmentRecord } = useFirebase('stockAdjustmentRecords');
     const { data: stockIssuesToReps, loading: l_stockIssuesToReps, add: add_stockIssueToRep } = useFirebase('stockIssuesToReps');
     const { data: stockReturnsFromReps, loading: l_stockReturnsFromReps, add: add_stockReturnFromRep } = useFirebase('stockReturnsFromReps');
-    const { data: inventoryClosings, loading: l_inventoryClosings, add: add_inventoryClosing } = useFirebase('inventoryClosings');
+    const { data: inventoryClosings, loading: l_inventoryClosings, add: add_inventoryClosing, remove: remove_inventoryClosing } = useFirebase('inventoryClosings');
 
 
     // Sales & Purchases
@@ -138,7 +138,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             'stockAdjustmentRecords': { add: add_stockAdjustmentRecord },
             'stockIssuesToReps': { add: add_stockIssueToRep },
             'stockReturnsFromReps': { add: add_stockReturnFromRep },
-            'inventoryClosings': { add: add_inventoryClosing },
+            'inventoryClosings': { add: add_inventoryClosing, remove: remove_inventoryClosing },
             'expenses': { add: add_expense, remove: remove_expense },
             'exceptionalIncomes': { add: add_exceptionalIncome, remove: remove_exceptionalIncome },
             'customerPayments': { add: add_customerPayment, remove: remove_customerPayment },

@@ -28,6 +28,7 @@ interface PosSale {
   items: { id: string; name: string; qty: number; price: number; }[];
   total: number;
   discount: number;
+  invoiceNumber: string;
 }
 interface PosAuditLog {
     id: string;
@@ -88,7 +89,7 @@ const ReportFilters = ({ onGenerate }: { onGenerate: (filters: any) => void }) =
                             <SelectTrigger><SelectValue placeholder="الكل" /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">كل الكاشيرات</SelectItem>
-                                {cashiers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                                {cashiers.map((c:User) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
@@ -98,7 +99,7 @@ const ReportFilters = ({ onGenerate }: { onGenerate: (filters: any) => void }) =
                             <SelectTrigger><SelectValue placeholder="الكل" /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">كل المخازن</SelectItem>
-                                {warehouses.map(w => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
+                                {warehouses.map((w:Warehouse) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
@@ -261,7 +262,7 @@ const DiscountReport = ({ sales }: { sales: PosSale[] }) => {
             <TableBody>
                 {salesWithDiscount.map(s => (
                     <TableRow key={s.id}>
-                        <TableCell>{s.id.slice(-6)}</TableCell>
+                        <TableCell>{s.invoiceNumber}</TableCell>
                         <TableCell>{s.cashierName}</TableCell>
                         <TableCell className="text-center">{s.discount.toLocaleString()} ج.م</TableCell>
                     </TableRow>
@@ -284,6 +285,7 @@ const AuditLogReport = ({ logs }: { logs: PosAuditLog[] }) => {
                         <TableCell className="text-xs">{log.details.invoiceNumber}</TableCell>
                     </TableRow>
                 ))}
+                 {logs.length === 0 && <TableRow><TableCell colSpan={4} className="text-center py-4">لا توجد سجلات.</TableCell></TableRow>}
             </TableBody>
         </Table>
     )

@@ -16,7 +16,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import Image from 'next/image';
 import { usePosInvoiceCounter } from '@/hooks/use-pos-invoice-counter';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { useSidebar, SidebarTrigger } from '@/components/ui/sidebar';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 
 interface PosItem {
   id: string; // The database ID of the item
@@ -350,7 +350,9 @@ export default function PosPage() {
              {/* Right/Bottom Section - Catalog */}
             <div className="flex-1 flex flex-col overflow-hidden">
                  <div className="shrink-0 mb-3 flex items-center gap-2">
-                     <SidebarTrigger className="lg:hidden"/>
+                     <Button variant="ghost" size="icon" className="md:hidden" onClick={() => {}}>
+                        <SidebarTrigger />
+                     </Button>
                     <form onSubmit={handleBarcodeSubmit} className="flex-1">
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
