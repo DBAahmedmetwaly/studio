@@ -164,7 +164,14 @@ const StockStatusReport = ({ filters, data }: any) => {
         <ReportContainer title="تقرير حالة المخزون" description={`يعرض الأرصدة الحالية للأصناف بناءً على آخر إقفال`} onPrint={() => window.print()}>
             <div className="w-full overflow-auto border rounded-lg">
                 <Table>
-                    <TableHeader><TableRow><TableHead>المخزن</TableHead><TableHead className="text-center">كود الصنف</TableHead><TableHead>اسم الصنف</TableHead><TableHead className="text-center">الرصيد الحالي</TableHead></TableRow></TableHeader>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>المخزن</TableHead>
+                            <TableHead className="text-center">كود الصنف</TableHead>
+                            <TableHead>اسم الصنف</TableHead>
+                            <TableHead className="text-center">الرصيد الحالي</TableHead>
+                        </TableRow>
+                    </TableHeader>
                     <TableBody>
                         {stockData.map((item:any) => (
                             <TableRow key={item.id}>
@@ -176,6 +183,11 @@ const StockStatusReport = ({ filters, data }: any) => {
                                 </TableCell>
                             </TableRow>
                         ))}
+                         {stockData.length === 0 && (
+                            <TableRow>
+                                <TableCell colSpan={4} className="text-center h-24">لا توجد بيانات لعرضها.</TableCell>
+                            </TableRow>
+                        )}
                     </TableBody>
                 </Table>
             </div>
@@ -192,7 +204,6 @@ const ItemLedgerReport = ({ filters, data }: any) => {
         
         const targetWarehouses = warehouseId === 'all' ? warehouses.map((w:any) => w.id) : [warehouseId];
         
-        // Find the last closing date for all targeted warehouses
         const closingsForWarehouses = inventoryClosings.filter((c: InventoryClosing) => targetWarehouses.includes(c.warehouseId));
         const lastClosing = closingsForWarehouses.length > 0 
             ? closingsForWarehouses.reduce((latest:any, current:any) => new Date(latest.closingDate) > new Date(current.closingDate) ? latest : current)
@@ -202,20 +213,18 @@ const ItemLedgerReport = ({ filters, data }: any) => {
 
         let openingBalance = 0;
         
-        // Calculate Opening Balance up to the start date
         const calculateStockUpTo = (date: Date) => {
             let stock = 0;
             targetWarehouses.forEach(whId => {
                 const closingsForWh = inventoryClosings.filter((c: InventoryClosing) => c.warehouseId === whId && new Date(c.closingDate) <= date);
                 const lastRelevantClosing = closingsForWh.length > 0 ? closingsForWh.reduce((l:any,c:any) => new Date(l.closingDate) > new Date(c.closingDate) ? l : c) : null;
                 
-                stock += lastRelevantClosing?.balances.find(b => b.itemId === itemId)?.balance || 0;
+                stock += lastRelevantClosing?.balances.find((b:any) => b.itemId === itemId)?.balance || 0;
                 const txStartDate = lastRelevantClosing ? new Date(lastRelevantClosing.closingDate) : new Date(0);
 
                 const filterTxs = (t:any) => new Date(t.date) > txStartDate && new Date(t.date) < date;
                 
                 purchaseInvoices.filter((t:any) => t.warehouseId === whId && filterTxs(t)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => stock += i.qty));
-                // Add all other IN transactions
                 stockInRecords.filter((t:any) => t.warehouseId === whId && filterTxs(t)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => stock += i.qty));
                 stockTransferRecords.filter((t:any) => t.toSourceId === whId && filterTxs(t)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => stock += i.qty));
                 salesReturns.filter((t:any) => t.warehouseId === whId && filterTxs(t)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => stock += i.qty));
@@ -223,7 +232,6 @@ const ItemLedgerReport = ({ filters, data }: any) => {
                 stockAdjustmentRecords.filter((t:any) => t.warehouseId === whId && filterTxs(t)).forEach((t:any) => t.items.filter((i:any)=>i.itemId === itemId).forEach((i:any) => stock += i.difference > 0 ? i.difference : 0));
                 
                 salesInvoices.filter((t:any) => t.warehouseId === whId && filterTxs(t) && t.status==='approved').forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => stock -= i.qty));
-                // Add all other OUT transactions
                 stockOutRecords.filter((t:any) => t.sourceId === whId && filterTxs(t)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => stock -= i.qty));
                 stockTransferRecords.filter((t:any) => t.fromSourceId === whId && filterTxs(t)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => stock -= i.qty));
                 purchaseReturns.filter((t:any) => t.warehouseId === whId && filterTxs(t)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => stock -= i.qty));
@@ -281,7 +289,15 @@ const ItemLedgerReport = ({ filters, data }: any) => {
         <ReportContainer title={`كارت الصنف: ${allItems.find((i:any)=>i.id === itemId)?.name}`} description={`حركة الصنف من ${filters.fromDate || 'البداية'} إلى ${filters.toDate || 'النهاية'}`} onPrint={() => window.print()}>
             <div className="w-full overflow-auto border rounded-lg">
                 <Table>
-                    <TableHeader><TableRow><TableHead>التاريخ</TableHead><TableHead>البيان</TableHead><TableHead className="text-center">وارد</TableHead><TableHead className="text-center">منصرف</TableHead><TableHead className="text-center">الرصيد</TableHead></TableRow></TableHeader>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>التاريخ</TableHead>
+                            <TableHead>البيان</TableHead>
+                            <TableHead className="text-center">وارد</TableHead>
+                            <TableHead className="text-center">منصرف</TableHead>
+                            <TableHead className="text-center">الرصيد</TableHead>
+                        </TableRow>
+                    </TableHeader>
                     <TableBody>
                         {ledgerData.map((tx, idx) => (
                             <TableRow key={idx}>
