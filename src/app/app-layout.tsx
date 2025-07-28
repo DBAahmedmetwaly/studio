@@ -160,12 +160,12 @@ const NavSubLink = ({ href, children, module }: { href: string; children: React.
     );
 };
 
-export function AppLayout({ children }: { children: React.ReactNode }) {
+const AppLayoutContent = ({ children }: { children: React.ReactNode }) => {
   const { user, signOut } = useAuth();
   const { toggleSidebar } = useSidebar();
   
   return (
-    <SidebarProvider>
+    <>
       <Sidebar side="right">
         <SidebarHeader>
             <div className="flex w-full items-center justify-between p-4 border-b">
@@ -293,6 +293,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </header>
         {children}
         </SidebarInset>
+    </>
+  );
+}
+
+export function AppLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <SidebarProvider>
+      <AppLayoutContent>{children}</AppLayoutContent>
     </SidebarProvider>
   );
 }
