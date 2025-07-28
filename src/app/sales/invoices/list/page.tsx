@@ -21,7 +21,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PlusCircle, Loader2, MoreHorizontal, FileText, Undo2 } from "lucide-react";
-import useFirebase from "@/hooks/use-firebase";
 import { useRouter } from 'next/navigation';
 import {
   DropdownMenu,
@@ -200,11 +199,8 @@ export default function SalesInvoicesListPage() {
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
                                         <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                                        <DropdownMenuItem disabled={invoice.isLocked}>
-                                            عرض التفاصيل
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem disabled={invoice.isLocked}>
-                                            طباعة
+                                        <DropdownMenuItem onClick={() => router.push(`/sales/invoices/${invoice.id}`)}>
+                                            عرض / طباعة
                                         </DropdownMenuItem>
                                         <DropdownMenuItem onClick={() => router.push(`/sales/returns/new?invoiceId=${invoice.id}`)} disabled={invoice.isLocked}>
                                             <Undo2 className="ml-2 h-4 w-4" />

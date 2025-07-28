@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
@@ -17,6 +18,8 @@ import Image from 'next/image';
 import { usePosInvoiceCounter } from '@/hooks/use-pos-invoice-counter';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { SidebarTrigger } from '@/components/ui/sidebar';
+import { PosReceipt } from '@/components/pos-receipt';
+import ReactDOM from 'react-dom';
 
 interface PosItem {
   id: string; // The database ID of the item
@@ -37,12 +40,13 @@ interface ItemGroup {
 }
 
 export default function PosPage() {
-    const { items: allItems, dbAction, itemGroups, posSessions } = useData();
+    const { items: allItems, dbAction, itemGroups, posSessions, settings } = useData();
     const { user } = useAuth();
     const { toast } = useToast();
     const { generateInvoiceNumber, currentInvoiceNumber, loading: loadingCounter } = usePosInvoiceCounter();
 
     const barcodeInputRef = useRef<HTMLInputElement>(null);
+    const printFrameRef = useRef<HTMLIFrameElement>(null);
     
     const [cart, setCart] = useState<PosItem[]>([]);
     const [subtotal, setSubtotal] = useState(0);
@@ -59,6 +63,8 @@ export default function PosPage() {
         const cashierSession = openWorkDay.cashierSessions?.[user.id];
         return cashierSession && !cashierSession.isClosed;
     }, [openWorkDay, user]);
+
+    const companySettings = useMemo(() => settings.find((s:any) => s.id === 'main')?.general || {}, [settings]);
 
 
     const resetSale = useCallback(async () => {
@@ -154,6 +160,22 @@ export default function PosPage() {
             item.uniqueId === uniqueId ? { ...item, qty: newQty, total: newQty * item.price } : item
         ));
     };
+    
+     const handlePrintReceipt = (saleData: any) => {
+        if (printFrameRef.current) {
+            const printDocument = printFrameRef.current.contentWindow?.document;
+            if (printDocument) {
+                ReactDOM.render(
+                    <PosReceipt invoice={saleData} company={companySettings} />,
+                    printDocument.body,
+                    () => {
+                        printFrameRef.current?.contentWindow?.focus();
+                        printFrameRef.current?.contentWindow?.print();
+                    }
+                );
+            }
+        }
+    };
 
     const handleFinishSale = async () => {
         if (cart.length === 0) return;
@@ -188,6 +210,7 @@ export default function PosPage() {
             });
 
             toast({ title: 'تمت العملية بنجاح', description: `تم حفظ الفاتورة ${currentInvoiceNumber}`});
+            handlePrintReceipt(saleData);
             resetSale();
         } catch (error) {
             console.error("Failed to save POS sale:", error);
@@ -259,6 +282,7 @@ export default function PosPage() {
 
 
     return (
+        <>
         <div className="h-screen bg-background flex flex-col lg:flex-row p-2 sm:p-4 gap-4">
              {/* Left/Top Section - Cart & Payment */}
             <div className="flex-none lg:w-1/3 flex flex-col gap-4">
@@ -350,9 +374,7 @@ export default function PosPage() {
              {/* Right/Bottom Section - Catalog */}
             <div className="flex-1 flex flex-col overflow-hidden">
                  <div className="shrink-0 mb-3 flex items-center gap-2">
-                     <Button variant="ghost" size="icon" className="md:hidden" onClick={() => {}}>
-                        <SidebarTrigger />
-                     </Button>
+                     <SidebarTrigger className="lg:hidden"/>
                     <form onSubmit={handleBarcodeSubmit} className="flex-1">
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -389,5 +411,7 @@ export default function PosPage() {
                 </Card>
             </div>
         </div>
+        <iframe ref={printFrameRef} style={{ display: 'none' }} title="Print Frame"></iframe>
+        </>
     );
 }
