@@ -31,7 +31,7 @@ interface Warehouse {
 
 export default function IssueToRepDetailsPage({ params }: { params: { id: string } }) {
   const router = useRouter();
-  const { id } = params;
+  const id = params.id;
 
   const [record, setRecord] = useState<IssueToRep | null>(null);
   const [loading, setLoading] = useState(true);

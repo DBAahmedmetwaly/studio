@@ -25,7 +25,7 @@ interface SaleInvoice {
 
 export default function SaleInvoiceDetailsPage({ params }: { params: { id: string } }) {
   const router = useRouter();
-  const { id } = params;
+  const id = params.id;
 
   const { salesInvoices, customers, settings, loading } = useData();
 
