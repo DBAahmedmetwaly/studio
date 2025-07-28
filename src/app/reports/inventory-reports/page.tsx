@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import PageHeader from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import {
@@ -162,21 +162,23 @@ const StockStatusReport = ({ filters, data }: any) => {
 
      return (
         <ReportContainer title="تقرير حالة المخزون" description={`يعرض الأرصدة الحالية للأصناف بناءً على آخر إقفال`} onPrint={() => window.print()}>
-            <Table>
-                <TableHeader><TableRow><TableHead>المخزن</TableHead><TableHead className="text-center">كود الصنف</TableHead><TableHead>اسم الصنف</TableHead><TableHead className="text-center">الرصيد الحالي</TableHead></TableRow></TableHeader>
-                <TableBody>
-                    {stockData.map((item:any) => (
-                        <TableRow key={item.id}>
-                            <TableCell>{item.warehouseName}</TableCell>
-                            <TableCell className="text-center">{item.code}</TableCell>
-                            <TableCell>{item.itemName}</TableCell>
-                            <TableCell className="text-center">
-                                <Badge variant={item.currentStock <= item.reorderPoint ? 'destructive' : 'default'}>{item.currentStock}</Badge>
-                            </TableCell>
-                        </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
+            <div className="w-full overflow-auto border rounded-lg">
+                <Table>
+                    <TableHeader><TableRow><TableHead>المخزن</TableHead><TableHead className="text-center">كود الصنف</TableHead><TableHead>اسم الصنف</TableHead><TableHead className="text-center">الرصيد الحالي</TableHead></TableRow></TableHeader>
+                    <TableBody>
+                        {stockData.map((item:any) => (
+                            <TableRow key={item.id}>
+                                <TableCell>{item.warehouseName}</TableCell>
+                                <TableCell className="text-center">{item.code}</TableCell>
+                                <TableCell>{item.itemName}</TableCell>
+                                <TableCell className="text-center">
+                                    <Badge variant={item.currentStock <= item.reorderPoint ? 'destructive' : 'default'}>{item.currentStock}</Badge>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </div>
         </ReportContainer>
      )
 }
@@ -277,20 +279,22 @@ const ItemLedgerReport = ({ filters, data }: any) => {
 
     return (
         <ReportContainer title={`كارت الصنف: ${allItems.find((i:any)=>i.id === itemId)?.name}`} description={`حركة الصنف من ${filters.fromDate || 'البداية'} إلى ${filters.toDate || 'النهاية'}`} onPrint={() => window.print()}>
-            <Table>
-                <TableHeader><TableRow><TableHead>التاريخ</TableHead><TableHead>البيان</TableHead><TableHead className="text-center">وارد</TableHead><TableHead className="text-center">منصرف</TableHead><TableHead className="text-center">الرصيد</TableHead></TableRow></TableHeader>
-                <TableBody>
-                    {ledgerData.map((tx, idx) => (
-                        <TableRow key={idx}>
-                            <TableCell>{tx.date}</TableCell>
-                            <TableCell>{tx.description}</TableCell>
-                            <TableCell className="text-center text-green-600">{tx.incoming > 0 ? tx.incoming : ''}</TableCell>
-                            <TableCell className="text-center text-destructive">{tx.outgoing > 0 ? tx.outgoing : ''}</TableCell>
-                            <TableCell className="text-center font-bold">{tx.balance}</TableCell>
-                        </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
+            <div className="w-full overflow-auto border rounded-lg">
+                <Table>
+                    <TableHeader><TableRow><TableHead>التاريخ</TableHead><TableHead>البيان</TableHead><TableHead className="text-center">وارد</TableHead><TableHead className="text-center">منصرف</TableHead><TableHead className="text-center">الرصيد</TableHead></TableRow></TableHeader>
+                    <TableBody>
+                        {ledgerData.map((tx, idx) => (
+                            <TableRow key={idx}>
+                                <TableCell>{tx.date}</TableCell>
+                                <TableCell>{tx.description}</TableCell>
+                                <TableCell className="text-center text-green-600">{tx.incoming > 0 ? tx.incoming : ''}</TableCell>
+                                <TableCell className="text-center text-destructive">{tx.outgoing > 0 ? tx.outgoing : ''}</TableCell>
+                                <TableCell className="text-center font-bold">{tx.balance}</TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </div>
         </ReportContainer>
     );
 };
@@ -344,3 +348,4 @@ export default function InventoryReportsPage() {
         </>
     );
 }
+
