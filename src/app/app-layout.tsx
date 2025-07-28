@@ -177,10 +177,11 @@ const AppLayoutContent = ({ children }: { children: React.ReactNode }) => {
             <NavLink href="/" icon={<LayoutDashboard />} module="dashboard">لوحة التحكم</NavLink>
             <NavLink href="/analytics" icon={<BarChart />} module="analytics">التحليلات الرسومية</NavLink>
 
-            <NavCollapsible title="نقاط البيع" icon={<Receipt />} modules={['pos', 'pos_itemGroups', 'pos_sessions', 'reports_pos']}>
+            <NavCollapsible title="نقاط البيع" icon={<Receipt />} modules={['pos', 'pos_itemGroups', 'pos_sessions', 'reports_pos', 'sales_posReturns']}>
                 <NavSubLink href="/pos" module="pos">شاشة الكاشير</NavSubLink>
                 <NavSubLink href="/master-data/item-groups" module="pos_itemGroups">مجموعات الأصناف</NavSubLink>
                 <NavSubLink href="/pos/sessions" module="pos_sessions">إدارة يومية الكاشير</NavSubLink>
+                <NavSubLink href="/sales/returns/pos" module="sales_posReturns">مرتجع نقاط البيع</NavSubLink>
                  <NavSubLink href="/reports/pos-reports" module="reports_pos">تقارير نقاط البيع</NavSubLink>
             </NavCollapsible>
 

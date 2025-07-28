@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { createContext, useContext, ReactNode } from 'react';
@@ -34,6 +35,7 @@ interface DataContextType {
     purchaseInvoices: any[];
     purchaseReturns: any[];
     posSales: any[];
+    posReturns: any[];
     posSessions: any[];
     posAuditLogs: any[];
 
@@ -90,6 +92,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const { data: purchaseInvoices, loading: l_purchaseInvoices, add: add_purchaseInvoice } = useFirebase('purchaseInvoices');
     const { data: purchaseReturns, loading: l_purchaseReturns, add: add_purchaseReturn } = useFirebase('purchaseReturns');
     const { data: posSales, loading: l_posSales, add: add_posSale } = useFirebase('posSales');
+    const { data: posReturns, loading: l_posReturns, add: add_posReturn } = useFirebase('posReturns');
     const { data: posSessions, loading: l_posSessions, add: add_posSession, update: update_posSession } = useFirebase('posSessions');
     const { data: posAuditLogs, loading: l_posAuditLogs, add: add_posAuditLog } = useFirebase('posAuditLogs');
 
@@ -111,7 +114,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const { getNextId } = useFirebase('counters');
 
 
-    const loading = l_items || l_customers || l_suppliers || l_warehouses || l_cashAccounts || l_partners || l_users || l_itemGroups || l_roles || l_settings || l_stockInRecords || l_stockOutRecords || l_stockTransferRecords || l_stockAdjustmentRecords || l_stockIssuesToReps || l_stockReturnsFromReps || l_salesInvoices || l_salesReturns || l_purchaseInvoices || l_purchaseReturns || l_expenses || l_exceptionalIncomes || l_customerPayments || l_supplierPayments || l_treasuryTransactions || l_employees || l_employeeAdvances || l_employeeAdjustments || l_repRemittances || l_posSales || l_posSessions || l_profitDistributions || l_posAuditLogs || l_barcodeDesigns || l_inventoryClosings;
+    const loading = l_items || l_customers || l_suppliers || l_warehouses || l_cashAccounts || l_partners || l_users || l_itemGroups || l_roles || l_settings || l_stockInRecords || l_stockOutRecords || l_stockTransferRecords || l_stockAdjustmentRecords || l_stockIssuesToReps || l_stockReturnsFromReps || l_salesInvoices || l_salesReturns || l_purchaseInvoices || l_purchaseReturns || l_expenses || l_exceptionalIncomes || l_customerPayments || l_supplierPayments || l_treasuryTransactions || l_employees || l_employeeAdvances || l_employeeAdjustments || l_repRemittances || l_posSales || l_posSessions || l_profitDistributions || l_posAuditLogs || l_barcodeDesigns || l_inventoryClosings || l_posReturns;
     
     // A single function to dispatch actions to the correct hook
     const dbAction = async (path: string, action: 'add' | 'update' | 'remove', payload?: any) => {
@@ -130,6 +133,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             'purchaseInvoices': { add: add_purchaseInvoice },
             'purchaseReturns': { add: add_purchaseReturn },
             'posSales': { add: add_posSale },
+            'posReturns': { add: add_posReturn },
             'posSessions': { add: add_posSession, update: update_posSession },
             'posAuditLogs': { add: add_posAuditLog },
             'stockInRecords': { add: add_stockInRecord },
@@ -165,7 +169,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const value = {
         items, customers, suppliers, warehouses, cashAccounts, partners, users, itemGroups, barcodeDesigns, roles, settings,
         stockInRecords, stockOutRecords, stockTransferRecords, stockAdjustmentRecords, stockIssuesToReps, stockReturnsFromReps, inventoryClosings,
-        salesInvoices, salesReturns, purchaseInvoices, purchaseReturns, posSales, posSessions, posAuditLogs,
+        salesInvoices, salesReturns, purchaseInvoices, purchaseReturns, posSales, posReturns, posSessions, posAuditLogs,
         expenses, exceptionalIncomes, customerPayments, supplierPayments, treasuryTransactions, profitDistributions,
         employees, employeeAdvances, employeeAdjustments, repRemittances,
         dbAction, getNextId,

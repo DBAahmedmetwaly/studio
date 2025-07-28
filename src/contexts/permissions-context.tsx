@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { createContext, useContext, useMemo, useState, useEffect } from 'react';
@@ -26,6 +27,7 @@ export const permissionsConfig = {
     pos_itemGroups: { label: "مجموعات الأصناف", group: "pos", actions: ["view", "add", "edit", "delete"] },
     pos_sessions: { label: "إدارة يومية الكاشير", group: "pos", actions: ["view", "add", "delete"] },
     reports_pos: { label: "تقارير نقاط البيع", group: "pos", actions: ["view", "generate"] },
+    sales_posReturns: { label: "مرتجع نقاط البيع", group: "pos", actions: ["view", "add"] },
     
     inventory_items: { label: "بطاقة الأصناف", group: "inventory", actions: ["view", "add", "edit", "delete"] },
     inventory_barcodeDesigner: { label: "تصميم الباركود", group: "inventory", actions: ["view", "print"] },
@@ -216,5 +218,3 @@ export const usePermissions = (): PermissionsContextType => {
   }
   return context;
 };
-
-    
