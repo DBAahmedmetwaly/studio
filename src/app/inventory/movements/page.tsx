@@ -6,7 +6,7 @@ import PageHeader from "@/components/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import useFirebase from "@/hooks/use-firebase";
-import { Loader2 } from "lucide-react";
+import { Loader2, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -15,13 +15,16 @@ import React, { useState, useMemo } from "react";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import Link from "next/link";
 import { getLinkForReceipt } from "@/lib/utils";
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 interface StockInRecord {
   id: string;
   receiptNumber: string;
   date: string;
   warehouseId: string;
-  items: { name: string; qty: number }[];
+  items: { name: string; qty: number; cost?: number }[];
+  createdByName?: string;
 }
 
 interface StockOutRecord {
@@ -29,7 +32,8 @@ interface StockOutRecord {
   receiptNumber: string;
   date: string;
   sourceId: string;
-  items: { name: string; qty: number }[];
+  items: { name: string; qty: number; cost?: number }[];
+  createdByName?: string;
 }
 
 interface StockTransferRecord {
@@ -38,13 +42,41 @@ interface StockTransferRecord {
   date: string;
   fromSourceId: string;
   toSourceId: string;
-  items: { name: string; qty: number }[];
+  items: { name: string; qty: number; cost?: number }[];
+  createdByName?: string;
 }
 
 interface Warehouse {
     id: string;
     name: string;
 }
+
+const ItemsDetailsDialog = ({ items }: { items: any[] }) => (
+    <DialogContent>
+        <DialogHeader>
+            <DialogTitle>تفاصيل الأصناف</DialogTitle>
+        </DialogHeader>
+        <Table>
+            <TableHeader>
+                <TableRow>
+                    <TableHead>الصنف</TableHead>
+                    <TableHead className="text-center">الكمية</TableHead>
+                    <TableHead className="text-center">التكلفة</TableHead>
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                {items.map((item, idx) => (
+                    <TableRow key={idx}>
+                        <TableCell>{item.name}</TableCell>
+                        <TableCell className="text-center">{item.qty}</TableCell>
+                        <TableCell className="text-center">{item.cost?.toLocaleString() || '-'}</TableCell>
+                    </TableRow>
+                ))}
+            </TableBody>
+        </Table>
+    </DialogContent>
+)
+
 
 export default function InventoryMovementsPage() {
   const [filters, setFilters] = useState({
@@ -176,21 +208,35 @@ export default function InventoryMovementsPage() {
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
             ) : (
-                <div className="w-full overflow-auto">
+                <div className="w-full overflow-auto border rounded-lg">
+                    <Dialog>
                     <Table>
                         <TableHeader>
                             <TableRow>
-                            <TableHead className="text-center w-[150px]">نوع الحركة</TableHead>
-                            <TableHead className="w-[150px]">رقم الإيصال</TableHead>
-                            <TableHead className="w-[150px]">التاريخ</TableHead>
                             <TableHead>التفاصيل</TableHead>
-                            <TableHead>الأصناف</TableHead>
+                            <TableHead>النوع</TableHead>
+                            <TableHead>التفاصيل الإضافية</TableHead>
+                            <TableHead className="text-center">عدد الأصناف</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filteredMovements.length > 0 ? filteredMovements.map((move) => (
+                            {filteredMovements.length > 0 ? filteredMovements.map((move: any) => (
                             <TableRow key={`${move.type}-${move.id}`}>
-                                <TableCell className="text-center">
+                                <TableCell>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Link href={getLinkForReceipt(move.receiptNumber, move.id)} className="hover:underline hover:text-primary font-mono">
+                                                <span>{move.receiptNumber}</span>
+                                            </Link>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>{getReceiptTooltip(move.receiptNumber)}</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                     <div className="text-xs text-muted-foreground">{new Date(move.date).toLocaleString('ar-EG')}</div>
+                                     <div className="text-xs text-muted-foreground">بواسطة: {move.createdByName || 'غير معروف'}</div>
+                                </TableCell>
+                                <TableCell>
                                 <Badge variant={
                                     move.type === 'in' ? 'default' :
                                     move.type === 'out' ? 'destructive' :
@@ -199,30 +245,19 @@ export default function InventoryMovementsPage() {
                                     <span>{move.typeLabel}</span>
                                 </Badge>
                                 </TableCell>
-                                <TableCell className="font-mono">
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <Link href={getLinkForReceipt(move.receiptNumber, move.id)} className="hover:underline hover:text-primary">
-                                                <span>{move.receiptNumber}</span>
-                                            </Link>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                            <p>{getReceiptTooltip(move.receiptNumber)}</p>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                </TableCell>
-                                <TableCell>{new Date(move.date).toLocaleDateString('ar-EG')}</TableCell>
                                 <TableCell>
                                 {move.type === 'in' && `إلى: ${getSourceName(move.warehouseId)}`}
                                 {move.type === 'out' && `من: ${getSourceName(move.sourceId)}`}
                                 {move.type === 'transfer' && `من: ${getSourceName(move.fromSourceId)} إلى: ${getSourceName(move.toSourceId)}`}
                                 </TableCell>
-                                <TableCell>
-                                {move.items.map((item: any, index: number) => (
-                                    <div key={index} className="text-xs">
-                                    {item.name} (الكمية: {item.qty})
-                                    </div>
-                                ))}
+                                <TableCell className="text-center">
+                                    <DialogTrigger asChild>
+                                        <Button variant="ghost" size="sm">
+                                            <FileText className="ml-2 h-4 w-4"/>
+                                            {move.items.length}
+                                        </Button>
+                                    </DialogTrigger>
+                                     <ItemsDetailsDialog items={move.items} />
                                 </TableCell>
                             </TableRow>
                             )) : (
@@ -234,6 +269,7 @@ export default function InventoryMovementsPage() {
                             )}
                         </TableBody>
                     </Table>
+                    </Dialog>
                 </div>
             )}
           </CardContent>
