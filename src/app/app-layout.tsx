@@ -18,14 +18,6 @@ import {
   SidebarMenuSubButton,
   useSidebar,
 } from "@/components/ui/sidebar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 import {
   LayoutDashboard,
@@ -167,39 +159,6 @@ const NavSubLink = ({ href, children, module }: { href: string; children: React.
     );
 };
 
-const UserMenu = () => {
-    const { user, signOut } = useAuth();
-    return (
-        <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                    <Avatar className="h-9 w-9">
-                        <AvatarImage src="https://placehold.co/100x100.png" alt={user?.name} />
-                        <AvatarFallback>{user?.name?.charAt(0) || 'U'}</AvatarFallback>
-                    </Avatar>
-                </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end" forceMount>
-                <DropdownMenuLabel className="font-normal">
-                    <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">{user?.name}</p>
-                        <p className="text-xs leading-none text-muted-foreground">{user?.loginName ? `${user.loginName}@admin.com` : "email@example.com"}</p>
-                    </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                    <ModeToggle /> <span className="mr-2">تغيير الثيم</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={signOut} className="text-destructive">
-                    <LogOut className="ml-2 h-4 w-4" />
-                    <span>تسجيل الخروج</span>
-                </DropdownMenuItem>
-            </DropdownMenuContent>
-        </DropdownMenu>
-    );
-}
-
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, signOut } = useAuth();
   
@@ -311,13 +270,20 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <header className="flex h-14 items-center gap-4 border-b bg-background px-6 sticky top-0 z-30">
+        <header className="flex h-14 items-center gap-4 border-b bg-background px-4 sticky top-0 z-30">
             <SidebarTrigger className="md:hidden" />
             <div className="flex-1">
                 {/* Header content can go here */}
             </div>
-             <div className="md:hidden">
-                <UserMenu />
+            <div className="md:hidden flex items-center gap-2">
+                 <ModeToggle />
+                 <Button variant="ghost" className="flex items-center gap-2 p-1 h-auto">
+                    <UserRound className="h-5 w-5" />
+                    <span className="text-sm font-semibold">{user?.name}</span>
+                 </Button>
+                 <Button variant="ghost" size="icon" onClick={signOut}>
+                    <LogOut className="h-5 w-5 text-destructive" />
+                 </Button>
             </div>
         </header>
         {children}
@@ -325,5 +291,3 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     </SidebarProvider>
   );
 }
-
-    
