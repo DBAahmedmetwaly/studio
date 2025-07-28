@@ -17,6 +17,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableFooter,
 } from "@/components/ui/table";
 import { Loader2 } from "lucide-react";
 import { Input } from '@/components/ui/input';
@@ -119,6 +120,10 @@ export default function StockStatusPage() {
         const units = { piece: "قطعة", weight: "لتر ", meter: "متر", kilo: "كيلو", gram: "جرام" };
         return units[unit as keyof typeof units] || unit;
     }
+    
+    const totalValue = useMemo(() => {
+        return stockData.reduce((sum, item) => sum + (item.currentStock * item.cost), 0);
+    }, [stockData]);
 
   return (
     <>
@@ -167,11 +172,12 @@ export default function StockStatusPage() {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>المخزن</TableHead>
+                                <TableHead className="w-[150px]">المخزن</TableHead>
                                 <TableHead>الصنف</TableHead>
                                 <TableHead className="text-center">الوحدة</TableHead>
                                 <TableHead className="text-center">سعر التكلفة</TableHead>
                                 <TableHead className="text-center">الرصيد الحالي</TableHead>
+                                <TableHead className="text-center w-[150px]">إجمالي القيمة</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -186,15 +192,28 @@ export default function StockStatusPage() {
                                         {item.currentStock.toLocaleString()}
                                     </Badge>
                                 </TableCell>
+                                 <TableCell className="text-center font-semibold">
+                                    {(item.currentStock * item.cost).toLocaleString()} ج.م
+                                </TableCell>
                             </TableRow>
                             )) : (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
+                                    <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
                                         لا توجد بيانات تطابق الفلاتر المحددة.
                                     </TableCell>
                                 </TableRow>
                             )}
                         </TableBody>
+                        {stockData.length > 0 && (
+                            <TableFooter>
+                                <TableRow>
+                                    <TableCell colSpan={5} className="font-bold text-base">إجمالي قيمة المخزون</TableCell>
+                                    <TableCell className="text-center font-bold text-base">
+                                        {totalValue.toLocaleString()} ج.م
+                                    </TableCell>
+                                </TableRow>
+                            </TableFooter>
+                        )}
                     </Table>
                 </div>
             )}
