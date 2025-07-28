@@ -16,7 +16,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import Image from 'next/image';
 import { usePosInvoiceCounter } from '@/hooks/use-pos-invoice-counter';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { useSidebar } from '@/components/ui/sidebar';
+import { useSidebar, SidebarTrigger } from '@/components/ui/sidebar';
 
 interface PosItem {
   id: string; // The database ID of the item
