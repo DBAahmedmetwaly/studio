@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { PlusCircle, Trash2, Printer, Save, Loader2, Info } from "lucide-react";
 import React, { useState, useEffect, useMemo } from "react";
-import useFirebase from "@/hooks/use-firebase";
+import { useData } from "@/contexts/data-provider";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from 'next/navigation';
 import { Switch } from "@/components/ui/switch";
@@ -105,26 +105,28 @@ export default function SalesInvoicePage() {
     const [invoiceDate, setInvoiceDate] = useState<string>('');
     const [dueDate, setDueDate] = useState<string>('');
 
-    const { data: allItems, loading: loadingItems } = useFirebase<Item>('items');
-    const { data: customers, loading: loadingCustomers } = useFirebase<Customer>('customers');
-    const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
-    const { data: cashAccounts, loading: loadingCashAccounts } = useFirebase<CashAccount>('cashAccounts');
-    const { data: sales, loading: l3 } = useFirebase<SaleInvoice>('salesInvoices');
-    const { data: purchases, loading: l4 } = useFirebase<PurchaseInvoice>('purchaseInvoices');
-    const { data: stockIns, loading: l5 } = useFirebase<StockInRecord>('stockInRecords');
-    const { data: stockOuts, loading: l6 } = useFirebase<StockOutRecord>('stockOutRecords');
-    const { data: transfers, loading: l7 } = useFirebase<StockTransferRecord>('stockTransferRecords');
-    const { data: adjustments, loading: l8 } = useFirebase<StockAdjustmentRecord>('stockAdjustmentRecords');
-    const { data: salesReturns, loading: l9 } = useFirebase<SalesReturn>('salesReturns');
-    const { data: purchaseReturns, loading: l10 } = useFirebase<PurchaseReturn>('purchaseReturns');
-    const { data: settings, loading: loadingSettings } = useFirebase<any>('settings');
-    const { data: issuesToReps, loading: l11 } = useFirebase<IssueToRep>('stockIssuesToReps');
-    const { data: returnsFromReps, loading: l12 } = useFirebase<ReturnFromRep>('stockReturnsFromReps');
-    const { add: addSaleInvoice, getNextId } = useFirebase('salesInvoices');
-    const { add: addCustomerPayment } = useFirebase('customerPayments');
+    const { 
+        items: allItems, 
+        customers, 
+        warehouses, 
+        cashAccounts, 
+        salesInvoices: sales, 
+        purchaseInvoices: purchases, 
+        stockInRecords: stockIns, 
+        stockOutRecords: stockOuts, 
+        stockTransferRecords: transfers, 
+        stockAdjustmentRecords: adjustments, 
+        salesReturns, 
+        purchaseReturns, 
+        settings, 
+        stockIssuesToReps: issuesToReps, 
+        stockReturnsFromReps: returnsFromReps,
+        dbAction,
+        getNextId,
+        loading 
+    } = useData();
 
     
-    const loading = loadingItems || loadingCustomers || loadingWarehouses || l3 || l4 || l5 || l6 || l7 || l8 || loadingCashAccounts || l9 || l10 || loadingSettings || l11 || l12;
     const isRep = !!user?.isSalesRep;
 
     useEffect(() => {
@@ -144,34 +146,34 @@ export default function SalesInvoicePage() {
 
         // Calculate issued stock
         issuesToReps
-            .filter(issue => issue.salesRepId === user.id)
-            .forEach(issue => {
-                issue.items.forEach(item => {
+            .filter((issue:any) => issue.salesRepId === user.id)
+            .forEach((issue:any) => {
+                issue.items.forEach((item:any) => {
                     repStock.set(item.id, (repStock.get(item.id) || 0) + item.qty);
                 });
             });
 
         // Calculate sold stock from invoices
         sales
-            .filter(sale => sale.salesRepId === user.id)
-            .forEach(sale => {
-                sale.items.forEach(item => {
+            .filter((sale:any) => sale.salesRepId === user.id)
+            .forEach((sale:any) => {
+                sale.items.forEach((item:any) => {
                     repStock.set(item.id, (repStock.get(item.id) || 0) - item.qty);
                 });
             });
 
         // Calculate returned stock from rep
         returnsFromReps
-            .filter(ret => ret.salesRepId === user.id)
-            .forEach(ret => {
-                ret.items.forEach(item => {
+            .filter((ret:any) => ret.salesRepId === user.id)
+            .forEach((ret:any) => {
+                ret.items.forEach((item:any) => {
                     repStock.set(item.id, (repStock.get(item.id) || 0) - item.qty);
                 });
             });
             
         return allItems
-            .map(item => ({...item, stock: repStock.get(item.id) || 0}))
-            .filter(item => item.stock > 0);
+            .map((item:any) => ({...item, stock: repStock.get(item.id) || 0}))
+            .filter((item:any) => item.stock > 0);
     }, [isRep, user?.id, allItems, issuesToReps, sales, returnsFromReps]);
 
 
@@ -184,23 +186,23 @@ export default function SalesInvoicePage() {
         
         const mainSettings = settings.find((s:any) => s.id === 'main');
 
-        return allItems.map(item => {
+        return allItems.map((item:any) => {
             let stock = item.openingStock || 0;
             
-            purchases.filter(p => p.warehouseId === warehouseId).forEach(p => p.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
-            stockIns.filter(si => si.warehouseId === warehouseId).forEach(si => si.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
-            transfers.filter(t => t.toSourceId === warehouseId).forEach(t => t.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
-            adjustments.filter(adj => adj.warehouseId === warehouseId).forEach(adj => adj.items.filter(i => i.itemId === item.id && i.difference > 0).forEach(i => stock += i.difference));
-            salesReturns.filter(sr => sr.warehouseId === warehouseId).forEach(sr => sr.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
+            purchases.filter((p:any) => p.warehouseId === warehouseId).forEach((p:any) => p.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
+            stockIns.filter((si:any) => si.warehouseId === warehouseId).forEach((si:any) => si.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
+            transfers.filter((t:any) => t.toSourceId === warehouseId).forEach((t:any) => t.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
+            adjustments.filter((adj:any) => adj.warehouseId === warehouseId).forEach((adj:any) => adj.items.filter((i:any) => i.itemId === item.id && i.difference > 0).forEach((i:any) => stock += i.difference));
+            salesReturns.filter((sr:any) => sr.warehouseId === warehouseId).forEach((sr:any) => sr.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
 
-            sales.filter(s => s.warehouseId === warehouseId).forEach(s => s.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
-            stockOuts.filter(so => so.sourceId === warehouseId).forEach(so => so.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
-            transfers.filter(t => t.fromSourceId === warehouseId).forEach(t => t.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
-            adjustments.filter(adj => adj.warehouseId === warehouseId).forEach(adj => adj.items.filter(i => i.itemId === item.id && i.difference < 0).forEach(i => stock += i.difference));
-            purchaseReturns.filter(pr => pr.warehouseId === warehouseId).forEach(pr => pr.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
+            sales.filter((s:any) => s.warehouseId === warehouseId).forEach((s:any) => s.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
+            stockOuts.filter((so:any) => so.sourceId === warehouseId).forEach((so:any) => so.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
+            transfers.filter((t:any) => t.fromSourceId === warehouseId).forEach((t:any) => t.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
+            adjustments.filter((adj:any) => adj.warehouseId === warehouseId).forEach((adj:any) => adj.items.filter((i:any) => i.itemId === item.id && i.difference < 0).forEach((i:any) => stock += i.difference));
+            purchaseReturns.filter((pr:any) => pr.warehouseId === warehouseId).forEach((pr:any) => pr.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
 
             return { ...item, stock };
-        }).filter(item => item.stock > 0 || (mainSettings?.financial?.allowNegativeStock));
+        }).filter((item:any) => item.stock > 0 || (mainSettings?.financial?.allowNegativeStock));
 
     }, [isRep, warehouseId, allItems, purchases, sales, stockIns, stockOuts, transfers, adjustments, salesReturns, purchaseReturns, settings, itemsInRepCustody]);
 
@@ -222,7 +224,7 @@ export default function SalesInvoicePage() {
 
     const handleAddItem = () => {
         if (!newItem.id || newItem.qty <= 0 || newItem.price < 0) return;
-        const selectedItem = availableItemsForWarehouse.find(i => i.id === newItem.id);
+        const selectedItem = availableItemsForWarehouse.find((i:any) => i.id === newItem.id);
         if (!selectedItem) return;
         
         const mainSettings = settings.find((s:any) => s.id === 'main');
@@ -258,7 +260,7 @@ export default function SalesInvoicePage() {
     };
 
     const handleItemSelect = (itemId: string) => {
-        const selectedItem = availableItemsForWarehouse.find(i => i.id === itemId);
+        const selectedItem = availableItemsForWarehouse.find((i:any) => i.id === itemId);
         if (selectedItem) {
             setNewItem({
                 ...newItem,
@@ -287,7 +289,7 @@ export default function SalesInvoicePage() {
         setIsSaving(true);
         try {
             const invoiceNumber = `ف-ب-${await getNextId('salesInvoice')}`;
-            const customerName = customers.find(c => c.id === customerId)?.name || '';
+            const customerName = customers.find((c:any) => c.id === customerId)?.name || '';
             
             const invoiceData = {
                 invoiceNumber,
@@ -317,10 +319,10 @@ export default function SalesInvoicePage() {
                 notes,
             };
             
-            await addSaleInvoice(invoiceData);
+            await dbAction('salesInvoices', 'add', invoiceData);
 
             if (invoiceData.status === 'approved' && paidAmount > 0) {
-                await addCustomerPayment({
+                await dbAction('customerPayments', 'add', {
                     date: new Date().toISOString(),
                     amount: paidAmount,
                     customerId: customerId,
@@ -391,7 +393,7 @@ export default function SalesInvoicePage() {
                                     <SelectValue placeholder="اختر عميلاً" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                   {customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                                   {customers.map((c:any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                                 </SelectContent>
                             </Select>
                         </div>
@@ -402,7 +404,7 @@ export default function SalesInvoicePage() {
                                     <SelectValue placeholder="اختر مخزنًا" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {warehouses.map(w => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
+                                  {warehouses.map((w:any) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
                                 </SelectContent>
                             </Select>
                         </div>
@@ -444,7 +446,7 @@ export default function SalesInvoicePage() {
                                             <SelectValue placeholder={(!isRep && !warehouseId) ? "اختر المخزن أولاً" : "اختر صنفًا"} />
                                         </SelectTrigger>
                                         <SelectContent>
-                                        {availableItemsForWarehouse.map(item => <SelectItem key={item.id} value={item.id}>{`${item.name} (المتاح: ${item.stock})`}</SelectItem>)}
+                                        {availableItemsForWarehouse.map((item:any) => <SelectItem key={item.id} value={item.id}>{`${item.name} (المتاح: ${item.stock})`}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
                                 </TableCell>
@@ -527,7 +529,7 @@ export default function SalesInvoicePage() {
                                             <SelectValue placeholder="اختر حساب الاستلام" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                        {cashAccounts.map((acc:CashAccount) => <SelectItem key={acc.id} value={acc.id} disabled={isRep ? !acc.salesRepId : !!acc.salesRepId}>{acc.name}</SelectItem>)}
+                                        {cashAccounts.map((acc:any) => <SelectItem key={acc.id} value={acc.id} disabled={isRep ? !acc.salesRepId : !!acc.salesRepId}>{acc.name}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
                                 </div>}

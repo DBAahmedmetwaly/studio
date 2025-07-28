@@ -24,7 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import useFirebase from "@/hooks/use-firebase";
+import { useData } from "@/contexts/data-provider";
 import { Loader2 } from "lucide-react";
 import { useMemo } from "react";
 
@@ -103,30 +103,28 @@ interface PurchaseReturn {
 // --- Financial Statement Components ---
 
 function IncomeStatement() {
-  const { data: sales, loading: loadingSales } = useFirebase<SaleInvoice>("salesInvoices");
-  const { data: expenses, loading: loadingExpenses } = useFirebase<Expense>("expenses");
-  const { data: exceptionalIncomes, loading: loadingExceptionalIncomes } = useFirebase<ExceptionalIncome>("exceptionalIncomes");
-  const { data: items, loading: loadingItems } = useFirebase<Item>("items");
-
-  const loading = loadingSales || loadingExpenses || loadingExceptionalIncomes || loadingItems;
+  const { salesInvoices, expenses, exceptionalIncomes, items, salesReturns, loading } = useData();
 
   const {
-      totalRevenue,
+      grossRevenue,
+      totalSalesReturns,
       totalSalesDiscount,
       costOfGoodsSold,
       totalExceptionalIncome,
       expensesByType,
       totalExpenses
   } = useMemo(() => {
-      const approvedSales = sales.filter((s: SaleInvoice) => s.status === 'approved');
+      const approvedSales = salesInvoices.filter((s: SaleInvoice) => s.status === 'approved');
       
-      const totalRevenue = approvedSales.reduce((acc, sale) => acc + sale.total + (sale.discount || 0), 0);
+      const grossRevenue = approvedSales.reduce((acc, sale) => acc + (sale.subtotal || (sale.total + sale.discount)), 0);
       const totalSalesDiscount = approvedSales.reduce((acc, sale) => acc + (sale.discount || 0), 0);
+      const totalSalesReturns = salesReturns.reduce((acc, ret) => acc + ret.total, 0);
       
       const costOfGoodsSold = approvedSales.reduce((acc, sale) => {
           return acc + (sale.items?.reduce((itemAcc, saleItem) => {
-              const itemMaster = items.find(i => i.id === saleItem.id);
-              const itemCost = saleItem.cost || itemMaster?.cost || 0;
+              const itemMaster = items.find((i:Item) => i.id === saleItem.id);
+              // Ensure cost is a number, default to 0 if not present
+              const itemCost = typeof saleItem.cost === 'number' ? saleItem.cost : (typeof itemMaster?.cost === 'number' ? itemMaster.cost : 0);
               return itemAcc + (saleItem.qty * itemCost);
           }, 0) || 0);
       }, 0);
@@ -139,11 +137,11 @@ function IncomeStatement() {
       });
       const totalExpenses = Object.values(expensesByType).reduce((acc, amount) => acc + amount, 0);
       
-      return { totalRevenue, totalSalesDiscount, costOfGoodsSold, totalExceptionalIncome, expensesByType, totalExpenses };
-  }, [sales, expenses, exceptionalIncomes, items]);
+      return { grossRevenue, totalSalesReturns, totalSalesDiscount, costOfGoodsSold, totalExceptionalIncome, expensesByType, totalExpenses };
+  }, [salesInvoices, expenses, exceptionalIncomes, items, salesReturns]);
 
   
-  const netRevenue = totalRevenue - totalSalesDiscount;
+  const netRevenue = grossRevenue - totalSalesReturns - totalSalesDiscount;
   const grossProfit = netRevenue - costOfGoodsSold;
   const netOperatingIncome = grossProfit - totalExpenses;
   const netIncome = netOperatingIncome + totalExceptionalIncome;
@@ -156,19 +154,23 @@ function IncomeStatement() {
     <Table>
       <TableBody>
         <TableRow>
-          <TableCell className="font-medium">إجمالي الإيرادات</TableCell>
-          <TableCell className="text-left">ج.م {totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+          <TableCell className="font-medium">إجمالي الإيرادات (المبيعات)</TableCell>
+          <TableCell className="text-left">ج.م {grossRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+        </TableRow>
+        <TableRow>
+          <TableCell className="pl-8 text-muted-foreground">(-) مرتجعات ومسموحات المبيعات</TableCell>
+          <TableCell className="text-left text-destructive">- ج.م {totalSalesReturns.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
         </TableRow>
         <TableRow>
           <TableCell className="pl-8 text-muted-foreground">(-) خصم مسموح به</TableCell>
           <TableCell className="text-left text-destructive">- ج.م {totalSalesDiscount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
         </TableRow>
-         <TableRow className="font-semibold">
+         <TableRow className="font-semibold border-t">
           <TableCell>صافي الإيرادات</TableCell>
           <TableCell className="text-left">ج.م {netRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
         </TableRow>
         <TableRow>
-          <TableCell className="font-medium">تكلفة البضاعة المباعة</TableCell>
+          <TableCell className="font-medium">تكلفة البضاعة المباعة (COGS)</TableCell>
           <TableCell className="text-left text-destructive">- ج.م {costOfGoodsSold.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
         </TableRow>
         <TableRow>
@@ -206,37 +208,26 @@ function IncomeStatement() {
 }
 
 function BalanceSheet() {
-    const { data: customers, loading: l1 } = useFirebase<Customer>("customers");
-    const { data: suppliers, loading: l2 } = useFirebase<Supplier>("suppliers");
-    const { data: partners, loading: l3 } = useFirebase<Partner>("partners");
-    const { data: items, loading: l4 } = useFirebase<Item>("items");
-    const { data: sales, loading: l5 } = useFirebase<SaleInvoice>("salesInvoices");
-    const { data: purchases, loading: l6 } = useFirebase<PurchaseInvoice>("purchaseInvoices");
-    const { data: customerPayments, loading: l7 } = useFirebase<CustomerPayment>('customerPayments');
-    const { data: supplierPayments, loading: l8 } = useFirebase<SupplierPayment>('supplierPayments');
-    const { data: salesReturns, loading: l9 } = useFirebase<SalesReturn>('salesReturns');
-    const { data: purchaseReturns, loading: l10 } = useFirebase<PurchaseReturn>('purchaseReturns');
-
-    const loading = l1 || l2 || l3 || l4 || l5 || l6 || l7 || l8 || l9 || l10;
+    const { customers, suppliers, partners, items, salesInvoices, purchaseInvoices, customerPayments, supplierPayments, salesReturns, purchaseReturns, loading } = useData();
 
     const { accountsReceivable, accountsPayable } = useMemo(() => {
-        let ar = customers.reduce((acc, cust) => acc + (cust.openingBalance || 0), 0);
-        let ap = suppliers.reduce((acc, sup) => acc + (sup.openingBalance || 0), 0);
+        let ar = customers.reduce((acc: number, cust: any) => acc + (cust.openingBalance || 0), 0);
+        let ap = suppliers.reduce((acc: number, sup: any) => acc + (sup.openingBalance || 0), 0);
         
-        sales.filter(s => s.status === 'approved').forEach(s => ar += s.total);
-        customerPayments.forEach(p => ar -= p.amount);
-        salesReturns.forEach(sr => ar -= sr.total);
+        salesInvoices.filter((s:any) => s.status === 'approved').forEach((s:any) => ar += s.total);
+        customerPayments.forEach((p:any) => ar -= p.amount);
+        salesReturns.forEach((sr:any) => ar -= sr.total);
         
-        purchases.forEach(p => ap += p.total);
-        supplierPayments.forEach(p => ap -= p.amount);
-        purchaseReturns.forEach(pr => ap -= pr.total);
+        purchaseInvoices.forEach((p:any) => ap += p.total);
+        supplierPayments.forEach((p:any) => ap -= p.amount);
+        purchaseReturns.forEach((pr:any) => ap -= pr.total);
 
         return { accountsReceivable: ar, accountsPayable: ap };
-    }, [customers, suppliers, sales, purchases, customerPayments, supplierPayments, salesReturns, purchaseReturns]);
+    }, [customers, suppliers, salesInvoices, purchaseInvoices, customerPayments, supplierPayments, salesReturns, purchaseReturns]);
 
-    const totalCapital = partners.reduce((acc, p) => acc + (p.capital || 0), 0);
+    const totalCapital = partners.reduce((acc:number, p:any) => acc + (p.capital || 0), 0);
     // This is a simplified inventory valuation. A more accurate one would track purchases and sales of each item.
-    const inventoryValue = items.reduce((acc, item) => acc + ((item.openingStock || 0) * (item.price || 0)), 0);
+    const inventoryValue = items.reduce((acc:number, item:any) => acc + ((item.openingStock || 0) * (item.price || 0)), 0);
 
     const totalAssets = accountsReceivable + inventoryValue; // Assuming cash is managed separately
     const totalLiabilities = accountsPayable;
