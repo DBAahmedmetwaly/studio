@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useMemo, useState } from 'react';
@@ -30,8 +31,8 @@ import { useData } from '@/contexts/data-provider';
 interface Item { id: string; name: string; unit: string; price: number; cost?: number; reorderPoint?: number; }
 interface Warehouse { id: string; name: string; }
 interface SaleInvoice { id: string; warehouseId: string; items: { id: string; qty: number; }[]; status?: 'approved' | 'pending'; date: string; }
-interface PurchaseInvoice { id: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
-interface StockInRecord { id: string; warehouseId: string; reason: string; items: { id: string; qty: number; }[]; date: string; }
+interface PurchaseInvoice { id: string; warehouseId: string; items: { id: string; qty: number; cost?: number }[]; date: string; }
+interface StockInRecord { id: string; warehouseId: string; reason: string; items: { id: string; qty: number; cost?: number }[]; date: string; }
 interface StockOutRecord { id: string; sourceId: string; items: { id: string; qty: number; }[]; date: string; }
 interface StockTransferRecord { id: string; fromSourceId: string; toSourceId: string; items: { id: string; qty: number; }[]; date: string; }
 interface StockAdjustmentRecord { id: string; warehouseId: string; items: { itemId: string; difference: number; }[]; date: string; }
@@ -67,7 +68,6 @@ export default function StockStatusPage() {
             : warehouses.filter((w:any) => w.id === filters.warehouseId);
 
         targetWarehouses.forEach((warehouse: Warehouse) => {
-            // Find the last closing date for the current warehouse
             const closingsForWarehouse = inventoryClosings.filter((c: InventoryClosing) => c.warehouseId === warehouse.id);
             const lastClosing = closingsForWarehouse.length > 0
                 ? closingsForWarehouse.reduce((latest, current) => new Date(latest.closingDate) > new Date(current.closingDate) ? latest : current)
@@ -75,7 +75,6 @@ export default function StockStatusPage() {
             const lastClosingDate = lastClosing ? new Date(lastClosing.closingDate) : new Date(0);
 
             allItems.forEach((item: Item) => {
-                // Get opening balance from the last closing record
                 let stock = lastClosing?.balances.find(b => b.itemId === item.id)?.balance || 0;
 
                 const filterTransactions = (t: any) => new Date(t.date) > lastClosingDate;
@@ -96,13 +95,34 @@ export default function StockStatusPage() {
                 purchaseReturns.filter(pr => pr.warehouseId === warehouse.id && filterTransactions(pr)).forEach(pr => pr.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
                 stockIssuesToReps.filter(itr => itr.warehouseId === warehouse.id && filterTransactions(itr)).forEach(itr => itr.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
                 
+                // Find latest cost
+                const lastPurchase = purchaseInvoices
+                    .filter((p: PurchaseInvoice) => p.warehouseId === warehouse.id && p.items.some(pi => pi.id === item.id))
+                    .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+                
+                const lastStockIn = stockInRecords
+                    .filter((si: StockInRecord) => si.warehouseId === warehouse.id && si.items.some(si_item => si_item.id === item.id))
+                    .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+
+                let latestCost = item.cost || 0;
+                let lastPurchaseDate = lastPurchase ? new Date(lastPurchase.date) : new Date(0);
+                let lastStockInDate = lastStockIn ? new Date(lastStockIn.date) : new Date(0);
+
+                if (lastPurchaseDate > lastStockInDate) {
+                    const purchasedItem = lastPurchase.items.find(pi => pi.id === item.id);
+                    latestCost = purchasedItem?.cost ?? latestCost;
+                } else if (lastStockInDate > lastPurchaseDate) {
+                    const stockInItem = lastStockIn.items.find(si_item => si_item.id === item.id);
+                    latestCost = stockInItem?.cost ?? latestCost;
+                }
+
                 results.push({
                     id: `${warehouse.id}-${item.id}`,
                     warehouseName: warehouse.name,
                     itemName: item.name,
                     unit: item.unit,
                     price: item.price,
-                    cost: item.cost || 0,
+                    cost: latestCost,
                     currentStock: stock,
                     reorderPoint: item.reorderPoint || 0,
                 });
