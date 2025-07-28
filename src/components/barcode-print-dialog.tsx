@@ -17,7 +17,6 @@ import { Input } from '@/components/ui/input';
 import Barcode from 'react-barcode';
 import { QRCodeSVG } from 'qrcode.react';
 import { Printer } from 'lucide-react';
-import ReactDOM from 'react-dom';
 import ReactDOMServer from 'react-dom/server';
 
 
@@ -45,6 +44,7 @@ interface Design {
     labelWidth: number;
     labelHeight: number;
     barcodeType: string;
+    rotation?: number;
     fontSizes: DesignFontSizes;
     positions: {
         companyName: { y: number; x: number; };
@@ -77,6 +77,7 @@ const DEFAULT_DESIGN: Design = {
     showBarcode: true,
     labelWidth: 50,
     labelHeight: 25,
+    rotation: 0,
     barcodeType: 'CODE128',
     fontSizes: DEFAULT_FONTS,
     positions: DEFAULT_POSITIONS
@@ -96,8 +97,8 @@ export const BarcodePrintDialog = ({ item, barcodeDesigns, trigger }: { item: It
     }, [isOpen, barcodeDesigns, selectedDesignId]);
 
     const activeDesign = useMemo(() => {
-        if (!barcodeDesigns || barcodeDesigns.length === 0) return DEFAULT_DESIGN;
-        const design = barcodeDesigns.find(d => d.id === selectedDesignId) || barcodeDesigns[0];
+        const design = barcodeDesigns.find(d => d.id === selectedDesignId);
+        if (!design) return DEFAULT_DESIGN;
         
         // Deep merge with defaults to avoid errors with older designs
         return {
@@ -136,7 +137,7 @@ export const BarcodePrintDialog = ({ item, barcodeDesigns, trigger }: { item: It
 
             const barcodeHtml = ReactDOMServer.renderToStaticMarkup(barcodeComponent);
 
-            const labelStyle = `width: ${activeDesign.labelWidth}mm; height: ${activeDesign.labelHeight}mm; position: relative; display: inline-block; vertical-align: top; overflow: hidden; border: 1px dotted #ccc; box-sizing: border-box;`;
+            const labelStyle = `width: ${activeDesign.labelWidth}mm; height: ${activeDesign.labelHeight}mm; position: relative; display: inline-block; vertical-align: top; overflow: hidden; border: 1px dotted #ccc; box-sizing: border-box; transform: rotate(${activeDesign.rotation || 0}deg);`;
             const companyNameStyle = `position: absolute; top: ${activeDesign.positions.companyName.y}%; left: ${activeDesign.positions.companyName.x}%; transform: translate(-50%, -50%); width: 100%; text-align: center; font-size: ${activeDesign.fontSizes.companyName}px; font-weight: bold;`;
             const itemNameStyle = `position: absolute; top: ${activeDesign.positions.itemName.y}%; left: ${activeDesign.positions.itemName.x}%; transform: translate(-50%, -50%); width: 100%; text-align: center; font-size: ${activeDesign.fontSizes.itemName}px; font-weight: 600;`;
             const barcodeContainerStyle = `position: absolute; top: ${activeDesign.positions.barcode.y}%; left: ${activeDesign.positions.barcode.x}%; transform: translate(-50%, -50%); width: 90%;`;
@@ -186,7 +187,7 @@ export const BarcodePrintDialog = ({ item, barcodeDesigns, trigger }: { item: It
             <DialogTrigger asChild>
                 {React.cloneElement(trigger as React.ReactElement, { onClick: () => setIsOpen(true) })}
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle>طباعة باركود لـ: {item.name}</DialogTitle>
                     <DialogDescription>اختر تصميمًا وكمية للطباعة.</DialogDescription>
@@ -210,15 +211,14 @@ export const BarcodePrintDialog = ({ item, barcodeDesigns, trigger }: { item: It
                     {activeDesign && (
                         <div className="space-y-2">
                             <Label>معاينة</Label>
-                            <div className="p-4 bg-muted rounded-md flex justify-center items-center">
+                             <div className="p-4 bg-muted rounded-md flex justify-center items-center min-h-[150px]">
                                 <div 
                                     className="bg-white shadow-lg overflow-hidden relative"
                                     style={{
-                                        width: `${activeDesign.labelWidth}mm`,
-                                        height: `${activeDesign.labelHeight}mm`,
+                                        width: `${activeDesign.labelWidth * 2.5}px`, // Render at a larger size for clarity
+                                        height: `${activeDesign.labelHeight * 2.5}px`,
                                         fontFamily: 'sans-serif',
-                                        transform: 'scale(2.5)',
-                                        transformOrigin: 'center'
+                                        transform: `rotate(${activeDesign.rotation || 0}deg)`
                                     }}
                                 >
                                     {activeDesign.showCompanyName && (
@@ -234,7 +234,7 @@ export const BarcodePrintDialog = ({ item, barcodeDesigns, trigger }: { item: It
                                             <Barcode 
                                                 value={item.code || "NO_CODE"} 
                                                 width={1} 
-                                                height={activeDesign.labelHeight / 3}
+                                                height={activeDesign.labelHeight} // Adjust height for preview
                                                 fontSize={activeDesign.fontSizes.barcode}
                                                 margin={2}
                                                 displayValue={activeDesign.showCode}
@@ -263,4 +263,3 @@ export const BarcodePrintDialog = ({ item, barcodeDesigns, trigger }: { item: It
         </Dialog>
     );
 };
-
