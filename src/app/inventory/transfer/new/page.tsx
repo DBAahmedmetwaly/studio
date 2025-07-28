@@ -14,6 +14,7 @@ import useFirebase from "@/hooks/use-firebase";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from 'next/navigation';
 import { useAuth } from "@/contexts/auth-context";
+import { Combobox } from "@/components/ui/combobox";
 
 interface StockItem {
   id: string; // The database ID of the item
@@ -47,7 +48,10 @@ export default function NewStockTransferPage() {
     const { data: availableItems, loading: loadingItems } = useFirebase<Item>('items');
     const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
     const { add: addStockTransferRecord, getNextId } = useFirebase("stockTransferRecords");
-
+    
+    const itemsForCombobox = React.useMemo(() => {
+        return availableItems.map(item => ({ value: item.id, label: item.name }));
+    }, [availableItems]);
 
     const handleAddItem = () => {
         if (!newItem.id || newItem.qty <= 0) {
@@ -142,7 +146,7 @@ export default function NewStockTransferPage() {
     <>
       <PageHeader title="إذن تحويل مخزني جديد">
         <div className="flex gap-2 no-print">
-            <Button onClick={handlePrint}>
+            <Button onClick={handlePrint} variant="outline">
                 <Printer className="ml-2 h-4 w-4" />
                 طباعة
             </Button>
@@ -219,14 +223,13 @@ export default function NewStockTransferPage() {
                         ))}
                         <TableRow className="no-print bg-muted/30">
                             <TableCell className="p-2">
-                                <Select value={newItem.id} onValueChange={handleItemSelect}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="اختر صنفًا" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                    {availableItems.map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
+                                <Combobox
+                                    options={itemsForCombobox}
+                                    value={newItem.id}
+                                    onValueChange={handleItemSelect}
+                                    placeholder="اختر صنفًا..."
+                                    emptyMessage="لم يتم العثور على الصنف."
+                                />
                             </TableCell>
                              <TableCell></TableCell>
                             <TableCell className="p-2">

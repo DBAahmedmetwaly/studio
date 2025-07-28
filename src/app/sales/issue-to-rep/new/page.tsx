@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import PageHeader from "@/components/page-header";
@@ -220,14 +221,13 @@ export default function IssueToRepPage() {
                             ))}
                             <TableRow className="bg-muted/30">
                                 <TableCell className="p-2">
-                                     <Select value={newItem.id} onValueChange={handleItemSelect}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="اختر صنفًا" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                        {availableItems.map(item => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
+                                     <Combobox
+                                        options={itemsForCombobox}
+                                        value={newItem.id}
+                                        onValueChange={handleItemSelect}
+                                        placeholder="اختر صنفًا..."
+                                        emptyMessage="لا توجد أصناف."
+                                    />
                                 </TableCell>
                                 <TableCell className="text-center text-muted-foreground p-2">{newItem.unit}</TableCell>
                                 <TableCell className="p-2">

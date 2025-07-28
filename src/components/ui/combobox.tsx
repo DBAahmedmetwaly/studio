@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -26,9 +25,10 @@ interface ComboboxProps {
     onValueChange: (value: string) => void;
     placeholder?: string;
     emptyMessage?: string;
+    className?: string;
 }
 
-export function Combobox({ options, value, onValueChange, placeholder="Select...", emptyMessage="No results." }: ComboboxProps) {
+export function Combobox({ options, value, onValueChange, placeholder="Select...", emptyMessage="No results.", className }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
 
   return (
@@ -38,15 +38,17 @@ export function Combobox({ options, value, onValueChange, placeholder="Select...
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between"
+          className={cn("w-full justify-between", className)}
         >
-          {value
-            ? options.find((option) => option.value === value)?.label
-            : placeholder}
+          <span className="truncate">
+            {value
+              ? options.find((option) => option.value === value)?.label
+              : placeholder}
+          </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0" align="start">
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
         <Command>
           <CommandInput placeholder={placeholder} />
           <CommandList>
@@ -55,9 +57,9 @@ export function Combobox({ options, value, onValueChange, placeholder="Select...
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
-                  value={option.value}
-                  onSelect={(currentValue) => {
-                    onValueChange(currentValue === value ? "" : currentValue)
+                  value={option.label} // Search by label
+                  onSelect={() => {
+                    onValueChange(option.value === value ? "" : option.value)
                     setOpen(false)
                   }}
                 >

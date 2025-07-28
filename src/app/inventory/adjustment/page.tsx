@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import PageHeader from "@/components/page-header";
@@ -233,7 +232,7 @@ export default function StockAdjustmentPage() {
                                 </TableRow>
                             ))}
                              <TableRow className="no-print bg-muted/30">
-                                <TableCell>
+                                <TableCell className="p-2">
                                     <Combobox
                                         options={availableItemsForCombobox}
                                         value={newItem.itemId}
@@ -243,7 +242,7 @@ export default function StockAdjustmentPage() {
                                     />
                                 </TableCell>
                                 <TableCell></TableCell>
-                                <TableCell>
+                                <TableCell className="p-2">
                                     <Input type="number" placeholder="الكمية الفعلية" value={newItem.actualQty} onChange={e => setNewItem({...newItem, actualQty: parseInt(e.target.value) || 0})} />
                                 </TableCell>
                                 <TableCell></TableCell>

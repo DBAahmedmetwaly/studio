@@ -16,6 +16,7 @@ import useFirebase from "@/hooks/use-firebase";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from 'next/navigation';
 import { useAuth } from "@/contexts/auth-context";
+import { Combobox } from "@/components/ui/combobox";
 
 interface StockItem {
   id: string; // The database ID of the item
@@ -52,6 +53,11 @@ export default function NewStockOutPage() {
     const { data: availableItems, loading: loadingItems } = useFirebase<Item>('items');
     const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
     const { add: addStockOutRecord, getNextId } = useFirebase("stockOutRecords");
+    
+    const itemsForCombobox = useMemo(() => {
+        return availableItems.map(item => ({ value: item.id, label: item.name }));
+    }, [availableItems]);
+
 
     const handleAddItem = () => {
         if (!newItem.id || newItem.qty <= 0) {
@@ -212,14 +218,13 @@ export default function NewStockOutPage() {
                             ))}
                                 <TableRow className="bg-muted/30">
                                     <TableCell className="p-2">
-                                        <Select value={newItem.id} onValueChange={handleItemSelect}>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="اختر صنفًا" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                            {availableItems.map(i => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
-                                            </SelectContent>
-                                        </Select>
+                                        <Combobox
+                                            options={itemsForCombobox}
+                                            value={newItem.id}
+                                            onValueChange={handleItemSelect}
+                                            placeholder="اختر صنفًا..."
+                                            emptyMessage="لم يتم العثور على الصنف."
+                                        />
                                     </TableCell>
                                     <TableCell></TableCell>
                                     <TableCell className="p-2">

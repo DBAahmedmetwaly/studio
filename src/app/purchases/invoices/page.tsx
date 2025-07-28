@@ -17,6 +17,7 @@ import { useRouter } from 'next/navigation';
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAuth } from "@/contexts/auth-context";
+import { Combobox } from "@/components/ui/combobox";
 
 
 interface InvoiceItem {
@@ -79,6 +80,10 @@ export default function PurchaseInvoicePage() {
   const { data: cashAccounts, loading: loadingCashAccounts } = useFirebase<CashAccount>('cashAccounts');
   const { add: addPurchaseInvoice, getNextId } = useFirebase('purchaseInvoices');
   const { add: addSupplierPayment } = useFirebase('supplierPayments');
+
+  const itemsForCombobox = React.useMemo(() => {
+    return availableItems.map(item => ({ value: item.id, label: item.name }));
+  }, [availableItems]);
 
   useEffect(() => {
     const newSubtotal = items.reduce((acc, item) => acc + item.total, 0);
@@ -146,7 +151,7 @@ export default function PurchaseInvoicePage() {
             return;
         }
        if (paidAmount > 0 && !paidFromAccountId) {
-            toast({ variant: "destructive", title: "بيانات غير كاملة", description: "يرجى تحديد الحساب الذي تم الدفع منه." });
+            toast({ variant: "destructive", title: "بيانات غير مكتملة", description: "يرجى تحديد الحساب الذي تم الدفع منه." });
             return;
         }
         setIsSaving(true);
@@ -308,14 +313,13 @@ export default function PurchaseInvoicePage() {
                         ))}
                         <TableRow className="no-print bg-muted/20">
                             <TableCell className="p-2">
-                                <Select value={newItem.id} onValueChange={handleItemSelect}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="اختر صنفًا" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                    {availableItems.map(item => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
+                                 <Combobox
+                                    options={itemsForCombobox}
+                                    value={newItem.id}
+                                    onValueChange={handleItemSelect}
+                                    placeholder="اختر صنفًا..."
+                                    emptyMessage="لا توجد أصناف."
+                                />
                             </TableCell>
                             <TableCell className="text-center text-muted-foreground p-2">{newItem.unit}</TableCell>
                             <TableCell className="p-2">
