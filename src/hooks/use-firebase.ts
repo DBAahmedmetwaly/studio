@@ -16,6 +16,10 @@ const useFirebase = <T extends object>(path: string) => {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
+    if (!path) {
+        setLoading(false);
+        return;
+    }
     const dbRef = ref(database, path);
     
     const unsubscribe = onValue(dbRef, (snapshot) => {
@@ -23,7 +27,7 @@ const useFirebase = <T extends object>(path: string) => {
             const snapshotData = snapshot.val();
             // The 'roles' path has a different structure (object of objects)
             // where the key is the role name. It should not be converted to an array.
-            if (path === 'roles') {
+            if (path === 'roles' || path === '/') {
                 setData(snapshotData);
             } else {
                  // All other paths are converted to arrays of objects with IDs.
@@ -75,13 +79,13 @@ const useFirebase = <T extends object>(path: string) => {
   }, [path]);
 
   const remove = useCallback(async (id: string) => {
-    if(!id) return;
+    const itemPath = id ? `${path}/${id}` : path;
+    const itemRef = ref(database, itemPath);
     try {
-      const itemRef = ref(database, `${path}/${id}`);
       await fbRemove(itemRef);
     } catch (e: any) {
       setError(e);
-      console.error('Firebase remove failed:', e);
+      console.error(`Firebase remove failed for path: ${itemPath}`, e);
       throw e;
     }
   }, [path]);

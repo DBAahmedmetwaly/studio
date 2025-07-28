@@ -15,8 +15,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import useFirebase from "@/hooks/use-firebase";
-import { Download, Upload, Loader2, AlertTriangle, History } from "lucide-react";
+import { useData } from "@/contexts/data-provider";
+import { Download, Upload, Loader2, AlertTriangle, History, RefreshCcw } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,9 +32,10 @@ import {
 
 export default function BackupPage() {
     const { toast } = useToast();
-    const { data: allData, loading: loadingData } = useFirebase<any>('/'); // Listen to root
+    const { allData, loading: loadingData, dbAction } = useData();
     const [isLoadingBackup, setIsLoadingBackup] = useState(false);
     const [isLoadingRestore, setIsLoadingRestore] = useState(false);
+    const [isLoadingReset, setIsLoadingReset] = useState(false);
     const [restoreFile, setRestoreFile] = useState<File | null>(null);
 
     // This is just a simple way to detect a change. We'll use the JSON string length.
@@ -132,6 +133,33 @@ export default function BackupPage() {
         reader.readAsText(restoreFile);
     };
 
+    const handleFactoryReset = async () => {
+        setIsLoadingReset(true);
+        try {
+            const pathsToClear = [
+                'items', 'customers', 'suppliers', 'warehouses', 'partners',
+                'cashAccounts', 'employees', 'itemGroups', 'barcodeDesigns',
+                'stockInRecords', 'stockOutRecords', 'stockTransferRecords', 'stockAdjustmentRecords', 'stockIssuesToReps', 'stockReturnsFromReps', 'inventoryClosings',
+                'salesInvoices', 'salesReturns', 'purchaseInvoices', 'purchaseReturns',
+                'posSales', 'posReturns', 'posSessions', 'posAuditLogs',
+                'expenses', 'exceptionalIncomes', 'customerPayments', 'supplierPayments',
+                'treasuryTransactions', 'profitDistributions', 'employeeAdvances',
+                'employeeAdjustments', 'repRemittances', 'counters'
+            ];
+
+            for (const path of pathsToClear) {
+                await dbAction(path, 'remove', { id: '' }); // Passing empty id to remove root of the path
+            }
+            toast({ title: "تمت إعادة الضبط بنجاح!", description: "تم حذف جميع البيانات الحركية والأساسية." });
+        } catch (error) {
+            console.error("Factory reset failed:", error);
+            toast({ variant: "destructive", title: "خطأ", description: "فشلت عملية إعادة ضبط المصنع." });
+        } finally {
+            setIsLoadingReset(false);
+        }
+    };
+
+
   return (
     <>
       <PageHeader title="النسخ الاحتياطي والاستعادة" />
@@ -200,6 +228,40 @@ export default function BackupPage() {
                             <AlertDialogFooter>
                             <AlertDialogCancel>إلغاء</AlertDialogCancel>
                             <AlertDialogAction onClick={handleRestore} className="bg-destructive hover:bg-destructive/90">نعم، أفهم المخاطر، قم بالاستعادة</AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                </CardContent>
+            </Card>
+            
+            <Card className="border-destructive md:col-span-2">
+                <CardHeader>
+                    <CardTitle className="text-destructive flex items-center gap-2">
+                        <AlertTriangle />
+                        إعادة ضبط المصنع
+                    </CardTitle>
+                    <CardDescription>
+                        حذف جميع البيانات الحركية والأساسية (الأصناف، العملاء، الموردون، الفواتير، إلخ) وإعادة البرنامج إلى حالته الأولية. هذا الإجراء لا يحذف المستخدمين أو الصلاحيات.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="destructive" disabled={isLoadingReset}>
+                                {isLoadingReset ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <RefreshCcw className="ml-2 h-4 w-4" />}
+                                {isLoadingReset ? 'جارٍ الحذف...' : 'حذف جميع البيانات والتهيئة'}
+                            </Button>
+                        </AlertDialogTrigger>
+                         <AlertDialogContent>
+                            <AlertDialogHeader>
+                            <AlertDialogTitle>تنبيه أخير! هل أنت متأكد تمامًا؟</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                أنت على وشك حذف جميع بيانات البرنامج بشكل نهائي ولا يمكن التراجع عن هذا الإجراء. يوصى بشدة بأخذ نسخة احتياطية أولاً.
+                            </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleFactoryReset} className="bg-destructive hover:bg-destructive/90">نعم، أحذف كل شيء</AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
                     </AlertDialog>
