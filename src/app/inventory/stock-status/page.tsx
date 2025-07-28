@@ -26,7 +26,7 @@ import { Badge } from '@/components/ui/badge';
 import { useData } from '@/contexts/data-provider';
 
 // Data Interfaces
-interface Item { id: string; name: string; unit: string; price: number; reorderPoint?: number; }
+interface Item { id: string; name: string; unit: string; price: number; cost?: number; reorderPoint?: number; }
 interface Warehouse { id: string; name: string; }
 interface SaleInvoice { id: string; warehouseId: string; items: { id: string; qty: number; }[]; status?: 'approved' | 'pending'; date: string; }
 interface PurchaseInvoice { id: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
@@ -101,6 +101,7 @@ export default function StockStatusPage() {
                     itemName: item.name,
                     unit: item.unit,
                     price: item.price,
+                    cost: item.cost || 0,
                     currentStock: stock,
                     reorderPoint: item.reorderPoint || 0,
                 });
@@ -169,7 +170,7 @@ export default function StockStatusPage() {
                                 <TableHead>المخزن</TableHead>
                                 <TableHead>الصنف</TableHead>
                                 <TableHead className="text-center">الوحدة</TableHead>
-                                <TableHead className="text-center">السعر</TableHead>
+                                <TableHead className="text-center">سعر التكلفة</TableHead>
                                 <TableHead className="text-center">الرصيد الحالي</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -179,7 +180,7 @@ export default function StockStatusPage() {
                                 <TableCell>{item.warehouseName}</TableCell>
                                 <TableCell className="font-medium">{item.itemName}</TableCell>
                                 <TableCell className="text-center">{getUnitLabel(item.unit)}</TableCell>
-                                <TableCell className="text-center">{item.price.toLocaleString()} ج.م</TableCell>
+                                <TableCell className="text-center">{item.cost.toLocaleString()} ج.م</TableCell>
                                 <TableCell className="text-center font-bold">
                                     <Badge variant={item.currentStock <= item.reorderPoint ? 'destructive' : 'default'}>
                                         {item.currentStock.toLocaleString()}
