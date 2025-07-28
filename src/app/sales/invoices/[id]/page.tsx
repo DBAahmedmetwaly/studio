@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -26,7 +25,7 @@ interface SaleInvoice {
 
 export default function SaleInvoiceDetailsPage({ params }: { params: { id: string } }) {
   const router = useRouter();
-  const id = params.id;
+  const { id } = params;
 
   const { salesInvoices, customers, settings, loading } = useData();
 

@@ -31,7 +31,7 @@ interface Warehouse {
 
 export default function ReturnFromRepDetailsPage({ params }: { params: { id: string } }) {
   const router = useRouter();
-  const id = params.id;
+  const { id } = params;
 
   const [record, setRecord] = useState<ReturnFromRep | null>(null);
   const [loading, setLoading] = useState(true);
