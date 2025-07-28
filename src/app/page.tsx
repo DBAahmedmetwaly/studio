@@ -64,7 +64,7 @@ interface ExceptionalIncome {
     warehouseId?: string;
     date: string;
 }
-interface PurchaseInvoice { id: string; warehouseId: string; items: { id: string; qty: number; }[]; total: number; date: string; }
+interface PurchaseInvoice { id: string; warehouseId: string; items: { id: string; qty: number; cost?: number; }[]; total: number; date: string; }
 interface Customer { id: string; }
 interface Item {
   id: string;
@@ -74,7 +74,7 @@ interface Item {
   reorderPoint?: number;
 }
 interface WarehouseData { id: string; name: string; }
-interface StockInRecord { id: string; warehouseId: string; items: { id: string; name: string; qty: number; }[]; date: string; }
+interface StockInRecord { id: string; warehouseId: string; items: { id: string; name: string; qty: number; cost?: number; }[]; date: string; }
 interface StockOutRecord { id: string; sourceId: string; items: { id: string; name: string; qty: number; }[]; date: string; }
 interface StockTransferRecord { id: string; fromSourceId: string; toSourceId: string; items: { id: string; qty: number; }[]; date: string; }
 interface StockAdjustmentRecord { id: string; warehouseId: string; items: { itemId: string; difference: number; }[]; date: string; }
@@ -175,8 +175,40 @@ export default function Dashboard() {
         return { ...item, currentStock: stock };
     });
     // --- End of Corrected Logic ---
+    
+    // --- Accurate Costing Logic ---
+    const inventoryValue = warehouseItems.reduce((acc: number, item: any) => {
+        if (item.currentStock <= 0) return acc;
 
-    const inventoryValue = warehouseItems.reduce((acc:number, item:any) => acc + (item.currentStock * (item.cost || 0)), 0);
+        // Find the last purchase price for this item
+        const lastPurchase = purchases
+            .filter((p: PurchaseInvoice) => p.items.some(pi => pi.id === item.id))
+            .sort((a: PurchaseInvoice, b: PurchaseInvoice) => new Date(b.date).getTime() - new Date(a.date).getTime())
+            [0];
+        
+        let lastCost = item.cost || 0; // Fallback to master cost
+        if(lastPurchase) {
+            const purchasedItem = lastPurchase.items.find(pi => pi.id === item.id);
+            if(purchasedItem && purchasedItem.cost) {
+                lastCost = purchasedItem.cost;
+            }
+        } else {
+             const lastStockIn = stockIns
+                .filter((si: StockInRecord) => si.items.some(si_item => si_item.id === item.id))
+                .sort((a: StockInRecord, b: StockInRecord) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                [0];
+            if (lastStockIn) {
+                 const stockInItem = lastStockIn.items.find(si_item => si_item.id === item.id);
+                 if (stockInItem && stockInItem.cost) {
+                    lastCost = stockInItem.cost;
+                 }
+            }
+        }
+
+        return acc + (item.currentStock * lastCost);
+    }, 0);
+
+
     const lowStockItems = warehouseItems.filter((item:any) => item.reorderPoint > 0 && item.currentStock <= item.reorderPoint).slice(0, 5);
     const recentTransactions = filteredSales.slice(-5).reverse();
 
@@ -274,7 +306,7 @@ export default function Dashboard() {
               <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold font-headline">ج.م {dashboardData.inventoryValue.toLocaleString()}</div>
+              <div className="text-2xl font-bold font-headline">ج.م {dashboardData.inventoryValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
               <p className="text-xs text-muted-foreground">
                 القيمة التقديرية للمخزن المحدد
               </p>
