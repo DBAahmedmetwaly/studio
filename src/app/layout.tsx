@@ -23,6 +23,7 @@ const notoKufi = Noto_Kufi_Arabic({
 export const metadata: Metadata = {
   title: "المحاسب الذكي",
   description: "نظام المخازن والمحاسبة",
+  viewport: "width=device-width, initial-scale=1",
 };
 
 export default function RootLayout({
