@@ -64,13 +64,7 @@ interface ExceptionalIncome {
     warehouseId?: string;
     date: string;
 }
-interface PurchaseInvoice {
-  id: string;
-  warehouseId: string;
-  items: { id: string; qty: number; }[];
-  total: number;
-  date: string;
-}
+interface PurchaseInvoice { id: string; warehouseId: string; items: { id: string; qty: number; }[]; total: number; date: string; }
 interface Customer { id: string; }
 interface Item {
   id: string;
@@ -89,6 +83,7 @@ interface PurchaseReturn { id: string; warehouseId: string; items: { id: string;
 interface CashAccount { id: string; name: string; warehouseId?: string }
 interface IssueToRep { id: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
 interface ReturnFromRep { id: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
+interface InventoryClosing { id: string; warehouseId: string; closingDate: string; balances: { itemId: string, balance: number }[] }
 
 export default function Dashboard() {
   const { 
@@ -98,6 +93,7 @@ export default function Dashboard() {
     stockTransferRecords: transfers, stockAdjustmentRecords: adjustments, 
     salesReturns, purchaseReturns, stockIssuesToReps: issuesToReps,
     stockReturnsFromReps: returnsFromReps,
+    inventoryClosings,
     loading 
   } = useData();
   
@@ -150,34 +146,42 @@ export default function Dashboard() {
     const totalSalesCount = filteredSales.length;
     const totalCustomers = customers.length; // This is not warehouse-specific
 
+    // --- Corrected Stock Calculation Logic ---
+    const closingsForWarehouse = inventoryClosings.filter((c: InventoryClosing) => c.warehouseId === selectedWarehouseId);
+    const lastClosing = closingsForWarehouse.length > 0 ? closingsForWarehouse.reduce((latest:any, current:any) => new Date(latest.closingDate) > new Date(current.closingDate) ? latest : current) : null;
+    const lastClosingDate = lastClosing ? new Date(lastClosing.closingDate) : new Date(0);
+
     const warehouseItems = items.map((item:any) => {
-        let stock = 0;
+        let stock = lastClosing?.balances.find((b:any) => b.itemId === item.id)?.balance || 0;
         
-        // Increases
-        purchases.filter((p:any) => p.warehouseId === selectedWarehouseId).forEach((p:any) => p.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
-        stockIns.filter((si:any) => si.warehouseId === selectedWarehouseId).forEach((si:any) => si.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
-        transfers.filter((t:any) => t.toSourceId === selectedWarehouseId).forEach((t:any) => t.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
-        adjustments.filter((adj:any) => adj.warehouseId === selectedWarehouseId).forEach((adj:any) => adj.items.filter((i:any) => i.itemId === item.id && i.difference > 0).forEach((i:any) => stock += i.difference));
-        salesReturns.filter((sr:any) => sr.warehouseId === selectedWarehouseId).forEach((sr:any) => sr.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
-        returnsFromReps.filter((rfr:any) => rfr.warehouseId === selectedWarehouseId).forEach((rfr:any) => rfr.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
+        const filterAfterClosing = (t: any) => new Date(t.date) > lastClosingDate;
 
-        // Decreases
-        sales.filter((s:any) => s.warehouseId === selectedWarehouseId && s.status === 'approved').forEach((s:any) => s.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
-        stockOuts.filter((so:any) => so.sourceId === selectedWarehouseId).forEach((so:any) => so.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
-        transfers.filter((t:any) => t.fromSourceId === selectedWarehouseId).forEach((t:any) => t.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
-        adjustments.filter((adj:any) => adj.warehouseId === selectedWarehouseId).forEach((adj:any) => adj.items.filter((i:any) => i.itemId === item.id && i.difference < 0).forEach((i:any) => stock += i.difference));
-        purchaseReturns.filter((pr:any) => pr.warehouseId === selectedWarehouseId).forEach((pr:any) => pr.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
-        issuesToReps.filter((itr:any) => itr.warehouseId === selectedWarehouseId).forEach((itr:any) => itr.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
+        // Increases since last closing
+        purchases.filter(p => p.warehouseId === selectedWarehouseId && filterAfterClosing(p)).forEach(p => p.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
+        stockIns.filter(si => si.warehouseId === selectedWarehouseId && filterAfterClosing(si)).forEach(si => si.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
+        transfers.filter(t => t.toSourceId === selectedWarehouseId && filterAfterClosing(t)).forEach(t => t.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
+        adjustments.filter(adj => adj.warehouseId === selectedWarehouseId && filterAfterClosing(adj)).forEach(adj => adj.items.filter(i => i.itemId === item.id && i.difference > 0).forEach(i => stock += i.difference));
+        salesReturns.filter(sr => sr.warehouseId === selectedWarehouseId && filterAfterClosing(sr)).forEach(sr => sr.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
+        returnsFromReps.filter(rfr => rfr.warehouseId === selectedWarehouseId && filterAfterClosing(rfr)).forEach(rfr => rfr.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
 
+        // Decreases since last closing
+        sales.filter(s => s.warehouseId === selectedWarehouseId && s.status === 'approved' && filterAfterClosing(s)).forEach(s => s.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
+        stockOuts.filter(so => so.sourceId === selectedWarehouseId && filterAfterClosing(so)).forEach(so => so.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
+        transfers.filter(t => t.fromSourceId === selectedWarehouseId && filterAfterClosing(t)).forEach(t => t.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
+        adjustments.filter(adj => adj.warehouseId === selectedWarehouseId && filterAfterClosing(adj)).forEach(adj => adj.items.filter(i => i.itemId === item.id && i.difference < 0).forEach(i => stock += i.difference));
+        purchaseReturns.filter(pr => pr.warehouseId === selectedWarehouseId && filterAfterClosing(pr)).forEach(pr => pr.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
+        issuesToReps.filter(itr => itr.warehouseId === selectedWarehouseId && filterAfterClosing(itr)).forEach(itr => itr.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
+        
         return { ...item, currentStock: stock };
     });
+    // --- End of Corrected Logic ---
 
     const inventoryValue = warehouseItems.reduce((acc:number, item:any) => acc + (item.currentStock * (item.cost || 0)), 0);
-    const lowStockItems = warehouseItems.filter((item:any) => item.currentStock <= (item.reorderPoint || 0) && item.currentStock > -Infinity).slice(0, 5);
+    const lowStockItems = warehouseItems.filter((item:any) => item.reorderPoint > 0 && item.currentStock <= item.reorderPoint).slice(0, 5);
     const recentTransactions = filteredSales.slice(-5).reverse();
 
     return { totalReceipts, totalSalesCount, totalCustomers, inventoryValue, lowStockItems, recentTransactions };
-  }, [selectedWarehouseId, dateRange, sales, customers, items, warehouses, cashAccounts, customerPayments, exceptionalIncomes, purchases, stockIns, stockOuts, transfers, adjustments, salesReturns, purchaseReturns, issuesToReps, returnsFromReps]);
+  }, [selectedWarehouseId, dateRange, sales, customers, items, warehouses, cashAccounts, customerPayments, exceptionalIncomes, purchases, stockIns, stockOuts, transfers, adjustments, salesReturns, purchaseReturns, issuesToReps, returnsFromReps, inventoryClosings]);
 
 
   if (loading && !warehouses.length) {
