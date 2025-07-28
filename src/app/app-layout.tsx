@@ -63,6 +63,7 @@ import {
   QrCode,
   PowerOff,
   ClipboardList,
+  PanelLeft,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -161,6 +162,7 @@ const NavSubLink = ({ href, children, module }: { href: string; children: React.
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, signOut } = useAuth();
+  const { toggleSidebar } = useSidebar();
   
   return (
     <SidebarProvider>
@@ -272,6 +274,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <SidebarInset>
         <header className="flex h-14 items-center gap-4 border-b bg-background px-4 sticky top-0 z-30">
             <SidebarTrigger className="md:hidden" />
+            <Button variant="ghost" size="icon" className="hidden md:flex" onClick={toggleSidebar}>
+              <PanelLeft />
+            </Button>
             <div className="flex-1">
                 {/* Header content can go here */}
             </div>

@@ -41,7 +41,6 @@ export default function PosPage() {
     const { user } = useAuth();
     const { toast } = useToast();
     const { generateInvoiceNumber, currentInvoiceNumber, loading: loadingCounter } = usePosInvoiceCounter();
-    const { setOpen } = useSidebar();
 
     const barcodeInputRef = useRef<HTMLInputElement>(null);
     
@@ -61,11 +60,6 @@ export default function PosPage() {
         return cashierSession && !cashierSession.isClosed;
     }, [openWorkDay, user]);
 
-
-    // Collapse sidebar when component mounts
-    useEffect(() => {
-      setOpen(false);
-    }, [setOpen]);
 
     const resetSale = useCallback(async () => {
         if (cart.length > 0) {
