@@ -163,7 +163,7 @@ const StockStatusReport = ({ filters, data }: any) => {
      return (
         <ReportContainer title="تقرير حالة المخزون" description={`يعرض الأرصدة الحالية للأصناف بناءً على آخر إقفال`} onPrint={() => window.print()}>
             <Table>
-                <TableHeader><TableRow><TableHead>المخزن</TableHead><TableHead>كود الصنف</TableHead><TableHead>اسم الصنف</TableHead><TableHead className="text-center">الرصيد الحالي</TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>المخزن</TableHead><TableHead className="text-center">كود الصنف</TableHead><TableHead>اسم الصنف</TableHead><TableHead className="text-center">الرصيد الحالي</TableHead></TableRow></TableHeader>
                 <TableBody>
                     {stockData.map((item:any) => (
                         <TableRow key={item.id}>
