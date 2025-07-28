@@ -13,7 +13,7 @@ import {
   CardFooter,
 } from "@/components/ui/card";
 import { useData } from "@/contexts/data-provider";
-import { Loader2, Printer, BarChart2 } from "lucide-react";
+import { Loader2, Printer, BarChart2, TrendingDown, TrendingUp, Coins, Percent } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -111,9 +111,7 @@ const ReportContainer = ({ title, description, children, onPrint }: { title: str
             </Button>
         </CardHeader>
         <CardContent>
-            <div className="w-full overflow-auto border rounded-lg">
-                {children}
-            </div>
+            {children}
         </CardContent>
     </Card>
 )
@@ -139,20 +137,20 @@ const StockStatusReport = ({ filters, data }: any) => {
                 const filterTransactions = (t: any) => new Date(t.date) > lastClosingDate;
 
                 // Increases
-                purchaseInvoices.filter(p => p.warehouseId === warehouse.id && filterTransactions(p)).forEach(p => p.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
-                stockInRecords.filter(si => si.warehouseId === warehouse.id && filterTransactions(si)).forEach(si => si.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
-                stockTransferRecords.filter(t => t.toSourceId === warehouse.id && filterTransactions(t)).forEach(t => t.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
-                stockAdjustmentRecords.filter(adj => adj.warehouseId === warehouse.id && filterTransactions(adj)).forEach(adj => adj.items.filter(i => i.itemId === item.id && i.difference > 0).forEach(i => stock += i.difference));
-                salesReturns.filter(sr => sr.warehouseId === warehouse.id && filterTransactions(sr)).forEach(sr => sr.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
-                stockReturnsFromReps.filter(rfr => rfr.warehouseId === warehouse.id && filterTransactions(rfr)).forEach(rfr => rfr.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
+                purchaseInvoices.filter((p:any) => p.warehouseId === warehouse.id && filterTransactions(p)).forEach((p:any) => p.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
+                stockInRecords.filter((si:any) => si.warehouseId === warehouse.id && filterTransactions(si)).forEach((si:any) => si.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
+                stockTransferRecords.filter((t:any) => t.toSourceId === warehouse.id && filterTransactions(t)).forEach((t:any) => t.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
+                stockAdjustmentRecords.filter((adj:any) => adj.warehouseId === warehouse.id && filterTransactions(adj)).forEach((adj:any) => adj.items.filter((i:any) => i.itemId === item.id && i.difference > 0).forEach((i:any) => stock += i.difference));
+                salesReturns.filter((sr:any) => sr.warehouseId === warehouse.id && filterTransactions(sr)).forEach((sr:any) => sr.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
+                stockReturnsFromReps.filter((rfr:any) => rfr.warehouseId === warehouse.id && filterTransactions(rfr)).forEach((rfr:any) => rfr.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
 
                 // Decreases
-                salesInvoices.filter(s => s.warehouseId === warehouse.id && s.status === 'approved' && filterTransactions(s)).forEach(s => s.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
-                stockOutRecords.filter(so => so.sourceId === warehouse.id && filterTransactions(so)).forEach(so => so.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
-                stockTransferRecords.filter(t => t.fromSourceId === warehouse.id && filterTransactions(t)).forEach(t => t.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
-                stockAdjustmentRecords.filter(adj => adj.warehouseId === warehouse.id && filterTransactions(adj)).forEach(adj => adj.items.filter(i => i.itemId === item.id && i.difference < 0).forEach(i => stock += i.difference));
-                purchaseReturns.filter(pr => pr.warehouseId === warehouse.id && filterTransactions(pr)).forEach(pr => pr.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
-                stockIssuesToReps.filter(itr => itr.warehouseId === warehouse.id && filterTransactions(itr)).forEach(itr => itr.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
+                salesInvoices.filter((s:any) => s.warehouseId === warehouse.id && s.status === 'approved' && filterTransactions(s)).forEach((s:any) => s.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
+                stockOutRecords.filter((so:any) => so.sourceId === warehouse.id && filterTransactions(so)).forEach((so:any) => so.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
+                stockTransferRecords.filter((t:any) => t.fromSourceId === warehouse.id && filterTransactions(t)).forEach((t:any) => t.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
+                stockAdjustmentRecords.filter((adj:any) => adj.warehouseId === warehouse.id && filterTransactions(adj)).forEach((adj:any) => adj.items.filter((i:any) => i.itemId === item.id && i.difference < 0).forEach((i:any) => stock += i.difference));
+                purchaseReturns.filter((pr:any) => pr.warehouseId === warehouse.id && filterTransactions(pr)).forEach((pr:any) => pr.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
+                stockIssuesToReps.filter((itr:any) => itr.warehouseId === warehouse.id && filterTransactions(itr)).forEach((itr:any) => itr.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
                 
                 results.push({ id: `${warehouse.id}-${item.id}`, warehouseName: warehouse.name, itemName: item.name, code: item.code, currentStock: stock, reorderPoint: item.reorderPoint || 0 });
             });
@@ -170,7 +168,7 @@ const StockStatusReport = ({ filters, data }: any) => {
                     {stockData.map((item:any) => (
                         <TableRow key={item.id}>
                             <TableCell>{item.warehouseName}</TableCell>
-                            <TableCell>{item.code}</TableCell>
+                            <TableCell className="text-center">{item.code}</TableCell>
                             <TableCell>{item.itemName}</TableCell>
                             <TableCell className="text-center">
                                 <Badge variant={item.currentStock <= item.reorderPoint ? 'destructive' : 'default'}>{item.currentStock}</Badge>
