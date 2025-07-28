@@ -21,6 +21,7 @@ interface User {
   warehouse: string;
   uid?: string;
   isSalesRep?: boolean;
+  isCashier?: boolean;
 }
 
 interface AuthContextType {
@@ -56,7 +57,7 @@ const LoginForm = () => {
     };
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="flex items-center justify-center min-h-screen bg-background p-4">
             <Card className="w-full max-w-sm">
                 <CardHeader>
                     <CardTitle className="text-2xl">تسجيل الدخول</CardTitle>

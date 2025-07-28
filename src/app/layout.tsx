@@ -1,3 +1,4 @@
+
 import type { Metadata } from "next";
 import { Inter, Noto_Kufi_Arabic } from "next/font/google";
 import "./globals.css";
@@ -36,7 +37,7 @@ export default function RootLayout({
       >
         <ThemeProvider
           attribute="class"
-          defaultTheme="neutral"
+          defaultTheme="dark"
           enableSystem
           disableTransitionOnChange
           themes={['light', 'dark', 'neutral']}
