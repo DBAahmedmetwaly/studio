@@ -27,6 +27,7 @@ interface PosItem {
   name: string;
   qty: number;
   price: number;
+  cost: number;
   total: number;
   uniqueId: string; // A unique ID for the list key
 }
@@ -125,6 +126,7 @@ export default function PosPage() {
                 name: itemToAdd.name,
                 qty: 1,
                 price: itemToAdd.price || 0,
+                cost: itemToAdd.cost || 0,
                 total: itemToAdd.price || 0,
                 uniqueId: `${itemToAdd.id}-${Date.now()}`
             }]);
@@ -204,7 +206,15 @@ export default function PosPage() {
                 customerName: 'عميل نقاط بيع',
                 warehouseId: user?.warehouse, // Assumes cashier is tied to a warehouse
                 status: 'approved', // POS sales are always approved
-                items: cart.map(item => ({ id: item.id.split('-')[0], qty: item.qty, price: item.price, cost: 0 })),
+                items: cart.map(item => ({ 
+                    id: item.id.split('-')[0], 
+                    qty: item.qty, 
+                    price: item.price, 
+                    cost: item.cost 
+                })),
+                subtotal,
+                discount,
+                tax: 0, // No tax for POS for now
                 total,
                 paidAmount: total, // POS sales are fully paid
             });

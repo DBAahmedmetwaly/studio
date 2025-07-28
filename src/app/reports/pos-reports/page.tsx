@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
@@ -12,7 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useData } from "@/contexts/data-provider";
-import { Loader2, Printer, BarChart2 } from "lucide-react";
+import { Loader2, Printer, BarChart2, TrendingDown, TrendingUp, Coins, Percent } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -26,10 +27,11 @@ interface PosSale {
   date: string;
   cashierId: string;
   cashierName: string;
-  items: { id: string; name: string; qty: number; price: number; total: number; }[];
+  items: { id: string; name: string; qty: number; price: number; cost: number; total: number; }[];
   total: number;
   discount: number;
   invoiceNumber: string;
+  subtotal: number;
 }
 interface PosAuditLog {
     id: string;
@@ -38,11 +40,6 @@ interface PosAuditLog {
     cashierName: string;
     action: string;
     details: any;
-}
-interface ItemGroup {
-  id: string;
-  name: string;
-  itemIds: string[];
 }
 interface User {
   id: string;
@@ -118,30 +115,32 @@ const ReportFilters = ({ onGenerate }: { onGenerate: (filters: any) => void }) =
 
 const SalesSummary = ({ sales }: { sales: PosSale[] }) => {
     const summary = useMemo(() => {
-        const totalSalesValue = sales.reduce((sum, s) => sum + s.total, 0);
+        const totalSalesValue = sales.reduce((sum, s) => sum + s.subtotal, 0);
         const totalDiscount = sales.reduce((sum, s) => sum + (s.discount || 0), 0);
-        const transactionCount = sales.length;
-        const avgTransactionValue = transactionCount > 0 ? totalSalesValue / transactionCount : 0;
-        return { totalSalesValue, totalDiscount, transactionCount, avgTransactionValue };
+        const netSales = totalSalesValue - totalDiscount;
+        const totalCost = sales.reduce((sum, s) => sum + s.items.reduce((itemSum, item) => itemSum + (item.cost * item.qty), 0), 0);
+        const netProfit = netSales - totalCost;
+        
+        return { totalSalesValue, totalDiscount, netSales, netProfit };
     }, [sales]);
 
     return (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Card>
-                <CardHeader><CardTitle>إجمالي المبيعات</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="flex items-center gap-2"><Coins className="text-muted-foreground"/>إجمالي المبيعات</CardTitle></CardHeader>
                 <CardContent><p className="text-2xl font-bold">{summary.totalSalesValue.toLocaleString()} ج.م</p></CardContent>
             </Card>
             <Card>
-                <CardHeader><CardTitle>عدد الفواتير</CardTitle></CardHeader>
-                <CardContent><p className="text-2xl font-bold">{summary.transactionCount}</p></CardContent>
-            </Card>
-            <Card>
-                <CardHeader><CardTitle>متوسط الفاتورة</CardTitle></CardHeader>
-                <CardContent><p className="text-2xl font-bold">{summary.avgTransactionValue.toFixed(2)} ج.م</p></CardContent>
-            </Card>
-            <Card>
-                <CardHeader><CardTitle>إجمالي الخصومات</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="flex items-center gap-2"><TrendingDown className="text-muted-foreground"/>إجمالي الخصومات</CardTitle></CardHeader>
                 <CardContent><p className="text-2xl font-bold text-destructive">{summary.totalDiscount.toLocaleString()} ج.م</p></CardContent>
+            </Card>
+             <Card>
+                <CardHeader><CardTitle className="flex items-center gap-2"><Percent className="text-muted-foreground"/>صافي المبيعات</CardTitle></CardHeader>
+                <CardContent><p className="text-2xl font-bold">{summary.netSales.toLocaleString()} ج.م</p></CardContent>
+            </Card>
+            <Card>
+                <CardHeader><CardTitle className="flex items-center gap-2"><TrendingUp className="text-muted-foreground"/>صافي الربح</CardTitle></CardHeader>
+                <CardContent><p className="text-2xl font-bold text-green-600">{summary.netProfit.toLocaleString()} ج.م</p></CardContent>
             </Card>
         </div>
     );
@@ -149,30 +148,42 @@ const SalesSummary = ({ sales }: { sales: PosSale[] }) => {
 
 const SalesByItem = ({ sales }: { sales: PosSale[] }) => {
     const data = useMemo(() => {
-        const itemMap = new Map<string, { id: string; name: string, qty: number, total: number }>();
+        const itemMap = new Map<string, { id: string; name: string, qty: number, total: number, cost: number, discount: number }>();
         sales.forEach(sale => {
+            const saleDiscountRatio = sale.subtotal > 0 ? sale.discount / sale.subtotal : 0;
             sale.items.forEach(item => {
+                const itemTotal = item.qty * item.price;
+                const itemDiscount = itemTotal * saleDiscountRatio;
                 const existing = itemMap.get(item.id);
                 if (existing) {
                     existing.qty += item.qty;
-                    existing.total += item.qty * item.price;
+                    existing.total += itemTotal;
+                    existing.cost += item.qty * item.cost;
+                    existing.discount += itemDiscount;
                 } else {
-                    itemMap.set(item.id, { id: item.id, name: item.name, qty: item.qty, total: item.qty * item.price });
+                    itemMap.set(item.id, { id: item.id, name: item.name, qty: item.qty, total: itemTotal, cost: item.qty * item.cost, discount: itemDiscount });
                 }
             });
         });
-        return Array.from(itemMap.values()).sort((a, b) => b.qty - a.qty);
+        return Array.from(itemMap.values()).map(item => ({
+            ...item,
+            profit: (item.total - item.discount) - item.cost,
+            profitMargin: (item.total - item.discount) > 0 ? (((item.total - item.discount) - item.cost) / (item.total - item.discount)) * 100 : 0
+        })).sort((a, b) => b.qty - a.qty);
     }, [sales]);
 
     return (
         <Table>
-            <TableHeader><TableRow><TableHead>الصنف</TableHead><TableHead className="text-center">الكمية المباعة</TableHead><TableHead className="text-center">قيمة المبيعات</TableHead></TableRow></TableHeader>
+            <TableHeader><TableRow><TableHead>الصنف</TableHead><TableHead className="text-center">الكمية</TableHead><TableHead className="text-center">إجمالي البيع</TableHead><TableHead className="text-center">إجمالي التكلفة</TableHead><TableHead className="text-center">صافي الربح</TableHead><TableHead className="text-center">هامش الربح</TableHead></TableRow></TableHeader>
             <TableBody>
                 {data.map(item => (
                     <TableRow key={item.id}>
                         <TableCell>{item.name}</TableCell>
                         <TableCell className="text-center">{item.qty}</TableCell>
                         <TableCell className="text-center">{item.total.toLocaleString()} ج.م</TableCell>
+                        <TableCell className="text-center">{item.cost.toLocaleString()} ج.م</TableCell>
+                        <TableCell className="text-center font-bold text-green-600">{item.profit.toLocaleString()} ج.م</TableCell>
+                        <TableCell className="text-center">{item.profitMargin.toFixed(1)}%</TableCell>
                     </TableRow>
                 ))}
             </TableBody>
@@ -198,7 +209,7 @@ const CashierPerformance = ({ sales }: { sales: PosSale[] }) => {
 
      return (
         <Table>
-            <TableHeader><TableRow><TableHead>الكاشير</TableHead><TableHead className="text-center">إجمالي المبيعات</TableHead><TableHead className="text-center">الخصومات</TableHead><TableHead className="text-center">عدد الفواتير</TableHead></TableRow></TableHeader>
+            <TableHeader><TableRow><TableHead>الكاشير</TableHead><TableHead className="text-center">صافي المبيعات</TableHead><TableHead className="text-center">الخصومات</TableHead><TableHead className="text-center">عدد الفواتير</TableHead></TableRow></TableHeader>
             <TableBody>
                 {data.map(cashier => (
                     <TableRow key={cashier.name}>
