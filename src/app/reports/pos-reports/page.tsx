@@ -19,13 +19,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface PosSale {
   id: string;
   date: string;
   cashierId: string;
   cashierName: string;
-  items: { id: string; name: string; qty: number; price: number; }[];
+  items: { id: string; name: string; qty: number; price: number; total: number; }[];
   total: number;
   discount: number;
   invoiceNumber: string;
@@ -69,7 +70,7 @@ const ReportFilters = ({ onGenerate }: { onGenerate: (filters: any) => void }) =
     }
 
     return (
-        <Card>
+        <Card className="no-print">
             <CardHeader>
                 <CardTitle>فلاتر التقارير</CardTitle>
             </CardHeader>
@@ -148,7 +149,7 @@ const SalesSummary = ({ sales }: { sales: PosSale[] }) => {
 
 const SalesByItem = ({ sales }: { sales: PosSale[] }) => {
     const data = useMemo(() => {
-        const itemMap = new Map<string, { name: string, qty: number, total: number }>();
+        const itemMap = new Map<string, { id: string; name: string, qty: number, total: number }>();
         sales.forEach(sale => {
             sale.items.forEach(item => {
                 const existing = itemMap.get(item.id);
@@ -156,7 +157,7 @@ const SalesByItem = ({ sales }: { sales: PosSale[] }) => {
                     existing.qty += item.qty;
                     existing.total += item.qty * item.price;
                 } else {
-                    itemMap.set(item.id, { name: item.name, qty: item.qty, total: item.qty * item.price });
+                    itemMap.set(item.id, { id: item.id, name: item.name, qty: item.qty, total: item.qty * item.price });
                 }
             });
         });
@@ -168,7 +169,7 @@ const SalesByItem = ({ sales }: { sales: PosSale[] }) => {
             <TableHeader><TableRow><TableHead>الصنف</TableHead><TableHead className="text-center">الكمية المباعة</TableHead><TableHead className="text-center">قيمة المبيعات</TableHead></TableRow></TableHeader>
             <TableBody>
                 {data.map(item => (
-                    <TableRow key={item.name}>
+                    <TableRow key={item.id}>
                         <TableCell>{item.name}</TableCell>
                         <TableCell className="text-center">{item.qty}</TableCell>
                         <TableCell className="text-center">{item.total.toLocaleString()} ج.م</TableCell>
@@ -179,50 +180,17 @@ const SalesByItem = ({ sales }: { sales: PosSale[] }) => {
     );
 };
 
-const SalesByGroup = ({ sales, itemGroups }: { sales: PosSale[], itemGroups: ItemGroup[] }) => {
-    const data = useMemo(() => {
-        const groupMap = new Map<string, { name: string, total: number }>();
-        itemGroups.forEach(g => groupMap.set(g.id, { name: g.name, total: 0 }));
-
-        sales.forEach(sale => {
-            sale.items.forEach(item => {
-                const group = itemGroups.find(g => g.itemIds.includes(item.id));
-                if (group) {
-                    const existing = groupMap.get(group.id);
-                    if (existing) {
-                        existing.total += item.qty * item.price;
-                    }
-                }
-            });
-        });
-        return Array.from(groupMap.values()).filter(g => g.total > 0).sort((a,b) => b.total - a.total);
-    }, [sales, itemGroups]);
-
-     return (
-        <Table>
-            <TableHeader><TableRow><TableHead>المجموعة</TableHead><TableHead className="text-center">قيمة المبيعات</TableHead></TableRow></TableHeader>
-            <TableBody>
-                {data.map(group => (
-                    <TableRow key={group.name}>
-                        <TableCell>{group.name}</TableCell>
-                        <TableCell className="text-center">{group.total.toLocaleString()} ج.م</TableCell>
-                    </TableRow>
-                ))}
-            </TableBody>
-        </Table>
-    );
-}
-
 const CashierPerformance = ({ sales }: { sales: PosSale[] }) => {
      const data = useMemo(() => {
-        const cashierMap = new Map<string, { name: string, sales: number, count: number }>();
+        const cashierMap = new Map<string, { name: string, sales: number, count: number, discount: number }>();
         sales.forEach(sale => {
             const existing = cashierMap.get(sale.cashierId);
             if (existing) {
                 existing.sales += sale.total;
                 existing.count += 1;
+                existing.discount += sale.discount || 0;
             } else {
-                cashierMap.set(sale.cashierId, { name: sale.cashierName, sales: sale.total, count: 1 });
+                cashierMap.set(sale.cashierId, { name: sale.cashierName, sales: sale.total, count: 1, discount: sale.discount || 0 });
             }
         });
         return Array.from(cashierMap.values()).sort((a,b) => b.sales - a.sales);
@@ -230,12 +198,13 @@ const CashierPerformance = ({ sales }: { sales: PosSale[] }) => {
 
      return (
         <Table>
-            <TableHeader><TableRow><TableHead>الكاشير</TableHead><TableHead className="text-center">إجمالي المبيعات</TableHead><TableHead className="text-center">عدد الفواتير</TableHead></TableRow></TableHeader>
+            <TableHeader><TableRow><TableHead>الكاشير</TableHead><TableHead className="text-center">إجمالي المبيعات</TableHead><TableHead className="text-center">الخصومات</TableHead><TableHead className="text-center">عدد الفواتير</TableHead></TableRow></TableHeader>
             <TableBody>
                 {data.map(cashier => (
                     <TableRow key={cashier.name}>
                         <TableCell>{cashier.name}</TableCell>
                         <TableCell className="text-center">{cashier.sales.toLocaleString()} ج.م</TableCell>
+                        <TableCell className="text-center">{cashier.discount.toLocaleString()} ج.م</TableCell>
                         <TableCell className="text-center">{cashier.count}</TableCell>
                     </TableRow>
                 ))}
@@ -244,33 +213,55 @@ const CashierPerformance = ({ sales }: { sales: PosSale[] }) => {
     );
 };
 
-const PaymentSummary = ({ sales }: { sales: PosSale[] }) => {
-    const totalCollected = sales.reduce((sum, s) => sum + s.total, 0);
-    return (
-        <Card>
-            <CardHeader><CardTitle>إجمالي المبالغ المحصلة</CardTitle></CardHeader>
-            <CardContent><p className="text-3xl font-bold text-green-600">{totalCollected.toLocaleString()} ج.م</p></CardContent>
-        </Card>
-    )
-};
+const SalesDetails = ({ sales }: { sales: PosSale[] }) => {
+    const [selectedInvoice, setSelectedInvoice] = useState<PosSale | null>(null);
 
-const DiscountReport = ({ sales }: { sales: PosSale[] }) => {
-    const salesWithDiscount = sales.filter(s => s.discount > 0);
     return (
-        <Table>
-            <TableHeader><TableRow><TableHead>الفاتورة</TableHead><TableHead>الكاشير</TableHead><TableHead className="text-center">قيمة الخصم</TableHead></TableRow></TableHeader>
-            <TableBody>
-                {salesWithDiscount.map(s => (
-                    <TableRow key={s.id}>
-                        <TableCell>{s.invoiceNumber}</TableCell>
-                        <TableCell>{s.cashierName}</TableCell>
-                        <TableCell className="text-center">{s.discount.toLocaleString()} ج.م</TableCell>
-                    </TableRow>
-                ))}
-            </TableBody>
-        </Table>
-    )
-};
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <CardTitle className="mb-4">الفواتير</CardTitle>
+                <ScrollArea className="h-[500px] border rounded-lg">
+                <Table>
+                     <TableHeader><TableRow><TableHead>رقم الفاتورة</TableHead><TableHead>الكاشير</TableHead><TableHead className="text-center">الإجمالي</TableHead></TableRow></TableHeader>
+                    <TableBody>
+                        {sales.map(s => (
+                            <TableRow key={s.id} onClick={() => setSelectedInvoice(s)} className={`cursor-pointer ${selectedInvoice?.id === s.id ? 'bg-muted' : ''}`}>
+                                <TableCell>{s.invoiceNumber}</TableCell>
+                                <TableCell>{s.cashierName}</TableCell>
+                                <TableCell className="text-center">{s.total.toLocaleString()} ج.م</TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+                </ScrollArea>
+            </div>
+             <div>
+                <CardTitle className="mb-4">أصناف الفاتورة المحددة</CardTitle>
+                 <ScrollArea className="h-[500px] border rounded-lg">
+                    {selectedInvoice ? (
+                        <Table>
+                            <TableHeader><TableRow><TableHead>الصنف</TableHead><TableHead className="text-center">الكمية</TableHead><TableHead className="text-center">السعر</TableHead><TableHead className="text-center">الإجمالي</TableHead></TableRow></TableHeader>
+                            <TableBody>
+                                {selectedInvoice.items.map(item => (
+                                     <TableRow key={item.id}>
+                                        <TableCell>{item.name}</TableCell>
+                                        <TableCell className="text-center">{item.qty}</TableCell>
+                                        <TableCell className="text-center">{item.price.toLocaleString()}</TableCell>
+                                        <TableCell className="text-center">{item.total.toLocaleString()}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    ) : (
+                        <div className="flex items-center justify-center h-full text-muted-foreground">
+                            <p>اختر فاتورة لعرض تفاصيلها</p>
+                        </div>
+                    )}
+                 </ScrollArea>
+            </div>
+        </div>
+    );
+}
 
 const AuditLogReport = ({ logs }: { logs: PosAuditLog[] }) => {
     return (
@@ -294,7 +285,7 @@ const AuditLogReport = ({ logs }: { logs: PosAuditLog[] }) => {
 
 export default function PosReportsPage() {
     const [filteredData, setFilteredData] = useState<{ sales: PosSale[], logs: PosAuditLog[] } | null>(null);
-    const { posSales, posAuditLogs, users, itemGroups, loading } = useData();
+    const { posSales, posAuditLogs, users, loading } = useData();
     
     const handleGenerate = (filters: any) => {
         const { fromDate, toDate, cashierId, warehouseId } = filters;
@@ -341,21 +332,17 @@ export default function PosReportsPage() {
                         </CardHeader>
                         <CardContent>
                             <Tabs defaultValue="summary">
-                                <TabsList className="grid w-full grid-cols-7">
+                                <TabsList className="grid w-full grid-cols-5">
                                     <TabsTrigger value="summary">الملخص</TabsTrigger>
+                                    <TabsTrigger value="details">تفاصيل المبيعات</TabsTrigger>
                                     <TabsTrigger value="by_item">حسب الصنف</TabsTrigger>
-                                    <TabsTrigger value="by_group">حسب المجموعة</TabsTrigger>
                                     <TabsTrigger value="by_cashier">حسب الكاشير</TabsTrigger>
-                                    <TabsTrigger value="payments">المدفوعات</TabsTrigger>
-                                    <TabsTrigger value="discounts">الخصومات</TabsTrigger>
                                     <TabsTrigger value="audit">سجل التدقيق</TabsTrigger>
                                 </TabsList>
                                 <TabsContent value="summary" className="pt-4"><SalesSummary sales={filteredData.sales} /></TabsContent>
+                                <TabsContent value="details" className="pt-4"><SalesDetails sales={filteredData.sales} /></TabsContent>
                                 <TabsContent value="by_item" className="pt-4"><SalesByItem sales={filteredData.sales} /></TabsContent>
-                                <TabsContent value="by_group" className="pt-4"><SalesByGroup sales={filteredData.sales} itemGroups={itemGroups} /></TabsContent>
                                 <TabsContent value="by_cashier" className="pt-4"><CashierPerformance sales={filteredData.sales} /></TabsContent>
-                                <TabsContent value="payments" className="pt-4"><PaymentSummary sales={filteredData.sales} /></TabsContent>
-                                <TabsContent value="discounts" className="pt-4"><DiscountReport sales={filteredData.sales} /></TabsContent>
                                 <TabsContent value="audit" className="pt-4"><AuditLogReport logs={filteredData.logs} /></TabsContent>
                             </Tabs>
                         </CardContent>
