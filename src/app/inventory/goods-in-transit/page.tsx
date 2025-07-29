@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import PageHeader from "@/components/page-header";
 import {
   Card,
@@ -21,6 +21,9 @@ import {
 import { useData } from "@/contexts/data-provider";
 import { Loader2, Truck } from "lucide-react";
 import Link from 'next/link';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface PurchaseInvoice {
   id: string;
@@ -36,8 +39,18 @@ interface StockInRecord {
   purchaseInvoiceId?: string;
 }
 
+interface Supplier {
+    id: string;
+    name: string;
+}
+
 export default function GoodsInTransitPage() {
-  const { purchaseInvoices, stockInRecords, loading } = useData();
+  const { purchaseInvoices, stockInRecords, suppliers, loading } = useData();
+  const [filters, setFilters] = useState({ supplierId: "all", itemName: "" });
+
+  const handleFilterChange = (key: string, value: string) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
 
   const goodsInTransit = useMemo(() => {
     const receivedInvoiceIds = new Set(
@@ -49,9 +62,16 @@ export default function GoodsInTransitPage() {
     const transitItems: any[] = [];
     
     purchaseInvoices
-      .filter((inv: PurchaseInvoice) => !receivedInvoiceIds.has(inv.id))
+      .filter((inv: PurchaseInvoice) => {
+        if (receivedInvoiceIds.has(inv.id)) return false;
+        if (filters.supplierId !== 'all' && inv.supplierId !== filters.supplierId) return false;
+        return true;
+      })
       .forEach((inv: PurchaseInvoice) => {
         inv.items.forEach(item => {
+          if (filters.itemName && !item.name.toLowerCase().includes(filters.itemName.toLowerCase())) {
+            return;
+          }
           transitItems.push({
             invoiceId: inv.id,
             invoiceNumber: inv.invoiceNumber,
@@ -64,12 +84,38 @@ export default function GoodsInTransitPage() {
       });
       
     return transitItems.sort((a,b) => new Date(b.invoiceDate).getTime() - new Date(a.invoiceDate).getTime());
-  }, [purchaseInvoices, stockInRecords]);
+  }, [purchaseInvoices, stockInRecords, filters]);
 
   return (
     <>
       <PageHeader title="تقرير بضاعة بالطريق" />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
+        <Card>
+            <CardHeader>
+                <CardTitle>فلاتر البحث</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                     <div className="space-y-2">
+                        <Label>المورد</Label>
+                        <Select value={filters.supplierId} onValueChange={(v) => handleFilterChange("supplierId", v)}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="اختر المورد" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">كل الموردين</SelectItem>
+                                {suppliers.map((s:Supplier) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                     <div className="space-y-2">
+                        <Label>اسم الصنف</Label>
+                        <Input type="text" placeholder="ابحث بالاسم..." value={filters.itemName} onChange={(e) => handleFilterChange("itemName", e.target.value)} />
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -116,7 +162,7 @@ export default function GoodsInTransitPage() {
                     ) : (
                       <TableRow>
                         <TableCell colSpan={4} className="text-center h-24">
-                          لا توجد حاليًا أي بضاعة بالطريق.
+                          لا توجد حاليًا أي بضاعة بالطريق تطابق الفلاتر المحددة.
                         </TableCell>
                       </TableRow>
                     )}
@@ -130,4 +176,3 @@ export default function GoodsInTransitPage() {
     </>
   );
 }
-
