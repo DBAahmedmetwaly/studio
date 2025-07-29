@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import PageHeader from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,6 +36,7 @@ interface SupplierPayment {
     receiptNumber?: string;
     createdById?: string;
     createdByName?: string;
+    invoiceId?: string;
 }
 
 interface Supplier {
@@ -48,18 +49,51 @@ interface CashAccount {
     name: string;
 }
 
-const PaymentForm = ({ payment, onSave, onClose, suppliers, cashAccounts }: { payment?: SupplierPayment, onSave: (data: Omit<SupplierPayment, 'id' | 'receiptNumber'>) => void, onClose: () => void, suppliers: Supplier[], cashAccounts: CashAccount[] }) => {
-    const [formData, setFormData] = useState(
-        payment || { date: new Date().toISOString().split('T')[0], amount: 0, supplierId: "", paidFromAccountId: "", notes: "" }
-    );
+interface PurchaseInvoice {
+  id: string;
+  invoiceNumber: string;
+  supplierId: string;
+  total: number;
+  paidAmount?: number;
+}
+
+
+const PaymentForm = ({ onSave, suppliers, cashAccounts, purchaseInvoices }: { onSave: (data: Omit<SupplierPayment, 'id' | 'receiptNumber'>) => void, suppliers: Supplier[], cashAccounts: CashAccount[], purchaseInvoices: PurchaseInvoice[] }) => {
+    const [formData, setFormData] = useState<Omit<SupplierPayment, 'id' | 'receiptNumber'>>({ 
+        date: new Date().toISOString().split('T')[0], 
+        amount: 0, 
+        supplierId: "", 
+        paidFromAccountId: "", 
+        notes: "",
+        invoiceId: "" 
+    });
+
+    const supplierInvoicesWithBalance = useMemo(() => {
+        if (!formData.supplierId) return [];
+        return purchaseInvoices.filter(inv => {
+            if (inv.supplierId !== formData.supplierId) return false;
+            const remaining = inv.total - (inv.paidAmount || 0);
+            return remaining > 0;
+        });
+    }, [formData.supplierId, purchaseInvoices]);
+
+    const selectedInvoiceDetails = useMemo(() => {
+        if (!formData.invoiceId) return null;
+        return supplierInvoicesWithBalance.find(inv => inv.id === formData.invoiceId);
+    }, [formData.invoiceId, supplierInvoicesWithBalance]);
+
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSave({ ...formData, amount: Number(formData.amount) });
-        if (!payment) { 
-            setFormData({ date: new Date().toISOString().split('T')[0], amount: 0, supplierId: "", paidFromAccountId: "", notes: "" });
+        
+        let notesToSave = formData.notes;
+        if(selectedInvoiceDetails) {
+            notesToSave = `دفعة لفاتورة شراء رقم ${selectedInvoiceDetails.invoiceNumber}`;
         }
-        onClose();
+        
+        onSave({ ...formData, amount: Number(formData.amount), notes: notesToSave });
+        
+        setFormData({ date: new Date().toISOString().split('T')[0], amount: 0, supplierId: "", paidFromAccountId: "", notes: "", invoiceId: "" });
     }
 
     return (
@@ -71,7 +105,7 @@ const PaymentForm = ({ payment, onSave, onClose, suppliers, cashAccounts }: { pa
                 </div>
                  <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="payment-supplier" className="text-right">المورد</Label>
-                    <Select value={formData.supplierId} onValueChange={v => setFormData({...formData, supplierId: v})} required>
+                    <Select value={formData.supplierId} onValueChange={v => setFormData({...formData, supplierId: v, invoiceId: ""})} required>
                         <SelectTrigger className="col-span-3">
                             <SelectValue placeholder="اختر موردًا" />
                         </SelectTrigger>
@@ -80,6 +114,30 @@ const PaymentForm = ({ payment, onSave, onClose, suppliers, cashAccounts }: { pa
                         </SelectContent>
                     </Select>
                 </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="payment-invoice" className="text-right">ربط بفاتورة</Label>
+                    <Select value={formData.invoiceId} onValueChange={v => setFormData({...formData, invoiceId: v})} disabled={!formData.supplierId || supplierInvoicesWithBalance.length === 0}>
+                        <SelectTrigger className="col-span-3">
+                            <SelectValue placeholder={!formData.supplierId ? "اختر موردًا أولاً" : "اختياري: اختر فاتورة"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {supplierInvoicesWithBalance.map(inv => (
+                                <SelectItem key={inv.id} value={inv.id}>
+                                    {inv.invoiceNumber} (المتبقي: {(inv.total - (inv.paidAmount || 0)).toLocaleString()})
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                {selectedInvoiceDetails && (
+                     <div className="col-span-4 -mt-2">
+                        <p className="text-xs text-muted-foreground text-center">
+                            إجمالي الفاتورة: {selectedInvoiceDetails.total.toLocaleString()} | 
+                            المدفوع: {(selectedInvoiceDetails.paidAmount || 0).toLocaleString()} | 
+                            المتبقي: {(selectedInvoiceDetails.total - (selectedInvoiceDetails.paidAmount || 0)).toLocaleString()}
+                        </p>
+                    </div>
+                )}
                  <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="paid-from" className="text-right">مدفوع من</Label>
                     <Select value={formData.paidFromAccountId} onValueChange={v => setFormData({...formData, paidFromAccountId: v})} required>
@@ -97,7 +155,7 @@ const PaymentForm = ({ payment, onSave, onClose, suppliers, cashAccounts }: { pa
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="payment-notes" className="text-right">ملاحظات</Label>
-                    <Textarea id="payment-notes" value={formData.notes || ''} onChange={e => setFormData({...formData, notes: e.target.value})} className="col-span-3" placeholder="أدخل أي ملاحظات (اختياري)" />
+                    <Textarea id="payment-notes" value={formData.notes || ''} onChange={e => setFormData({...formData, notes: e.target.value})} className="col-span-3" placeholder="أدخل أي ملاحظات (اختياري)" disabled={!!formData.invoiceId} />
                 </div>
             </div>
              <Alert className="mt-4">
@@ -119,7 +177,7 @@ const PaymentForm = ({ payment, onSave, onClose, suppliers, cashAccounts }: { pa
 };
 
 export default function SupplierPaymentsPage() {
-    const { supplierPayments: payments, suppliers, cashAccounts, dbAction, getNextId, loading } = useData();
+    const { supplierPayments: payments, suppliers, cashAccounts, purchaseInvoices, dbAction, getNextId, loading } = useData();
     const { toast } = useToast();
     const { user } = useAuth();
     
@@ -141,6 +199,16 @@ export default function SupplierPaymentsPage() {
                 createdByName: user?.name,
             };
             await dbAction('supplierPayments', 'add', newPayment);
+            
+            // If payment is linked to an invoice, update the invoice's paidAmount
+            if (data.invoiceId) {
+                const invoice = purchaseInvoices.find((inv: PurchaseInvoice) => inv.id === data.invoiceId);
+                if (invoice) {
+                    const newPaidAmount = (invoice.paidAmount || 0) + data.amount;
+                    await dbAction('purchaseInvoices', 'update', { id: data.invoiceId, data: { paidAmount: newPaidAmount } });
+                }
+            }
+
             toast({ title: "تمت الإضافة بنجاح", description: `تم حفظ الدفعة برقم إيصال: ${receiptNumber}` });
         } catch (error) {
             toast({ variant: "destructive", title: "حدث خطأ", description: "فشل الحفظ" });
@@ -170,7 +238,7 @@ export default function SupplierPaymentsPage() {
                 </CardDescription>
             </CardHeader>
             <CardContent>
-                <PaymentForm onSave={handleSave} onClose={()=>{}} suppliers={suppliers} cashAccounts={cashAccounts} />
+                <PaymentForm onSave={handleSave} suppliers={suppliers} cashAccounts={cashAccounts} purchaseInvoices={purchaseInvoices} />
             </CardContent>
             </Card>
             
@@ -218,7 +286,7 @@ export default function SupplierPaymentsPage() {
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
                                                             <AlertDialogTrigger asChild>
-                                                                <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}>
+                                                                <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()} disabled={!!payment.invoiceId}>
                                                                     <Trash2 className="ml-2 h-4 w-4" />
                                                                     حذف
                                                                 </DropdownMenuItem>
@@ -252,4 +320,3 @@ export default function SupplierPaymentsPage() {
     </>
   );
 }
-
