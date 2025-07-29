@@ -189,6 +189,7 @@ export default function SupplierPaymentsPage() {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>المورد</TableHead>
+                                        <TableHead>البيان / المرجع</TableHead>
                                         <TableHead>مدفوعة من</TableHead>
                                         <TableHead className="text-center">المبلغ</TableHead>
                                         <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
@@ -202,6 +203,7 @@ export default function SupplierPaymentsPage() {
                                                 <div className="text-sm text-muted-foreground">{new Date(payment.date).toLocaleDateString('ar-EG')}</div>
                                                 <div className="text-xs text-muted-foreground">بواسطة: {payment.createdByName || 'غير معروف'}</div>
                                             </TableCell>
+                                            <TableCell className="text-sm text-muted-foreground">{payment.notes || 'دفعة عامة'}</TableCell>
                                             <TableCell>{getCashAccountName(payment.paidFromAccountId)}</TableCell>
                                             <TableCell className="text-center">{payment.amount.toLocaleString()}</TableCell>
                                             <TableCell className="text-center">
@@ -250,3 +252,4 @@ export default function SupplierPaymentsPage() {
     </>
   );
 }
+
