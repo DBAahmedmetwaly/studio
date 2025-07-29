@@ -436,6 +436,9 @@ export default function JournalPage() {
         const from = filters.fromDate ? new Date(filters.fromDate) : null;
         const to = filters.toDate ? new Date(filters.toDate) : null;
 
+        if (from) from.setHours(0,0,0,0);
+        if (to) to.setHours(23,59,59,999);
+
         if (from && entryDate < from) return false;
         if (to && entryDate > to) return false;
         if (filters.warehouseId !== 'all' && entry.warehouseId !== filters.warehouseId && entry.warehouseId !== undefined) return false;

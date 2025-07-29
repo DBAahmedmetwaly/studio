@@ -5,7 +5,7 @@
 import PageHeader from "@/components/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import useFirebase from "@/hooks/use-firebase";
+import { useData } from "@/contexts/data-provider";
 import { Loader2, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -86,29 +86,27 @@ export default function InventoryMovementsPage() {
     toDate: ""
   });
 
-  const { data: stockIns, loading: loadingIn } = useFirebase<StockInRecord>("stockInRecords");
-  const { data: stockOuts, loading: loadingOut } = useFirebase<StockOutRecord>("stockOutRecords");
-  const { data: stockTransfers, loading: loadingTransfers } = useFirebase<StockTransferRecord>("stockTransferRecords");
-  const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>("warehouses");
-
-  const loading = loadingIn || loadingOut || loadingTransfers || loadingWarehouses;
+  const { stockInRecords, stockOutRecords, stockTransferRecords, warehouses, loading } = useData();
 
   const getSourceName = (id: string) => {
-    const warehouse = warehouses.find(w => w.id === id);
+    const warehouse = warehouses.find((w: Warehouse) => w.id === id);
     return warehouse ? warehouse.name : id;
   };
 
   const filteredMovements = useMemo(() => {
     const allMovements = [
-      ...stockIns.map(r => ({ ...r, type: 'in', typeLabel: 'استلام' })),
-      ...stockOuts.map(r => ({ ...r, type: 'out', typeLabel: 'صرف' })),
-      ...stockTransfers.map(r => ({ ...r, type: 'transfer', typeLabel: 'تحويل' })),
+      ...stockInRecords.map((r: any) => ({ ...r, type: 'in', typeLabel: 'استلام' })),
+      ...stockOutRecords.map((r: any) => ({ ...r, type: 'out', typeLabel: 'صرف' })),
+      ...stockTransferRecords.map((r: any) => ({ ...r, type: 'transfer', typeLabel: 'تحويل' })),
     ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     return allMovements.filter(move => {
       const moveDate = new Date(move.date);
       const fromDate = filters.fromDate ? new Date(filters.fromDate) : null;
       const toDate = filters.toDate ? new Date(filters.toDate) : null;
+
+      if (fromDate) fromDate.setHours(0,0,0,0);
+      if (toDate) toDate.setHours(23,59,59,999);
 
       if (fromDate && moveDate < fromDate) return false;
       if (toDate && moveDate > toDate) return false;
@@ -122,14 +120,14 @@ export default function InventoryMovementsPage() {
       
       return true;
     });
-  }, [stockIns, stockOuts, stockTransfers, filters, warehouses]);
+  }, [stockInRecords, stockOutRecords, stockTransferRecords, filters, warehouses]);
 
 
   const handleFilterChange = (key: keyof typeof filters, value: string) => {
     setFilters(prev => ({...prev, [key]: value}));
   }
 
-  if (loading && !warehouses.length) {
+  if (loading && warehouses.length === 0) {
     return (
       <div className="flex flex-1 justify-center items-center">
         <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
@@ -165,7 +163,7 @@ export default function InventoryMovementsPage() {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">كل المخازن</SelectItem>
-                                {warehouses.map(w => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
+                                {warehouses.map((w: Warehouse) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
@@ -214,8 +212,8 @@ export default function InventoryMovementsPage() {
                         <TableHeader>
                             <TableRow>
                             <TableHead>التفاصيل</TableHead>
-                            <TableHead>النوع</TableHead>
-                            <TableHead>التفاصيل الإضافية</TableHead>
+                            <TableHead className="text-center">النوع</TableHead>
+                            <TableHead className="text-center">التفاصيل الإضافية</TableHead>
                             <TableHead className="text-center">عدد الأصناف</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -236,7 +234,7 @@ export default function InventoryMovementsPage() {
                                      <div className="text-xs text-muted-foreground">{new Date(move.date).toLocaleString('ar-EG')}</div>
                                      <div className="text-xs text-muted-foreground">بواسطة: {move.createdByName || 'غير معروف'}</div>
                                 </TableCell>
-                                <TableCell>
+                                <TableCell className="text-center">
                                 <Badge variant={
                                     move.type === 'in' ? 'default' :
                                     move.type === 'out' ? 'destructive' :
@@ -245,7 +243,7 @@ export default function InventoryMovementsPage() {
                                     <span>{move.typeLabel}</span>
                                 </Badge>
                                 </TableCell>
-                                <TableCell>
+                                <TableCell className="text-center">
                                 {move.type === 'in' && `إلى: ${getSourceName(move.warehouseId)}`}
                                 {move.type === 'out' && `من: ${getSourceName(move.sourceId)}`}
                                 {move.type === 'transfer' && `من: ${getSourceName(move.fromSourceId)} إلى: ${getSourceName(move.toSourceId)}`}

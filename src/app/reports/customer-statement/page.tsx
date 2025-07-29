@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
-import useFirebase from "@/hooks/use-firebase";
+import { useData } from "@/contexts/data-provider";
 import { Loader2, Printer } from "lucide-react";
 import React, { useState } from "react";
 
@@ -50,20 +50,15 @@ export default function CustomerStatementPage() {
   const [toDate, setToDate] = useState<string>("");
   const [reportData, setReportData] = useState<any[] | null>(null);
 
-  const { data: customers, loading: loadingCustomers } = useFirebase<Customer>('customers');
-  const { data: sales, loading: loadingSales } = useFirebase<SaleInvoice>('salesInvoices');
-  const { data: payments, loading: loadingPayments } = useFirebase<CustomerPayment>('customerPayments');
-  const { data: salesReturns, loading: loadingReturns } = useFirebase<SalesReturn>('salesReturns');
+  const { customers, salesInvoices, customerPayments, salesReturns, loading } = useData();
   
-  const loading = loadingCustomers || loadingSales || loadingPayments || loadingReturns;
-
   const handleGenerateReport = () => {
     if (!selectedCustomerId) {
       alert("يرجى اختيار عميل");
       return;
     }
 
-    const customer = customers.find(c => c.id === selectedCustomerId);
+    const customer = customers.find((c: Customer) => c.id === selectedCustomerId);
     if (!customer) return;
 
     const allTransactions: any[] = [];
@@ -78,9 +73,9 @@ export default function CustomerStatementPage() {
     });
     
     // Add Sales Invoices (Debit)
-    sales
-      .filter(s => s.customerId === selectedCustomerId && s.status === 'approved')
-      .forEach(sale => {
+    salesInvoices
+      .filter((s: SaleInvoice) => s.customerId === selectedCustomerId && s.status === 'approved')
+      .forEach((sale: SaleInvoice) => {
         // Add the invoice total as a debit
         allTransactions.push({
             date: new Date(sale.date),
@@ -104,8 +99,8 @@ export default function CustomerStatementPage() {
     
     // Add Sales Returns (Credit)
     salesReturns
-        .filter(sr => sr.customerId === selectedCustomerId)
-        .forEach(sr => {
+        .filter((sr: SalesReturn) => sr.customerId === selectedCustomerId)
+        .forEach((sr: SalesReturn) => {
             allTransactions.push({
                 date: new Date(sr.date),
                 sortDate: new Date(sr.date),
@@ -116,9 +111,9 @@ export default function CustomerStatementPage() {
         });
 
     // Add separate Customer Payments (Credit)
-    payments
-      .filter(p => p.customerId === selectedCustomerId)
-      .forEach(payment => {
+    customerPayments
+      .filter((p: CustomerPayment) => p.customerId === selectedCustomerId)
+      .forEach((payment: CustomerPayment) => {
           allTransactions.push({
               date: new Date(payment.date),
               sortDate: new Date(payment.date),
@@ -134,6 +129,8 @@ export default function CustomerStatementPage() {
             const start = fromDate ? new Date(fromDate) : null;
             const end = toDate ? new Date(toDate) : null;
             if (txDate.getTime() === new Date(0).getTime()) return true; // always include opening balance
+            if (start) start.setHours(0,0,0,0);
+            if (end) end.setHours(23,59,59,999);
             if (start && txDate < start) return false;
             if (end && txDate > end) return false;
             return true;
@@ -161,7 +158,7 @@ export default function CustomerStatementPage() {
     window.print();
   };
   
-  const getSelectedCustomer = () => customers.find(c => c.id === selectedCustomerId);
+  const getSelectedCustomer = () => customers.find((c: Customer) => c.id === selectedCustomerId);
 
   return (
     <>
@@ -187,7 +184,7 @@ export default function CustomerStatementPage() {
                                     <SelectValue placeholder="اختر عميلاً" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                                    {customers.map((c: Customer) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                                 </SelectContent>
                             </Select>
                         </div>

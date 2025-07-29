@@ -51,8 +51,8 @@ export default function SupplierStatementPage() {
 
   const { 
     suppliers, 
-    purchaseInvoices: purchases, 
-    supplierPayments: payments, 
+    purchaseInvoices, 
+    supplierPayments, 
     purchaseReturns, 
     loading 
   } = useData();
@@ -78,7 +78,7 @@ export default function SupplierStatementPage() {
     });
     
     // Add Purchases (Credit - we owe them)
-    purchases
+    purchaseInvoices
       .filter((p: PurchaseInvoice) => p.supplierId === selectedSupplierId)
       .forEach((purchase: PurchaseInvoice) => {
         allTransactions.push({
@@ -104,7 +104,7 @@ export default function SupplierStatementPage() {
         });
       
     // Add Payments (Debit - reduces what we owe)
-    payments
+    supplierPayments
       .filter((p: SupplierPayment) => p.supplierId === selectedSupplierId)
       .forEach((payment: SupplierPayment) => {
         allTransactions.push({

@@ -7,9 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
+import { useData } from "@/contexts/data-provider";
 import { Loader2, Printer } from "lucide-react";
 import React, { useState } from "react";
-import useFirebase from "@/hooks/use-firebase";
 
 // Data interfaces
 interface SaleInvoice { id: string; date: string; total: number; }
@@ -32,14 +32,14 @@ export default function PartnerSharesPage() {
     const [reportData, setReportData] = useState<ReportResult[] | null>(null);
     const [netIncome, setNetIncome] = useState<number | null>(null);
 
-    // Fetching data from Firebase
-    const { data: partners, loading: loadingPartners } = useFirebase<Partner>('partners');
-    const { data: sales, loading: loadingSales } = useFirebase<SaleInvoice>("salesInvoices");
-    const { data: purchases, loading: loadingPurchases } = useFirebase<PurchaseInvoice>("purchaseInvoices");
-    const { data: expenses, loading: loadingExpenses } = useFirebase<Expense>("expenses");
-    const { data: exceptionalIncomes, loading: loadingExceptionalIncomes } = useFirebase<ExceptionalIncome>("exceptionalIncomes");
-
-    const loading = loadingPartners || loadingSales || loadingPurchases || loadingExpenses || loadingExceptionalIncomes;
+    const { 
+        partners,
+        salesInvoices,
+        purchaseInvoices,
+        expenses,
+        exceptionalIncomes,
+        loading
+    } = useData();
 
     const handleGenerateReport = () => {
         const start = fromDate ? new Date(fromDate) : null;
@@ -47,20 +47,22 @@ export default function PartnerSharesPage() {
 
         const filterByDate = (item: { date: string }) => {
             const itemDate = new Date(item.date);
+            if(start) start.setHours(0,0,0,0);
+            if(end) end.setHours(23,59,59,999);
             if (start && itemDate < start) return false;
             if (end && itemDate > end) return false;
             return true;
         };
 
-        const totalRevenue = sales.filter(filterByDate).reduce((acc, sale) => acc + sale.total, 0);
+        const totalRevenue = salesInvoices.filter(filterByDate).reduce((acc: number, sale: any) => acc + sale.total, 0);
         const totalExceptionalIncome = exceptionalIncomes.filter(filterByDate).reduce((acc, income) => acc + income.amount, 0);
-        const totalCogs = purchases.filter(filterByDate).reduce((acc, purchase) => acc + purchase.total, 0);
+        const totalCogs = purchaseInvoices.filter(filterByDate).reduce((acc, purchase) => acc + purchase.total, 0);
         const totalExpenses = expenses.filter(filterByDate).reduce((acc, expense) => acc + expense.amount, 0);
 
         const calculatedNetIncome = (totalRevenue + totalExceptionalIncome) - (totalCogs + totalExpenses);
         setNetIncome(calculatedNetIncome);
 
-        const results = partners.map(partner => {
+        const results = partners.map((partner: Partner) => {
             const profitShareValue = calculatedNetIncome * (partner.profitShare / 100);
             return {
                 id: partner.id,
