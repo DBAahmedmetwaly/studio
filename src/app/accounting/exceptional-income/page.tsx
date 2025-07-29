@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState } from 'react';
@@ -9,14 +8,13 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { PlusCircle, Loader2, MoreHorizontal, Edit, Trash2 } from "lucide-react";
+import { PlusCircle, Loader2, MoreHorizontal, Trash2 } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem } from '@/components/ui/dropdown-menu';
@@ -32,20 +30,20 @@ interface ExceptionalIncome {
     date: string;
     amount: number;
     description: string;
-    warehouseId?: string;
+    paidToAccountId: string;
     receiptNumber?: string;
     createdById?: string;
     createdByName?: string;
 }
 
-interface Warehouse {
+interface CashAccount {
     id: string;
     name: string;
 }
 
-const IncomeForm = ({ income, onSave, onClose, warehouses }: { income?: ExceptionalIncome, onSave: (data: Omit<ExceptionalIncome, 'id'|'receiptNumber'>) => void, onClose: () => void, warehouses: Warehouse[] }) => {
+const IncomeForm = ({ income, onSave, onClose, cashAccounts }: { income?: ExceptionalIncome, onSave: (data: Omit<ExceptionalIncome, 'id'|'receiptNumber'>) => void, onClose: () => void, cashAccounts: CashAccount[] }) => {
     const [formData, setFormData] = useState<Omit<ExceptionalIncome, 'id'|'receiptNumber'>>(
-        income || { date: new Date().toISOString().split('T')[0], amount: 0, description: "" }
+        income || { date: new Date().toISOString().split('T')[0], amount: 0, description: "", paidToAccountId: "" }
     );
 
     const handleSubmit = () => {
@@ -60,6 +58,17 @@ const IncomeForm = ({ income, onSave, onClose, warehouses }: { income?: Exceptio
                     <Label htmlFor="income-date" className="text-right">التاريخ</Label>
                     <Input id="income-date" type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="col-span-3" />
                 </div>
+                 <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="paid-to" className="text-right">مستلم في</Label>
+                    <Select value={formData.paidToAccountId} onValueChange={v => setFormData({...formData, paidToAccountId: v})} required>
+                        <SelectTrigger className="col-span-3">
+                            <SelectValue placeholder="اختر حساب الاستلام" />
+                        </SelectTrigger>
+                        <SelectContent>
+                           {cashAccounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="income-amount" className="text-right">المبلغ</Label>
                     <Input id="income-amount" type="number" value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value as any})} className="col-span-3" placeholder="أدخل مبلغ الدخل" />
@@ -67,18 +76,6 @@ const IncomeForm = ({ income, onSave, onClose, warehouses }: { income?: Exceptio
                 <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="income-description" className="text-right">الوصف</Label>
                     <Textarea id="income-description" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="col-span-3" placeholder="أدخل وصفًا للدخل" />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="income-warehouse" className="text-right">تحميل على</Label>
-                    <Select value={formData.warehouseId} onValueChange={v => setFormData({...formData, warehouseId: v})}>
-                        <SelectTrigger className="col-span-3">
-                            <SelectValue placeholder="اختياري: اختر مخزنًا" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="none">بدون (عام)</SelectItem>
-                            {warehouses.map(w => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
                 </div>
             </div>
             <div className="flex justify-end">
@@ -90,13 +87,13 @@ const IncomeForm = ({ income, onSave, onClose, warehouses }: { income?: Exceptio
 
 
 export default function ExceptionalIncomePage() {
-    const { exceptionalIncomes: incomes, warehouses, dbAction, getNextId, loading } = useData();
+    const { exceptionalIncomes: incomes, cashAccounts, dbAction, getNextId, loading } = useData();
     const { toast } = useToast();
     const { user } = useAuth();
     
-    const getWarehouseName = (warehouseId?: string) => {
-        if (!warehouseId || warehouseId === 'none') return 'عام';
-        return warehouses.find(w => w.id === warehouseId)?.name || 'غير معروف';
+    const getCashAccountName = (accountId?: string) => {
+        if (!accountId) return 'غير محدد';
+        return cashAccounts.find(w => w.id === accountId)?.name || 'غير معروف';
     };
 
     const handleSave = async (data: Omit<ExceptionalIncome, 'id' | 'receiptNumber'>) => {
@@ -137,7 +134,7 @@ export default function ExceptionalIncomePage() {
                 </Button>
             }
         >
-            <IncomeForm onSave={handleSave} onClose={()=>{}} warehouses={warehouses} />
+            <IncomeForm onSave={handleSave} onClose={()=>{}} cashAccounts={cashAccounts} />
         </AddEntityDialog>
       </PageHeader>
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
@@ -157,7 +154,7 @@ export default function ExceptionalIncomePage() {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>الوصف</TableHead>
-                                    <TableHead>المخزن/الجهة</TableHead>
+                                    <TableHead>الحساب المستلم</TableHead>
                                     <TableHead className="text-center">المبلغ</TableHead>
                                     <TableHead className="text-center w-[100px]">الإجراءات</TableHead>
                                 </TableRow>
@@ -170,7 +167,7 @@ export default function ExceptionalIncomePage() {
                                             <div className="text-sm text-muted-foreground">{new Date(income.date).toLocaleDateString('ar-EG')}</div>
                                             <div className="text-xs text-muted-foreground">بواسطة: {income.createdByName || 'غير معروف'}</div>
                                         </TableCell>
-                                        <TableCell>{getWarehouseName(income.warehouseId)}</TableCell>
+                                        <TableCell>{getCashAccountName(income.paidToAccountId)}</TableCell>
                                         <TableCell className="text-center">{income.amount.toLocaleString()}</TableCell>
                                         <TableCell className="text-center">
                                             <AlertDialog>

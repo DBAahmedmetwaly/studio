@@ -37,7 +37,7 @@ interface SaleInvoice {
 }
 interface PurchaseInvoice { id: string; date: string; supplierName: string; total: number; warehouseId: string; discount: number; invoiceNumber?: string; paidAmount?: number; items: { id: string, name: string; qty: number, cost?:number }[];}
 interface Expense { id: string; date: string; description: string; amount: number; warehouseId?: string; expenseType: string; paidFromAccountId: string; receiptNumber?: string;}
-interface ExceptionalIncome { id: string; date: string; description: string; amount: number; warehouseId?: string; receiptNumber?: string; }
+interface ExceptionalIncome { id: string; date: string; description: string; amount: number; paidToAccountId: string; receiptNumber?: string; }
 interface Warehouse { id: string; name: string; autoStockUpdate?: boolean; }
 interface CashAccount { id: string; name: string; }
 interface StockTransferRecord {
@@ -313,9 +313,9 @@ export default function JournalPage() {
         // Exceptional Incomes
         exceptionalIncomes.forEach(i => {
             const number = i.receiptNumber || `إ-س-${i.id.slice(-4)}`;
-            const warehouse = getWarehouse(i.warehouseId);
-            entries.push({ id: `ex-inc-debit-${i.id}`, date: i.date, warehouseId: i.warehouseId, number: number, description: i.description, debit: i.amount, credit: 0, account: 'النقدية/البنك' });
-            entries.push({ id: `ex-inc-credit-${i.id}`, date: i.date, warehouseId: i.warehouseId, number: number, description: i.description, debit: 0, credit: i.amount, account: i.warehouseId ? `دخل استثنائي - ${warehouse?.name}` : 'دخل استثنائي' });
+            const cashAccountName = getCashAccountName(i.paidToAccountId);
+            entries.push({ id: `ex-inc-debit-${i.id}`, date: i.date, number: number, description: i.description, debit: i.amount, credit: 0, account: cashAccountName });
+            entries.push({ id: `ex-inc-credit-${i.id}`, date: i.date, number: number, description: i.description, debit: 0, credit: i.amount, account: 'دخل استثنائي' });
         });
 
         // Stock Transfers
