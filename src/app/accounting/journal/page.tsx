@@ -169,8 +169,8 @@ export default function JournalPage() {
     });
 
     const {
-        salesInvoices: sales,
-        purchaseInvoices: purchases,
+        salesInvoices,
+        purchaseInvoices,
         expenses,
         exceptionalIncomes,
         warehouses,
@@ -210,7 +210,7 @@ export default function JournalPage() {
         const getPartnerName = (id?: string) => partners.find(p => p.id === id)?.name || 'شريك غير معروف';
         
         // Sales Invoices (Only approved ones)
-        sales.filter(s => s.status === 'approved').forEach(sale => {
+        salesInvoices.filter(s => s.status === 'approved').forEach(sale => {
             const costOfGoodsSold = sale.items.reduce((acc, item) => acc + (item.qty * (item.cost || item.price * 0.8)), 0);
             const totalBeforeDiscount = sale.total + (sale.discount || 0);
             const number = sale.invoiceNumber || `ف-ب-${sale.id.slice(-4)}`;
@@ -239,7 +239,7 @@ export default function JournalPage() {
         });
 
         // Purchase Invoices
-        purchases.forEach(p => {
+        purchaseInvoices.forEach(p => {
              const totalBeforeDiscount = p.total + (p.discount || 0);
              const number = p.invoiceNumber || `ف-ش-${p.id.slice(-4)}`;
              const warehouse = getWarehouse(p.warehouseId);
@@ -423,7 +423,7 @@ export default function JournalPage() {
 
 
         return entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [sales, purchases, expenses, exceptionalIncomes, transfers, warehouses, itemsMap, cashAccounts, treasuryTxs, employeeAdvances, employees, employeeAdjustments, salesReturns, purchaseReturns, customers, suppliers, supplierPayments, customerPayments, stockOuts, profitDistributions, partners]);
+    }, [salesInvoices, purchaseInvoices, expenses, exceptionalIncomes, transfers, warehouses, itemsMap, cashAccounts, treasuryTxs, employeeAdvances, employees, employeeAdjustments, salesReturns, purchaseReturns, customers, suppliers, supplierPayments, customerPayments, stockOuts, profitDistributions, partners]);
 
     const filteredEntries = journalEntries.filter(entry => {
         const entryDate = new Date(entry.date);
