@@ -50,6 +50,7 @@ interface StockInRecord {
     id: string;
     purchaseInvoiceId?: string;
     reason?: string;
+    warehouseId?: string;
 }
 
 
@@ -88,6 +89,11 @@ export default function NewStockInPage() {
                 label: `${inv.invoiceNumber} - ${inv.supplierName}`
             }));
     }, [purchaseInvoices, stockInRecords]);
+
+    const hasOpeningStock = useMemo(() => {
+        if (!selectedWarehouse) return false;
+        return stockInRecords.some((record: StockInRecord) => record.warehouseId === selectedWarehouse && record.reason === 'opening_stock');
+    }, [selectedWarehouse, stockInRecords]);
     
     useEffect(() => {
         if(reason === 'purchase' && selectedPurchaseInvoice) {
@@ -215,25 +221,25 @@ export default function NewStockInPage() {
                 <>
                     <div className="grid md:grid-cols-3 gap-6">
                          <div className="space-y-2">
-                            <Label htmlFor="reason">سبب الاستلام</Label>
-                            <Select value={reason} onValueChange={setReason}>
-                                <SelectTrigger id="reason">
-                                    <SelectValue placeholder="اختر سبب الاستلام" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                   <SelectItem value="purchase">مشتريات (من فاتورة)</SelectItem>
-                                   <SelectItem value="opening_stock">رصيد افتتاحي</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="space-y-2">
                             <Label htmlFor="warehouse">إلى مخزن</Label>
-                            <Select value={selectedWarehouse} onValueChange={setSelectedWarehouse} disabled={reason === 'purchase'}>
+                             <Select value={selectedWarehouse} onValueChange={setSelectedWarehouse} disabled={reason === 'purchase'}>
                                 <SelectTrigger id="warehouse">
                                     <SelectValue placeholder="اختر المخزن" />
                                 </SelectTrigger>
                                 <SelectContent>
                                    {warehouses.map((w: Warehouse) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="reason">سبب الاستلام</Label>
+                            <Select value={reason} onValueChange={setReason} disabled={!selectedWarehouse}>
+                                <SelectTrigger id="reason">
+                                    <SelectValue placeholder="اختر سبب الاستلام" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                   <SelectItem value="purchase">مشتريات (من فاتورة)</SelectItem>
+                                   <SelectItem value="opening_stock" disabled={hasOpeningStock} title={hasOpeningStock ? "تم إدخال رصيد افتتاحي لهذا المخزن من قبل" : ""}>رصيد افتتاحي</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
