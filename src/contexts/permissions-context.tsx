@@ -36,6 +36,7 @@ export const permissionsConfig = {
     inventory_stockOut: { label: "صرف مخزون", group: "inventory", actions: ["view", "add", "delete", "print"] },
     inventory_transfer: { label: "تحويل مخزون", group: "inventory", actions: ["view", "add", "delete", "print"] },
     inventory_adjustment: { label: "تسوية المخزون", group: "inventory", actions: ["view", "add", "delete", "print"] },
+    inventory_goodsInTransit: { label: "بضاعة بالطريق", group: "inventory", actions: ["view"] },
     inventory_movements: { label: "حركة المخزون", group: "inventory", actions: ["view"] },
     inventory_stockStatus: { label: "أرصدة المخزون", group: "inventory", actions: ["view"] },
     reports_itemProfitLoss: { label: "تقرير أرباح الأصناف", group: "inventory", actions: ["view", "generate", "print"] },

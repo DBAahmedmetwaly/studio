@@ -185,7 +185,7 @@ const AppLayoutContent = ({ children }: { children: React.ReactNode }) => {
                  <NavSubLink href="/reports/pos-reports" module="reports_pos">تقارير نقاط البيع</NavSubLink>
             </NavCollapsible>
 
-            <NavCollapsible title="الأصناف والمخزون" icon={<Warehouse />} modules={['inventory_items', 'inventory_warehouses', 'inventory_stockIn', 'inventory_stockOut', 'inventory_transfer', 'inventory_adjustment', 'inventory_movements', 'inventory_stockStatus', 'reports_itemProfitLoss', 'reports_inventory', 'inventory_barcodeDesigner']}>
+            <NavCollapsible title="الأصناف والمخزون" icon={<Warehouse />} modules={['inventory_items', 'inventory_warehouses', 'inventory_stockIn', 'inventory_stockOut', 'inventory_transfer', 'inventory_adjustment', 'inventory_movements', 'inventory_stockStatus', 'reports_itemProfitLoss', 'reports_inventory', 'inventory_barcodeDesigner', 'inventory_goodsInTransit']}>
                 <NavSubLink href="/master-data/items" module="inventory_items">بطاقة الأصناف</NavSubLink>
                 <NavSubLink href="/inventory/barcode-designer" module="inventory_barcodeDesigner">تصميم الباركود</NavSubLink>
                 <NavSubLink href="/master-data/warehouses" module="inventory_warehouses">المخازن</NavSubLink>
@@ -193,6 +193,7 @@ const AppLayoutContent = ({ children }: { children: React.ReactNode }) => {
                 <NavSubLink href="/inventory/stock-out/new" module="inventory_stockOut">صرف مخزون</NavSubLink>
                 <NavSubLink href="/inventory/transfer/new" module="inventory_transfer">تحويل مخزون</NavSubLink>
                 <NavSubLink href="/inventory/adjustment" module="inventory_adjustment">تسوية المخزون</NavSubLink>
+                <NavSubLink href="/inventory/goods-in-transit" module="inventory_goodsInTransit">بضاعة بالطريق</NavSubLink>
                 <NavSubLink href="/inventory/movements" module="inventory_movements">حركة المخزون</NavSubLink>
                 <NavSubLink href="/inventory/stock-status" module="inventory_stockStatus">أرصدة المخزون</NavSubLink>
                 <NavSubLink href="/reports/item-profit-loss" module="reports_itemProfitLoss">تقرير أرباح الأصناف</NavSubLink>
