@@ -29,7 +29,7 @@ import { useData } from '@/contexts/data-provider';
 
 // Data Interfaces
 interface Item { id: string; name: string; unit: string; price: number; cost?: number; reorderPoint?: number; }
-interface Warehouse { id: string; name: string; }
+interface Warehouse { id: string; name: string; autoStockUpdate?: boolean; }
 interface SaleInvoice { id: string; warehouseId: string; items: { id: string; qty: number; }[]; status?: 'approved' | 'pending'; date: string; }
 interface PurchaseInvoice { id: string; warehouseId: string; items: { id: string; qty: number; cost?: number }[]; date: string; }
 interface StockInRecord { id: string; warehouseId: string; reason: string; items: { id: string; qty: number; cost?: number }[]; date: string; }
@@ -73,6 +73,7 @@ export default function StockStatusPage() {
                 ? closingsForWarehouse.reduce((latest, current) => new Date(latest.closingDate) > new Date(current.closingDate) ? latest : current)
                 : null;
             const lastClosingDate = lastClosing ? new Date(lastClosing.closingDate) : new Date(0);
+            const autoStockUpdate = warehouse.autoStockUpdate;
 
             allItems.forEach((item: Item) => {
                 let stock = lastClosing?.balances.find(b => b.itemId === item.id)?.balance || 0;
@@ -80,7 +81,9 @@ export default function StockStatusPage() {
                 const filterTransactions = (t: any) => new Date(t.date) > lastClosingDate;
 
                 // Increases since last closing
-                purchaseInvoices.filter(p => p.warehouseId === warehouse.id && filterTransactions(p)).forEach(p => p.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
+                if (autoStockUpdate) {
+                    purchaseInvoices.filter(p => p.warehouseId === warehouse.id && filterTransactions(p)).forEach(p => p.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
+                }
                 stockInRecords.filter(si => si.warehouseId === warehouse.id && filterTransactions(si)).forEach(si => si.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
                 stockTransferRecords.filter(t => t.toSourceId === warehouse.id && filterTransactions(t)).forEach(t => t.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
                 stockAdjustmentRecords.filter(adj => adj.warehouseId === warehouse.id && filterTransactions(adj)).forEach(adj => adj.items.filter(i => i.itemId === item.id && i.difference > 0).forEach(i => stock += i.difference));
@@ -214,7 +217,7 @@ export default function StockStatusPage() {
                                 </TableCell>
                                  <TableCell className="text-center font-semibold">
                                     {(item.currentStock * item.cost).toLocaleString()} ج.م
-                                </TableCell>
+                                 </TableCell>
                             </TableRow>
                             )) : (
                                 <TableRow>

@@ -73,7 +73,7 @@ interface Item {
   price?: number;
   reorderPoint?: number;
 }
-interface WarehouseData { id: string; name: string; }
+interface WarehouseData { id: string; name: string; autoStockUpdate?: boolean; }
 interface StockInRecord { id: string; warehouseId: string; items: { id: string; name: string; qty: number; cost?: number; }[]; date: string; }
 interface StockOutRecord { id: string; sourceId: string; items: { id: string; name: string; qty: number; }[]; date: string; }
 interface StockTransferRecord { id: string; fromSourceId: string; toSourceId: string; items: { id: string; qty: number; }[]; date: string; }
@@ -146,52 +146,54 @@ export default function Dashboard() {
     const totalSalesCount = filteredSales.length;
     const totalCustomers = customers.length; // This is not warehouse-specific
 
-    // --- Corrected Stock Calculation Logic ---
-    const closingsForWarehouse = inventoryClosings.filter((c: InventoryClosing) => c.warehouseId === selectedWarehouseId);
-    const lastClosing = closingsForWarehouse.length > 0 ? closingsForWarehouse.reduce((latest:any, current:any) => new Date(latest.closingDate) > new Date(current.closingDate) ? latest : current) : null;
-    const lastClosingDate = lastClosing ? new Date(lastClosing.closingDate) : new Date(0);
-
-    const warehouseItems = items.map((item:any) => {
-        let stock = lastClosing?.balances.find((b:any) => b.itemId === item.id)?.balance || 0;
+    const warehouseItems = items.map((item: any) => {
+        const closingsForWarehouse = inventoryClosings.filter((c: InventoryClosing) => c.warehouseId === selectedWarehouseId);
+        const lastClosing = closingsForWarehouse.length > 0
+            ? closingsForWarehouse.reduce((latest: any, current: any) => new Date(latest.closingDate) > new Date(current.closingDate) ? latest : current)
+            : null;
+        const lastClosingDate = lastClosing ? new Date(lastClosing.closingDate) : new Date(0);
         
-        const filterAfterClosing = (t: any) => new Date(t.date) > lastClosingDate;
+        let stock = lastClosing?.balances.find((b: any) => b.itemId === item.id)?.balance || 0;
+        
+        const filterTransactions = (t: any) => new Date(t.date) > lastClosingDate;
 
-        // Increases since last closing
-        purchaseInvoices.filter(p => p.warehouseId === selectedWarehouseId && filterAfterClosing(p)).forEach(p => p.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
-        stockInRecords.filter(si => si.warehouseId === selectedWarehouseId && filterAfterClosing(si)).forEach(si => si.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
-        stockTransferRecords.filter(t => t.toSourceId === selectedWarehouseId && filterAfterClosing(t)).forEach(t => t.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
-        stockAdjustmentRecords.filter(adj => adj.warehouseId === selectedWarehouseId && filterAfterClosing(adj)).forEach(adj => adj.items.filter(i => i.itemId === item.id && i.difference > 0).forEach(i => stock += i.difference));
-        salesReturns.filter(sr => sr.warehouseId === selectedWarehouseId && filterAfterClosing(sr)).forEach(sr => sr.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
-        stockReturnsFromReps.filter(rfr => rfr.warehouseId === selectedWarehouseId && filterAfterClosing(rfr)).forEach(rfr => rfr.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
+        const warehouse = warehouses.find((w: WarehouseData) => w.id === selectedWarehouseId);
+        const autoStockUpdate = warehouse?.autoStockUpdate;
 
-        // Decreases since last closing
-        salesInvoices.filter(s => s.warehouseId === selectedWarehouseId && s.status === 'approved' && filterAfterClosing(s)).forEach(s => s.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
-        stockOutRecords.filter(so => so.sourceId === selectedWarehouseId && filterAfterClosing(so)).forEach(so => so.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
-        stockTransferRecords.filter(t => t.fromSourceId === selectedWarehouseId && filterAfterClosing(t)).forEach(t => t.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
-        stockAdjustmentRecords.filter(adj => adj.warehouseId === selectedWarehouseId && filterAfterClosing(adj)).forEach(adj => adj.items.filter(i => i.itemId === item.id && i.difference < 0).forEach(i => stock += i.difference));
-        purchaseReturns.filter(pr => pr.warehouseId === selectedWarehouseId && filterAfterClosing(pr)).forEach(pr => pr.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
-        stockIssuesToReps.filter(itr => itr.warehouseId === selectedWarehouseId && filterAfterClosing(itr)).forEach(itr => itr.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
+        // Increases
+        if (autoStockUpdate) {
+            purchaseInvoices.filter(p => p.warehouseId === selectedWarehouseId && filterTransactions(p)).forEach(p => p.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
+        }
+        stockInRecords.filter(si => si.warehouseId === selectedWarehouseId && filterTransactions(si)).forEach(si => si.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
+        stockTransferRecords.filter(t => t.toSourceId === selectedWarehouseId && filterTransactions(t)).forEach(t => t.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
+        stockAdjustmentRecords.filter(adj => adj.warehouseId === selectedWarehouseId && filterTransactions(adj)).forEach(adj => adj.items.filter(i => i.itemId === item.id && i.difference > 0).forEach(i => stock += i.difference));
+        salesReturns.filter(sr => sr.warehouseId === selectedWarehouseId && filterTransactions(sr)).forEach(sr => sr.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
+        stockReturnsFromReps.filter(rfr => rfr.warehouseId === selectedWarehouseId && filterTransactions(rfr)).forEach(rfr => rfr.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
+
+        // Decreases
+        salesInvoices.filter(s => s.warehouseId === selectedWarehouseId && s.status === 'approved' && filterTransactions(s)).forEach(s => s.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
+        stockOutRecords.filter(so => so.sourceId === selectedWarehouseId && filterTransactions(so)).forEach(so => so.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
+        stockTransferRecords.filter(t => t.fromSourceId === selectedWarehouseId && filterTransactions(t)).forEach(t => t.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
+        stockAdjustmentRecords.filter(adj => adj.warehouseId === selectedWarehouseId && filterTransactions(adj)).forEach(adj => adj.items.filter(i => i.itemId === item.id && i.difference < 0).forEach(i => stock += i.difference));
+        purchaseReturns.filter(pr => pr.warehouseId === selectedWarehouseId && filterTransactions(pr)).forEach(pr => pr.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
+        stockIssuesToReps.filter(itr => itr.warehouseId === selectedWarehouseId && filterTransactions(itr)).forEach(itr => itr.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
         
         return { ...item, currentStock: stock };
     });
-    
-    // --- Accurate Costing Logic ---
+
     const inventoryValue = warehouseItems.reduce((acc: number, item: any) => {
         if (item.currentStock <= 0) return acc;
-
-        // Find the last purchase price for this item
-        const allPurchasesForItem = purchaseInvoices
-            .filter((p: PurchaseInvoice) => p.items.some(pi => pi.id === item.id))
-            .sort((a: PurchaseInvoice, b: PurchaseInvoice) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        const lastPurchase = purchaseInvoices
+            .filter((p: PurchaseInvoice) => p.warehouseId === selectedWarehouseId && p.items.some(pi => pi.id === item.id && pi.cost))
+            .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
         
-        let lastCost = item.cost || 0; // Fallback to master cost
-        if(allPurchasesForItem.length > 0) {
-            const purchasedItem = allPurchasesForItem[0].items.find(pi => pi.id === item.id);
+        let lastCost = item.cost || 0;
+        if(lastPurchase) {
+            const purchasedItem = lastPurchase.items.find(pi => pi.id === item.id);
             if(purchasedItem && typeof purchasedItem.cost === 'number') {
                 lastCost = purchasedItem.cost;
             }
         }
-
         return acc + (item.currentStock * lastCost);
     }, 0);
 
