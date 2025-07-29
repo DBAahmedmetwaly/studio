@@ -169,18 +169,18 @@ const StockStatusReport = ({ filters, data }: any) => {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>المخزن</TableHead>
+                            <TableHead className="text-center">المخزن</TableHead>
                             <TableHead className="text-center">كود الصنف</TableHead>
-                            <TableHead>اسم الصنف</TableHead>
+                            <TableHead className="text-center">اسم الصنف</TableHead>
                             <TableHead className="text-center">الرصيد الحالي</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {stockData.map((item:any) => (
                             <TableRow key={item.id}>
-                                <TableCell>{item.warehouseName}</TableCell>
+                                <TableCell className="text-center">{item.warehouseName}</TableCell>
                                 <TableCell className="text-center">{item.code}</TableCell>
-                                <TableCell>{item.itemName}</TableCell>
+                                <TableCell className="text-center">{item.itemName}</TableCell>
                                 <TableCell className="text-center">
                                     <Badge variant={item.currentStock <= item.reorderPoint ? 'destructive' : 'default'}>{item.currentStock}</Badge>
                                 </TableCell>
@@ -374,4 +374,3 @@ export default function InventoryReportsPage() {
         </>
     );
 }
-
