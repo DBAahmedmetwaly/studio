@@ -215,9 +215,17 @@ export default function SupplierPaymentsPage() {
         }
     };
     
-    const handleDelete = async (id: string) => {
+    const handleDelete = async (payment: SupplierPayment) => {
         try {
-            await dbAction('supplierPayments', 'remove', { id });
+             // If payment is linked to an invoice, revert the paidAmount on the invoice
+            if (payment.invoiceId) {
+                const invoice = purchaseInvoices.find((inv: PurchaseInvoice) => inv.id === payment.invoiceId);
+                if (invoice) {
+                    const newPaidAmount = (invoice.paidAmount || 0) - payment.amount;
+                    await dbAction('purchaseInvoices', 'update', { id: payment.invoiceId, data: { paidAmount: Math.max(0, newPaidAmount) } });
+                }
+            }
+            await dbAction('supplierPayments', 'remove', { id: payment.id! });
             toast({ title: "تم الحذف بنجاح" });
         } catch (error) {
             toast({ variant: "destructive", title: "حدث خطأ", description: "فشل الحذف" });
@@ -286,7 +294,7 @@ export default function SupplierPaymentsPage() {
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
                                                             <AlertDialogTrigger asChild>
-                                                                <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()} disabled={!!payment.invoiceId}>
+                                                                <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}>
                                                                     <Trash2 className="ml-2 h-4 w-4" />
                                                                     حذف
                                                                 </DropdownMenuItem>
@@ -297,12 +305,12 @@ export default function SupplierPaymentsPage() {
                                                         <AlertDialogHeader>
                                                             <AlertDialogTitle>هل أنت متأكد تمامًا؟</AlertDialogTitle>
                                                             <AlertDialogDescription>
-                                                                هذا الإجراء سيحذف الدفعة بشكل دائم. لا يمكن التراجع عن هذا الإجراء.
+                                                                هذا الإجراء سيحذف الدفعة بشكل دائم. إذا كانت الدفعة مرتبطة بفاتورة، فسيتم عكس قيمتها من المبلغ المدفوع في الفاتورة. لا يمكن التراجع عن هذا الإجراء.
                                                             </AlertDialogDescription>
                                                         </AlertDialogHeader>
                                                         <AlertDialogFooter>
                                                             <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                                                            <AlertDialogAction onClick={() => handleDelete(payment.id!)}>متابعة</AlertDialogAction>
+                                                            <AlertDialogAction onClick={() => handleDelete(payment)}>متابعة</AlertDialogAction>
                                                         </AlertDialogFooter>
                                                     </AlertDialogContent>
                                                 </AlertDialog>
