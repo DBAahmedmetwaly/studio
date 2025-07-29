@@ -199,26 +199,26 @@ const AppLayoutContent = ({ children }: { children: React.ReactNode }) => {
                  <NavSubLink href="/reports/inventory-reports" module="reports_inventory">تقارير المخزون الشاملة</NavSubLink>
             </NavCollapsible>
             
-            <NavCollapsible title="العملاء والمبيعات" icon={<UserSquare />} modules={['customers_data', 'sales_invoices', 'sales_returns', 'reports_customerStatement']}>
+            <NavCollapsible title="العملاء والمبيعات" icon={<UserSquare />} modules={['customers_data', 'sales_invoices', 'sales_returns', 'reports_customerStatement', 'accounting_customerPayments']}>
                 <NavSubLink href="/master-data/customers" module="customers_data">بيانات العملاء</NavSubLink>
                 <NavSubLink href="/sales/invoices/list" module="sales_invoices">فواتير البيع</NavSubLink>
                 <NavSubLink href="/sales/returns/new" module="sales_returns">مرتجعات البيع</NavSubLink>
+                <NavSubLink href="/accounting/customer-payments" module="accounting_customerPayments">مقبوضات العملاء</NavSubLink>
                 <NavSubLink href="/reports/customer-statement" module="reports_customerStatement">كشف حساب العملاء</NavSubLink>
             </NavCollapsible>
 
-            <NavCollapsible title="الموردون والمشتريات" icon={<Building2 />} modules={['suppliers_data', 'purchases_invoices', 'purchases_returns', 'reports_supplierStatement']}>
+            <NavCollapsible title="الموردون والمشتريات" icon={<Building2 />} modules={['suppliers_data', 'purchases_invoices', 'purchases_returns', 'reports_supplierStatement', 'accounting_supplierPayments']}>
                 <NavSubLink href="/master-data/suppliers" module="suppliers_data">بيانات الموردين</NavSubLink>
                 <NavSubLink href="/purchases/invoices/list" module="purchases_invoices">فواتير الشراء</NavSubLink>
                 <NavSubLink href="/purchases/returns/new" module="purchases_returns">مرتجعات الشراء</NavSubLink>
+                <NavSubLink href="/accounting/supplier-payments" module="accounting_supplierPayments">مدفوعات الموردين</NavSubLink>
                 <NavSubLink href="/reports/supplier-statement" module="reports_supplierStatement">كشف حساب الموردين</NavSubLink>
             </NavCollapsible>
             
-            <NavCollapsible title="المحاسبة والمالية" icon={<BookUser />} modules={['accounting_journal', 'accounting_expenses', 'accounting_exceptionalIncome', 'accounting_supplierPayments', 'accounting_customerPayments', 'accounting_treasury', 'accounting_profitDistribution', 'accounting_aiAnalysis', 'reports_financialStatements']}>
+            <NavCollapsible title="المحاسبة والمالية" icon={<BookUser />} modules={['accounting_journal', 'accounting_expenses', 'accounting_exceptionalIncome', 'accounting_treasury', 'accounting_profitDistribution', 'accounting_aiAnalysis', 'reports_financialStatements']}>
                 <NavSubLink href="/accounting/journal" module="accounting_journal">قيود اليومية</NavSubLink>
                 <NavSubLink href="/accounting/expenses" module="accounting_expenses">إدارة المصروفات</NavSubLink>
                 <NavSubLink href="/accounting/exceptional-income" module="accounting_exceptionalIncome">الدخل الاستثنائي</NavSubLink>
-                <NavSubLink href="/accounting/supplier-payments" module="accounting_supplierPayments">مدفوعات الموردين</NavSubLink>
-                <NavSubLink href="/accounting/customer-payments" module="accounting_customerPayments">مقبوضات العملاء</NavSubLink>
                 <NavSubLink href="/accounting/treasury" module="accounting_treasury">حركة الخزينة</NavSubLink>
                 <NavSubLink href="/accounting/profit-distribution" module="accounting_profitDistribution">توزيعات الأرباح</NavSubLink>
                 <NavSubLink href="/accounting/ai-analysis" module="accounting_aiAnalysis">تحليل مالي بالذكاء الاصطناعي</NavSubLink>

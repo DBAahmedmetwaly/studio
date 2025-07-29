@@ -99,14 +99,14 @@ const PaymentForm = ({ onSave, suppliers, cashAccounts, purchaseInvoices }: { on
     return (
         <form onSubmit={handleSubmit}>
             <div className="grid gap-4 py-4">
-                 <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="payment-date" className="text-right">التاريخ</Label>
-                    <Input id="payment-date" type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="col-span-3" required/>
+                <div className="space-y-2">
+                    <Label htmlFor="payment-date">التاريخ</Label>
+                    <Input id="payment-date" type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} required/>
                 </div>
-                 <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="payment-supplier" className="text-right">المورد</Label>
+                <div className="space-y-2">
+                    <Label htmlFor="payment-supplier">المورد</Label>
                     <Select value={formData.supplierId} onValueChange={v => setFormData({...formData, supplierId: v, invoiceId: ""})} required>
-                        <SelectTrigger className="col-span-3">
+                        <SelectTrigger id="payment-supplier">
                             <SelectValue placeholder="اختر موردًا" />
                         </SelectTrigger>
                         <SelectContent>
@@ -114,10 +114,10 @@ const PaymentForm = ({ onSave, suppliers, cashAccounts, purchaseInvoices }: { on
                         </SelectContent>
                     </Select>
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="payment-invoice" className="text-right">ربط بفاتورة</Label>
+                 <div className="space-y-2">
+                    <Label htmlFor="payment-invoice">ربط بفاتورة</Label>
                     <Select value={formData.invoiceId} onValueChange={v => setFormData({...formData, invoiceId: v})} disabled={!formData.supplierId || supplierInvoicesWithBalance.length === 0}>
-                        <SelectTrigger className="col-span-3">
+                        <SelectTrigger id="payment-invoice">
                             <SelectValue placeholder={!formData.supplierId ? "اختر موردًا أولاً" : "اختياري: اختر فاتورة"} />
                         </SelectTrigger>
                         <SelectContent>
@@ -130,7 +130,7 @@ const PaymentForm = ({ onSave, suppliers, cashAccounts, purchaseInvoices }: { on
                     </Select>
                 </div>
                 {selectedInvoiceDetails && (
-                     <div className="col-span-4 -mt-2">
+                     <div className="-mt-2">
                         <p className="text-xs text-muted-foreground text-center">
                             إجمالي الفاتورة: {selectedInvoiceDetails.total.toLocaleString()} | 
                             المدفوع: {(selectedInvoiceDetails.paidAmount || 0).toLocaleString()} | 
@@ -138,10 +138,10 @@ const PaymentForm = ({ onSave, suppliers, cashAccounts, purchaseInvoices }: { on
                         </p>
                     </div>
                 )}
-                 <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="paid-from" className="text-right">مدفوع من</Label>
+                <div className="space-y-2">
+                    <Label htmlFor="paid-from">مدفوع من</Label>
                     <Select value={formData.paidFromAccountId} onValueChange={v => setFormData({...formData, paidFromAccountId: v})} required>
-                        <SelectTrigger className="col-span-3">
+                        <SelectTrigger id="paid-from">
                             <SelectValue placeholder="اختر حساب الدفع" />
                         </SelectTrigger>
                         <SelectContent>
@@ -149,13 +149,13 @@ const PaymentForm = ({ onSave, suppliers, cashAccounts, purchaseInvoices }: { on
                         </SelectContent>
                     </Select>
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="payment-amount" className="text-right">المبلغ</Label>
-                    <Input id="payment-amount" type="number" value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value as any})} className="col-span-3" placeholder="أدخل مبلغ الدفعة" required/>
+                 <div className="space-y-2">
+                    <Label htmlFor="payment-amount">المبلغ</Label>
+                    <Input id="payment-amount" type="number" value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value as any})} placeholder="أدخل مبلغ الدفعة" required/>
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="payment-notes" className="text-right">ملاحظات</Label>
-                    <Textarea id="payment-notes" value={formData.notes || ''} onChange={e => setFormData({...formData, notes: e.target.value})} className="col-span-3" placeholder="أدخل أي ملاحظات (اختياري)" disabled={!!formData.invoiceId} />
+                 <div className="space-y-2">
+                    <Label htmlFor="payment-notes">ملاحظات</Label>
+                    <Textarea id="payment-notes" value={formData.notes || ''} onChange={e => setFormData({...formData, notes: e.target.value})} placeholder="أدخل أي ملاحظات (اختياري)" disabled={!!formData.invoiceId} />
                 </div>
             </div>
              <Alert className="mt-4">
@@ -237,7 +237,7 @@ export default function SupplierPaymentsPage() {
     <>
       <PageHeader title="مدفوعات الموردين" />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
-        <div className="grid gap-6 lg:grid-cols-5">
+        <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-5">
             <Card className="lg:col-span-2">
             <CardHeader>
                 <CardTitle>إضافة دفعة جديدة</CardTitle>

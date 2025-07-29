@@ -65,14 +65,14 @@ const PaymentForm = ({ payment, onSave, onClose, customers, cashAccounts }: { pa
     return (
         <form onSubmit={handleSubmit}>
             <div className="grid gap-4 py-4">
-                 <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="payment-date" className="text-right">التاريخ</Label>
-                    <Input id="payment-date" type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="col-span-3" required/>
+                <div className="space-y-2">
+                    <Label htmlFor="payment-date">التاريخ</Label>
+                    <Input id="payment-date" type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} required/>
                 </div>
-                 <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="payment-customer" className="text-right">العميل</Label>
+                <div className="space-y-2">
+                    <Label htmlFor="payment-customer">العميل</Label>
                     <Select value={formData.customerId} onValueChange={v => setFormData({...formData, customerId: v})} required>
-                        <SelectTrigger className="col-span-3">
+                        <SelectTrigger id="payment-customer">
                             <SelectValue placeholder="اختر عميلاً" />
                         </SelectTrigger>
                         <SelectContent>
@@ -80,10 +80,10 @@ const PaymentForm = ({ payment, onSave, onClose, customers, cashAccounts }: { pa
                         </SelectContent>
                     </Select>
                 </div>
-                 <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="paid-to" className="text-right">مستلم في</Label>
+                <div className="space-y-2">
+                    <Label htmlFor="paid-to">مستلم في</Label>
                     <Select value={formData.paidToAccountId} onValueChange={v => setFormData({...formData, paidToAccountId: v})} required>
-                        <SelectTrigger className="col-span-3">
+                        <SelectTrigger id="paid-to">
                             <SelectValue placeholder="اختر حساب الاستلام" />
                         </SelectTrigger>
                         <SelectContent>
@@ -91,13 +91,13 @@ const PaymentForm = ({ payment, onSave, onClose, customers, cashAccounts }: { pa
                         </SelectContent>
                     </Select>
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="payment-amount" className="text-right">المبلغ</Label>
-                    <Input id="payment-amount" type="number" value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value as any})} className="col-span-3" placeholder="أدخل مبلغ الدفعة" required/>
+                 <div className="space-y-2">
+                    <Label htmlFor="payment-amount">المبلغ</Label>
+                    <Input id="payment-amount" type="number" value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value as any})} placeholder="أدخل مبلغ الدفعة" required/>
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="payment-notes" className="text-right">ملاحظات</Label>
-                    <Textarea id="payment-notes" value={formData.notes || ''} onChange={e => setFormData({...formData, notes: e.target.value})} className="col-span-3" placeholder="أدخل أي ملاحظات (اختياري)" />
+                <div className="space-y-2">
+                    <Label htmlFor="payment-notes">ملاحظات</Label>
+                    <Textarea id="payment-notes" value={formData.notes || ''} onChange={e => setFormData({...formData, notes: e.target.value})} placeholder="أدخل أي ملاحظات (اختياري)" />
                 </div>
             </div>
              <Alert className="mt-4">
@@ -161,8 +161,8 @@ export default function CustomerPaymentsPage() {
     <>
       <PageHeader title="مقبوضات العملاء" />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
-        <div className="grid gap-6 md:grid-cols-5">
-            <Card className="md:col-span-2">
+        <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-5">
+            <Card className="lg:col-span-2">
             <CardHeader>
                 <CardTitle>إضافة دفعة جديدة</CardTitle>
                 <CardDescription>
@@ -174,7 +174,7 @@ export default function CustomerPaymentsPage() {
             </CardContent>
             </Card>
             
-            <Card className="md:col-span-3">
+            <Card className="lg:col-span-3">
                 <CardHeader>
                     <CardTitle>سجل المقبوضات</CardTitle>
                 </CardHeader>
