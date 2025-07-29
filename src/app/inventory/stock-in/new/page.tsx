@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import PageHeader from "@/components/page-header";
@@ -11,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Save, Loader2, PlusCircle, Trash2 } from "lucide-react";
 import React, { useState, useEffect, useMemo } from "react";
-import useFirebase from "@/hooks/use-firebase";
+import { useData } from "@/contexts/data-provider";
 import { useToast } from "@/hooks/use-toast";
 import { Combobox } from "@/components/ui/combobox";
 import { useRouter } from 'next/navigation';
@@ -66,21 +65,25 @@ export default function NewStockInPage() {
     const [selectedPurchaseInvoice, setSelectedPurchaseInvoice] = useState<string>("");
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     
-    const { data: availableItems, loading: loadingItems } = useFirebase<Item>('items');
-    const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
-    const { data: purchaseInvoices, loading: loadingInvoices } = useFirebase<PurchaseInvoice>('purchaseInvoices');
-    const { data: stockInRecords, loading: loadingStockInRecords } = useFirebase<StockInRecord>('stockInRecords');
-    const { add: addStockInRecord, getNextId } = useFirebase("stockInRecords");
+    const { 
+        items: availableItems, 
+        warehouses, 
+        purchaseInvoices, 
+        stockInRecords,
+        dbAction,
+        getNextId,
+        loading 
+    } = useData();
     
     const itemsForCombobox = useMemo(() => {
-        return availableItems.map(item => ({ value: item.id, label: item.name }));
+        return availableItems.map((item: Item) => ({ value: item.id, label: item.name }));
     }, [availableItems]);
 
     const purchaseInvoiceOptions = useMemo(() => {
-        const receivedInvoiceIds = new Set(stockInRecords.filter(r => r.purchaseInvoiceId).map(r => r.purchaseInvoiceId));
+        const receivedInvoiceIds = new Set(stockInRecords.filter((r: StockInRecord) => r.purchaseInvoiceId).map((r: StockInRecord) => r.purchaseInvoiceId));
         return purchaseInvoices
-            .filter(inv => !receivedInvoiceIds.has(inv.id))
-            .map(inv => ({
+            .filter((inv: PurchaseInvoice) => !receivedInvoiceIds.has(inv.id))
+            .map((inv: PurchaseInvoice) => ({
                 value: inv.id,
                 label: `${inv.invoiceNumber} - ${inv.supplierName}`
             }));
@@ -88,11 +91,11 @@ export default function NewStockInPage() {
     
     useEffect(() => {
         if(reason === 'purchase' && selectedPurchaseInvoice) {
-            const invoice = purchaseInvoices.find(inv => inv.id === selectedPurchaseInvoice);
+            const invoice = purchaseInvoices.find((inv: PurchaseInvoice) => inv.id === selectedPurchaseInvoice);
             if(invoice) {
                 setSelectedWarehouse(invoice.warehouseId); // Automatically select warehouse from invoice
                 const invoiceItems: StockItem[] = invoice.items.map(item => {
-                    const availableItem = availableItems.find(i => i.id === item.id);
+                    const availableItem = availableItems.find((i: Item) => i.id === item.id);
                     return {
                         id: item.id,
                         name: item.name,
@@ -117,7 +120,7 @@ export default function NewStockInPage() {
             toast({ variant: "destructive", title: "خطأ", description: "يرجى اختيار صنف وكمية صالحة."});
             return;
         }
-        const selectedItem = availableItems.find(i => i.id === newItem.id);
+        const selectedItem = availableItems.find((i: Item) => i.id === newItem.id);
         if (!selectedItem) return;
 
         setItems([
@@ -174,7 +177,7 @@ export default function NewStockInPage() {
         }
 
         try {
-            await addStockInRecord(record);
+            await dbAction('stockInRecords', 'add', record);
             toast({
                 title: "تم بنجاح",
                 description: `تم تأكيد استلام المخزون بنجاح برقم إيصال: ${record.receiptNumber}`,
@@ -190,8 +193,6 @@ export default function NewStockInPage() {
         }
     };
 
-    const loading = loadingItems || loadingWarehouses || loadingInvoices || loadingStockInRecords;
-    
     const isManualEntry = reason === 'opening_stock';
 
   return (
@@ -232,7 +233,7 @@ export default function NewStockInPage() {
                                     <SelectValue placeholder="اختر المخزن" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                   {warehouses.map(w => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
+                                   {warehouses.map((w: Warehouse) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
                                 </SelectContent>
                             </Select>
                         </div>
@@ -302,7 +303,7 @@ export default function NewStockInPage() {
                                     <Input type="number" placeholder="التكلفة" value={newItem.cost} onChange={e => setNewItem({...newItem, cost: parseFloat(e.target.value) || 0})} className="text-center" />
                                 </TableCell>
                                 <TableCell className="text-center">
-                                    <Button onClick={handleAddItem} size="sm">
+                                    <Button onClick={handleAddItem} size="sm" disabled={!selectedWarehouse || !newItem.id}>
                                         <PlusCircle className="ml-2 h-4 w-4" />
                                         إضافة
                                     </Button>

@@ -33,8 +33,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 
@@ -42,12 +40,11 @@ interface Warehouse {
   id?: string;
   name: string;
   address: string;
-  autoStockUpdate?: boolean;
 }
 
 const WarehouseForm = ({ warehouse, onSave, onClose }: { warehouse?: Warehouse, onSave: (warehouse: Warehouse) => void, onClose: () => void }) => {
   const [formData, setFormData] = useState<Warehouse>(
-    warehouse || { name: "", address: "", autoStockUpdate: false }
+    warehouse || { name: "", address: "" }
   );
 
   const handleSubmit = () => {
@@ -69,19 +66,6 @@ const WarehouseForm = ({ warehouse, onSave, onClose }: { warehouse?: Warehouse, 
             العنوان
           </Label>
           <Textarea id="warehouse-address" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} className="col-span-3" />
-        </div>
-        <div className="grid grid-cols-4 items-center gap-4">
-           <Label htmlFor="auto-stock-update" className="text-right">
-            تحديث تلقائي
-          </Label>
-          <div className="col-span-3 flex items-center space-x-2">
-            <Switch
-              id="auto-stock-update"
-              checked={formData.autoStockUpdate}
-              onCheckedChange={(checked) => setFormData({...formData, autoStockUpdate: checked})}
-            />
-            <Label htmlFor="auto-stock-update" className="text-xs text-muted-foreground">تحديث المخزون مباشرة عند إنشاء فواتير البيع/الشراء</Label>
-          </div>
         </div>
       </div>
        <div className="flex justify-end">
@@ -145,7 +129,6 @@ export default function WarehousesPage() {
                             <TableRow>
                                 <TableHead>اسم المخزن</TableHead>
                                 <TableHead className="hidden sm:table-cell">العنوان</TableHead>
-                                <TableHead className="text-center">تحديث تلقائي</TableHead>
                                 <TableHead className="text-center w-[100px]">
                                     <span className="sr-only">الإجراءات</span>
                                 </TableHead>
@@ -156,11 +139,6 @@ export default function WarehousesPage() {
                                 <TableRow key={warehouse.id}>
                                     <TableCell className="font-medium">{warehouse.name}</TableCell>
                                     <TableCell className="hidden sm:table-cell">{warehouse.address}</TableCell>
-                                    <TableCell className="text-center">
-                                        <Badge variant={warehouse.autoStockUpdate ? 'default' : 'outline'}>
-                                            {warehouse.autoStockUpdate ? 'مفعل' : 'غير مفعل'}
-                                        </Badge>
-                                    </TableCell>
                                     <TableCell className="text-center">
                                         <AlertDialog>
                                             <DropdownMenu>
