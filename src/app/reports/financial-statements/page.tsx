@@ -37,6 +37,7 @@ interface SaleInvoice {
   items: { id: string; qty: number; cost?: number; price: number; }[];
   paidAmount?: number;
   date: string;
+  subtotal: number;
 }
 interface PurchaseInvoice {
   id: string;
@@ -116,7 +117,7 @@ function IncomeStatement() {
   } = useMemo(() => {
       const approvedSales = salesInvoices.filter((s: SaleInvoice) => s.status === 'approved');
       
-      const grossRevenue = approvedSales.reduce((acc, sale) => acc + (sale.subtotal || (sale.total + sale.discount)), 0);
+      const grossRevenue = approvedSales.reduce((acc, sale) => acc + (sale.subtotal || (sale.total + (sale.discount || 0))), 0);
       const totalSalesDiscount = approvedSales.reduce((acc, sale) => acc + (sale.discount || 0), 0);
       const totalSalesReturns = salesReturns.reduce((acc, ret) => acc + ret.total, 0);
       
@@ -310,17 +311,12 @@ function BalanceSheet() {
 }
 
 function TrialBalance() {
-    const { data: customers, loading: loadingCustomers } = useFirebase<Customer>("customers");
-    const { data: suppliers, loading: loadingSuppliers } = useFirebase<Supplier>("suppliers");
-    const { data: partners, loading: loadingPartners } = useFirebase<Partner>("partners");
-    const { data: items, loading: loadingItems } = useFirebase<Item>("items");
-
-    const loading = loadingCustomers || loadingSuppliers || loadingPartners || loadingItems;
+    const { customers, suppliers, partners, items, loading } = useData();
     
-    const accountsReceivable = customers.reduce((acc, cust) => acc + (cust.openingBalance || 0), 0); // Debit
-    const inventoryValue = items.reduce((acc, item) => acc + ((item.openingStock || 0) * (item.price || 0)), 0); // Debit
-    const accountsPayable = suppliers.reduce((acc, sup) => acc + (sup.openingBalance || 0), 0); // Credit
-    const totalCapital = partners.reduce((acc, p) => acc + (p.capital || 0), 0); // Credit
+    const accountsReceivable = customers.reduce((acc: number, cust: any) => acc + (cust.openingBalance || 0), 0); // Debit
+    const inventoryValue = items.reduce((acc: number, item: any) => acc + ((item.openingStock || 0) * (item.price || 0)), 0); // Debit
+    const accountsPayable = suppliers.reduce((acc: number, sup: any) => acc + (sup.openingBalance || 0), 0); // Credit
+    const totalCapital = partners.reduce((acc: number, p: any) => acc + (p.capital || 0), 0); // Credit
 
     const totalDebits = accountsReceivable + inventoryValue;
     const totalCredits = accountsPayable + totalCapital;
