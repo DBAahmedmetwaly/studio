@@ -180,27 +180,15 @@ export default function Dashboard() {
         if (item.currentStock <= 0) return acc;
 
         // Find the last purchase price for this item
-        const lastPurchase = purchaseInvoices
+        const allPurchasesForItem = purchaseInvoices
             .filter((p: PurchaseInvoice) => p.items.some(pi => pi.id === item.id))
-            .sort((a: PurchaseInvoice, b: PurchaseInvoice) => new Date(b.date).getTime() - new Date(a.date).getTime())
-            [0];
+            .sort((a: PurchaseInvoice, b: PurchaseInvoice) => new Date(b.date).getTime() - new Date(a.date).getTime());
         
         let lastCost = item.cost || 0; // Fallback to master cost
-        if(lastPurchase) {
-            const purchasedItem = lastPurchase.items.find(pi => pi.id === item.id);
-            if(purchasedItem && purchasedItem.cost) {
+        if(allPurchasesForItem.length > 0) {
+            const purchasedItem = allPurchasesForItem[0].items.find(pi => pi.id === item.id);
+            if(purchasedItem && typeof purchasedItem.cost === 'number') {
                 lastCost = purchasedItem.cost;
-            }
-        } else {
-             const lastStockIn = stockInRecords
-                .filter((si: StockInRecord) => si.items.some(si_item => si_item.id === item.id))
-                .sort((a: StockInRecord, b: StockInRecord) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                [0];
-            if (lastStockIn) {
-                 const stockInItem = lastStockIn.items.find(si_item => si_item.id === item.id);
-                 if (stockInItem && stockInItem.cost) {
-                    lastCost = stockInItem.cost;
-                 }
             }
         }
 
