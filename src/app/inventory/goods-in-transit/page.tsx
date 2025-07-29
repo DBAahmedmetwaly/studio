@@ -24,6 +24,8 @@ import Link from 'next/link';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Combobox } from "@/components/ui/combobox";
+
 
 interface PurchaseInvoice {
   id: string;
@@ -44,13 +46,26 @@ interface Supplier {
     name: string;
 }
 
+interface Item {
+    id: string;
+    name: string;
+    code?: string;
+}
+
 export default function GoodsInTransitPage() {
-  const { purchaseInvoices, stockInRecords, suppliers, loading } = useData();
-  const [filters, setFilters] = useState({ supplierId: "all", itemName: "", fromDate: "", toDate: "" });
+  const { purchaseInvoices, stockInRecords, suppliers, items: allItems, loading } = useData();
+  const [filters, setFilters] = useState({ supplierId: "all", itemId: "", fromDate: "", toDate: "" });
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
+
+  const itemOptions = useMemo(() => {
+    return allItems.map((item: Item) => ({
+      value: item.id,
+      label: `${item.name} (${item.code || item.id.slice(-4)})`
+    }));
+  }, [allItems]);
 
   const goodsInTransit = useMemo(() => {
     const receivedInvoiceIds = new Set(
@@ -76,7 +91,7 @@ export default function GoodsInTransitPage() {
       })
       .forEach((inv: PurchaseInvoice) => {
         inv.items.forEach(item => {
-          if (filters.itemName && !item.name.toLowerCase().includes(filters.itemName.toLowerCase())) {
+          if (filters.itemId && item.id !== filters.itemId) {
             return;
           }
           transitItems.push({
@@ -116,8 +131,14 @@ export default function GoodsInTransitPage() {
                         </Select>
                     </div>
                      <div className="space-y-2">
-                        <Label>اسم الصنف</Label>
-                        <Input type="text" placeholder="ابحث بالاسم..." value={filters.itemName} onChange={(e) => handleFilterChange("itemName", e.target.value)} />
+                        <Label>الصنف</Label>
+                         <Combobox
+                            options={itemOptions}
+                            value={filters.itemId}
+                            onValueChange={(value) => handleFilterChange('itemId', value)}
+                            placeholder="اختر صنفًا..."
+                            emptyMessage="لم يتم العثور على الصنف."
+                        />
                     </div>
                      <div className="space-y-2">
                         <Label>من تاريخ</Label>
