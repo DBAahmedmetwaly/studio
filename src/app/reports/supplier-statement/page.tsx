@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
-import useFirebase from "@/hooks/use-firebase";
+import { useData } from "@/contexts/data-provider";
 import { Loader2, Printer } from "lucide-react";
 import React, { useState } from "react";
 
@@ -22,6 +22,7 @@ interface PurchaseInvoice {
 
 interface PurchaseReturn {
     id: string;
+    receiptNumber?: string;
     date: string;
     supplierId: string;
     total: number;
@@ -29,6 +30,7 @@ interface PurchaseReturn {
 
 interface SupplierPayment {
     id: string;
+    receiptNumber?: string;
     date: string;
     supplierId: string;
     amount: number;
@@ -47,39 +49,38 @@ export default function SupplierStatementPage() {
   const [toDate, setToDate] = useState<string>("");
   const [reportData, setReportData] = useState<any[] | null>(null);
 
-  const { data: suppliers, loading: loadingSuppliers } = useFirebase<Supplier>('suppliers');
-  const { data: purchases, loading: loadingPurchases } = useFirebase<PurchaseInvoice>('purchaseInvoices');
-  const { data: payments, loading: loadingPayments } = useFirebase<SupplierPayment>('supplierPayments');
-  const { data: purchaseReturns, loading: loadingReturns } = useFirebase<PurchaseReturn>('purchaseReturns');
+  const { 
+    suppliers, 
+    purchaseInvoices: purchases, 
+    supplierPayments: payments, 
+    purchaseReturns, 
+    loading 
+  } = useData();
   
-  const loading = loadingSuppliers || loadingPurchases || loadingPayments || loadingReturns;
-
   const handleGenerateReport = () => {
     if (!selectedSupplierId) {
       alert("يرجى اختيار مورد");
       return;
     }
 
-    const supplier = suppliers.find(s => s.id === selectedSupplierId);
+    const supplier = suppliers.find((s: Supplier) => s.id === selectedSupplierId);
     if (!supplier) return;
 
-    // A positive opening balance for a supplier is a credit (we owe them)
-    let balance = supplier.openingBalance || 0;
     const allTransactions: any[] = [];
 
     // Add opening balance as first transaction
     allTransactions.push({
-      date: new Date(0), // to ensure it's always first when sorting
+      date: new Date(0), // for sorting
       sortDate: new Date(0),
       description: 'رصيد أول المدة',
       debit: 0, 
-      credit: balance,
+      credit: supplier.openingBalance > 0 ? supplier.openingBalance : 0,
     });
     
-    // Add Purchases (Credit)
+    // Add Purchases (Credit - we owe them)
     purchases
-      .filter(p => p.supplierId === selectedSupplierId)
-      .forEach(purchase => {
+      .filter((p: PurchaseInvoice) => p.supplierId === selectedSupplierId)
+      .forEach((purchase: PurchaseInvoice) => {
         allTransactions.push({
             date: new Date(purchase.date),
             sortDate: new Date(purchase.date),
@@ -89,27 +90,27 @@ export default function SupplierStatementPage() {
         });
       });
 
-    // Add Purchase Returns (Debit)
+    // Add Purchase Returns (Debit - reduces what we owe)
     purchaseReturns
-        .filter(pr => pr.supplierId === selectedSupplierId)
-        .forEach(pr => {
+        .filter((pr: PurchaseReturn) => pr.supplierId === selectedSupplierId)
+        .forEach((pr: PurchaseReturn) => {
             allTransactions.push({
                 date: new Date(pr.date),
                 sortDate: new Date(pr.date),
-                description: `مرتجع مشتريات رقم ${pr.id.slice(-6).toUpperCase()}`,
+                description: `مرتجع مشتريات رقم ${pr.receiptNumber || pr.id.slice(-6).toUpperCase()}`,
                 debit: pr.total,
                 credit: 0,
             });
         });
       
-    // Add Payments (Debit)
+    // Add Payments (Debit - reduces what we owe)
     payments
-      .filter(p => p.supplierId === selectedSupplierId)
-      .forEach(payment => {
+      .filter((p: SupplierPayment) => p.supplierId === selectedSupplierId)
+      .forEach((payment: SupplierPayment) => {
         allTransactions.push({
             date: new Date(payment.date),
             sortDate: new Date(payment.date),
-            description: `دفعة مسددة ${payment.notes ? `(${payment.notes})` : ''}`,
+            description: `دفعة مسددة (سند: ${payment.receiptNumber || payment.id.slice(-5)}) ${payment.notes ? `(${payment.notes})` : ''}`,
             debit: payment.amount,
             credit: 0
         });
@@ -121,13 +122,14 @@ export default function SupplierStatementPage() {
             const txDate = t.sortDate;
             const start = fromDate ? new Date(fromDate) : null;
             const end = toDate ? new Date(toDate) : null;
+            if(start) start.setHours(0,0,0,0);
+            if(end) end.setHours(23,59,59,999);
             if (txDate.getTime() === new Date(0).getTime()) return true; // always include opening balance
             if (start && txDate < start) return false;
             if (end && txDate > end) return false;
             return true;
         })
         .sort((a,b) => a.sortDate.getTime() - b.sortDate.getTime());
-    
     
     // Calculate running balance
     let runningBalance = 0;
@@ -171,7 +173,7 @@ export default function SupplierStatementPage() {
                                     <SelectValue placeholder="اختر موردًا" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                                    {suppliers.map((s: Supplier) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                                 </SelectContent>
                             </Select>
                         </div>
@@ -195,7 +197,7 @@ export default function SupplierStatementPage() {
             <Card className="printable-area">
             <CardHeader className="flex flex-row items-center justify-between border-b pb-4 mb-4">
                 <div>
-                    <CardTitle>كشف الحساب لـ: {suppliers.find(s => s.id === selectedSupplierId)?.name}</CardTitle>
+                    <CardTitle>كشف الحساب لـ: {suppliers.find((s: Supplier) => s.id === selectedSupplierId)?.name}</CardTitle>
                     <CardDescription>
                         عرض مفصل لمعاملات المورد من {fromDate || 'البداية'} إلى {toDate || 'النهاية'}.
                     </CardDescription>
