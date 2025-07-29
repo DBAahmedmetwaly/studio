@@ -46,7 +46,7 @@ interface Supplier {
 
 export default function GoodsInTransitPage() {
   const { purchaseInvoices, stockInRecords, suppliers, loading } = useData();
-  const [filters, setFilters] = useState({ supplierId: "all", itemName: "" });
+  const [filters, setFilters] = useState({ supplierId: "all", itemName: "", fromDate: "", toDate: "" });
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -65,6 +65,13 @@ export default function GoodsInTransitPage() {
       .filter((inv: PurchaseInvoice) => {
         if (receivedInvoiceIds.has(inv.id)) return false;
         if (filters.supplierId !== 'all' && inv.supplierId !== filters.supplierId) return false;
+        
+        const invoiceDate = new Date(inv.date);
+        const from = filters.fromDate ? new Date(filters.fromDate) : null;
+        const to = filters.toDate ? new Date(filters.toDate) : null;
+        if (from && invoiceDate < from) return false;
+        if (to && invoiceDate > to) return false;
+
         return true;
       })
       .forEach((inv: PurchaseInvoice) => {
@@ -95,7 +102,7 @@ export default function GoodsInTransitPage() {
                 <CardTitle>فلاتر البحث</CardTitle>
             </CardHeader>
             <CardContent>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                      <div className="space-y-2">
                         <Label>المورد</Label>
                         <Select value={filters.supplierId} onValueChange={(v) => handleFilterChange("supplierId", v)}>
@@ -111,6 +118,14 @@ export default function GoodsInTransitPage() {
                      <div className="space-y-2">
                         <Label>اسم الصنف</Label>
                         <Input type="text" placeholder="ابحث بالاسم..." value={filters.itemName} onChange={(e) => handleFilterChange("itemName", e.target.value)} />
+                    </div>
+                     <div className="space-y-2">
+                        <Label>من تاريخ</Label>
+                        <Input type="date" value={filters.fromDate} onChange={(e) => handleFilterChange("fromDate", e.target.value)} />
+                    </div>
+                     <div className="space-y-2">
+                        <Label>إلى تاريخ</Label>
+                        <Input type="date" value={filters.toDate} onChange={(e) => handleFilterChange("toDate", e.target.value)} />
                     </div>
                 </div>
             </CardContent>
