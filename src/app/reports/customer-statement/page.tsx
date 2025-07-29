@@ -222,6 +222,7 @@ export default function CustomerStatementPage() {
                 </Button>
             </CardHeader>
             <CardContent>
+              <div className="w-full overflow-auto border rounded-lg">
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -250,6 +251,7 @@ export default function CustomerStatementPage() {
                         </TableRow>
                     </TableFooter>
                 </Table>
+              </div>
             </CardContent>
             </Card>
         )}

@@ -208,6 +208,7 @@ export default function SupplierStatementPage() {
                 </Button>
             </CardHeader>
             <CardContent>
+              <div className="w-full overflow-auto border rounded-lg">
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -236,6 +237,7 @@ export default function SupplierStatementPage() {
                         </TableRow>
                     </TableFooter>
                 </Table>
+              </div>
             </CardContent>
             </Card>
         )}
