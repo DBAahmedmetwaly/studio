@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
@@ -19,7 +18,7 @@ import { usePosInvoiceCounter } from '@/hooks/use-pos-invoice-counter';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { PosReceipt } from '@/components/pos-receipt';
-import ReactDOM from 'react-dom';
+import { createRoot } from 'react-dom/client';
 
 interface PosItem {
   id: string; // The database ID of the item
@@ -167,14 +166,18 @@ export default function PosPage() {
         if (printFrameRef.current) {
             const printDocument = printFrameRef.current.contentWindow?.document;
             if (printDocument) {
-                ReactDOM.render(
-                    <PosReceipt invoice={saleData} company={companySettings} />,
-                    printDocument.body,
-                    () => {
-                        printFrameRef.current?.contentWindow?.focus();
-                        printFrameRef.current?.contentWindow?.print();
-                    }
+                const root = createRoot(printDocument.body);
+                root.render(
+                    <React.StrictMode>
+                        <PosReceipt invoice={saleData} company={companySettings} />
+                    </React.StrictMode>
                 );
+                
+                setTimeout(() => {
+                    printFrameRef.current?.contentWindow?.focus();
+                    printFrameRef.current?.contentWindow?.print();
+                    root.unmount();
+                }, 500); 
             }
         }
     };
