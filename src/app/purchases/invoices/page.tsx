@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { PlusCircle, Trash2, Printer, Save, Info, Loader2 } from "lucide-react";
 import React, { useState, useEffect } from "react";
-import useFirebase from "@/hooks/use-firebase";
+import { useData } from "@/contexts/data-provider";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from 'next/navigation';
 import { Switch } from "@/components/ui/switch";
@@ -330,7 +330,7 @@ export default function PurchaseInvoicePage() {
                             </TableCell>
                             <TableCell></TableCell>
                             <TableCell className="text-center p-2">
-                                <Button onClick={handleAddItem}>
+                                <Button onClick={handleAddItem} size="sm">
                                     <PlusCircle className="ml-2 h-4 w-4" />
                                     إضافة
                                 </Button>
