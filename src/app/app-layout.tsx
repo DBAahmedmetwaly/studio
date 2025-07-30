@@ -117,20 +117,20 @@ const NavCollapsible = ({ title, icon, children, modules }: { title: string; ico
         return null;
     }
 
-    const childPaths = React.Children.map(children, child => {
+    const childHrefs = React.Children.map(children, child => {
         if (React.isValidElement(child) && child.props.href) {
             return child.props.href;
         }
         return null;
-    }) || [];
-    
-    const isAnyChildActive = childPaths.some(path => path && pathname.startsWith(path));
+    })?.filter(Boolean) as string[] | undefined;
+
+    const isAnyChildActive = childHrefs?.some(href => pathname.startsWith(href));
 
     return (
         <Collapsible defaultOpen={isAnyChildActive}>
             <SidebarMenuItem>
                 <CollapsibleTrigger asChild>
-                    <SidebarMenuButton>
+                     <SidebarMenuButton>
                         {icon}
                         <span>{title}</span>
                         <ChevronDown className="mr-auto h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" />
@@ -284,7 +284,10 @@ const AppLayoutContent = ({ children }: { children: React.ReactNode }) => {
          <div className="md:hidden fixed z-50">
             <SidebarTrigger className={cn(
                 "rounded-full w-14 h-14 shadow-lg bg-primary text-primary-foreground hover:bg-primary/90",
-                fabPosition === 'bottom-right' ? 'bottom-4 right-4' : 'top-4 right-4'
+                {
+                    'bottom-4 right-4': fabPosition === 'bottom-right',
+                    'top-4 right-4': fabPosition === 'top-right'
+                }
             )} />
         </div>
         <header className="flex h-14 items-center gap-4 border-b bg-background px-4 sticky top-0 z-30">

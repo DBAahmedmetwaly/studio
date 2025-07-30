@@ -26,22 +26,20 @@ export function AddEntityDialog({
 }: AddEntityDialogProps) {
   const [isOpen, setIsOpen] = React.useState(false);
 
-  // Wrap the trigger button to manually control the dialog state
-  const Trigger = React.cloneElement(triggerButton as React.ReactElement, {
-    onClick: (e: MouseEvent) => {
-        e.stopPropagation();
-        e.preventDefault();
-        setIsOpen(true);
-        // If the original trigger has an onClick, call it
-        if ((triggerButton as React.ReactElement).props.onClick) {
-            (triggerButton as React.ReactElement).props.onClick(e);
-        }
-    },
-  });
+  // Wrap the original trigger to control the dialog's open state
+  const handleTriggerClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setIsOpen(true);
+  };
+  
+  const TriggerWrapper = React.isValidElement(triggerButton) 
+    ? React.cloneElement(triggerButton, { onClick: handleTriggerClick } as React.HTMLAttributes<HTMLElement>)
+    : <div onClick={handleTriggerClick}>{triggerButton}</div>;
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>{Trigger}</DialogTrigger>
+      <DialogTrigger asChild>{TriggerWrapper}</DialogTrigger>
       <DialogContent 
         className="sm:max-w-[425px]"
         onInteractOutside={(e) => {
@@ -54,7 +52,11 @@ export function AddEntityDialog({
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
-        {React.cloneElement(children as React.ReactElement, { onClose: () => setIsOpen(false) })}
+        {React.Children.map(children, child =>
+          React.isValidElement(child)
+            ? React.cloneElement(child, { onClose: () => setIsOpen(false) } as any)
+            : child
+        )}
       </DialogContent>
     </Dialog>
   );
