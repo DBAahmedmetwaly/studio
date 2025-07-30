@@ -274,7 +274,7 @@ const AppLayoutContent = ({ children }: { children: React.ReactNode }) => {
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-         <div className="md:hidden fixed bottom-4 left-4 z-50">
+         <div className="md:hidden fixed bottom-4 right-4 z-50">
             <SidebarTrigger className="rounded-full w-14 h-14 shadow-lg bg-primary text-primary-foreground hover:bg-primary/90">
                 <PanelLeft />
             </SidebarTrigger>
