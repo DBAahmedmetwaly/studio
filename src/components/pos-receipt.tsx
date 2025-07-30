@@ -76,8 +76,8 @@ export const PosReceipt = ({ invoice, company }: { invoice: any, company: any })
           </tr>
         </thead>
         <tbody>
-          {invoice.items.map((item: any) => (
-            <tr key={item.uniqueId || item.id}>
+          {invoice.items.map((item: any, index: number) => (
+            <tr key={`${item.id}-${index}`}>
               <td style={tdStyle}>{item.name}</td>
               <td style={{...tdStyle, textAlign: 'center'}}>{item.qty}</td>
               <td style={{...tdStyle, textAlign: 'right'}}>{item.price.toFixed(2)}</td>
