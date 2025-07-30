@@ -73,6 +73,9 @@ import { ModeToggle } from "@/components/mode-toggle";
 import { usePermissions } from "@/contexts/permissions-context";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
+import { useData } from "@/contexts/data-provider";
+import { cn } from "@/lib/utils";
+
 
 const Logo = () => (
     <div className="flex items-center gap-2" >
@@ -163,7 +166,11 @@ const NavSubLink = ({ href, children, module }: { href: string; children: React.
 const AppLayoutContent = ({ children }: { children: React.ReactNode }) => {
   const { user, signOut } = useAuth();
   const { toggleSidebar } = useSidebar();
-  
+  const { settings } = useData();
+
+  const generalSettings = settings.find((s:any) => s.id === 'main')?.general || {};
+  const fabPosition = generalSettings.mobileFabPosition || 'bottom-right';
+
   return (
     <>
       <Sidebar side="right">
@@ -274,10 +281,11 @@ const AppLayoutContent = ({ children }: { children: React.ReactNode }) => {
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-         <div className="md:hidden fixed bottom-4 right-4 z-50">
-            <SidebarTrigger className="rounded-full w-14 h-14 shadow-lg bg-primary text-primary-foreground hover:bg-primary/90">
-                <PanelLeft />
-            </SidebarTrigger>
+         <div className="md:hidden fixed z-50">
+            <SidebarTrigger className={cn(
+                "rounded-full w-14 h-14 shadow-lg bg-primary text-primary-foreground hover:bg-primary/90",
+                fabPosition === 'bottom-right' ? 'bottom-4 right-4' : 'top-4 right-4'
+            )} />
         </div>
         <header className="flex h-14 items-center gap-4 border-b bg-background px-4 sticky top-0 z-30">
             <Button variant="ghost" size="icon" className="hidden md:flex" onClick={toggleSidebar}>
@@ -310,3 +318,5 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     </SidebarProvider>
   );
 }
+
+    

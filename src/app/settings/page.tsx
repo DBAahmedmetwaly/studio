@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect } from "react";
@@ -34,6 +35,7 @@ interface GeneralSettings {
     companyName: string;
     companyAddress: string;
     language: 'ar' | 'en';
+    mobileFabPosition: 'bottom-right' | 'top-right';
 }
 
 interface FinancialSettings {
@@ -61,7 +63,7 @@ export default function SettingsPage() {
             } else {
                 // Initialize with default settings if none exist
                 setSettings({
-                    general: { companyName: '', companyAddress: '', language: 'ar' },
+                    general: { companyName: '', companyAddress: '', language: 'ar', mobileFabPosition: 'bottom-right' },
                     financial: { openingCapital: 0, fiscalYearStart: '', currency: 'EGP', allowNegativeStock: false }
                 });
             }
@@ -132,18 +134,32 @@ export default function SettingsPage() {
                   <Label htmlFor="company-address">عنوان الشركة</Label>
                   <Textarea id="company-address" placeholder="أدخل عنوان الشركة" value={settings.general.companyAddress} onChange={e => handleGeneralChange('companyAddress', e.target.value)} />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="language">اللغة</Label>
-                  <Select value={settings.general.language} onValueChange={(value: GeneralSettings['language']) => handleGeneralChange('language', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="اختر اللغة" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ar">العربية</SelectItem>
-                      <SelectItem value="en">English</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                 <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="language">اللغة</Label>
+                      <Select value={settings.general.language} onValueChange={(value: GeneralSettings['language']) => handleGeneralChange('language', value)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="اختر اللغة" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ar">العربية</SelectItem>
+                          <SelectItem value="en">English</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                     <div className="space-y-2">
+                      <Label htmlFor="fab-position">موضع زر القائمة (موبايل)</Label>
+                      <Select value={settings.general.mobileFabPosition || 'bottom-right'} onValueChange={(value: GeneralSettings['mobileFabPosition']) => handleGeneralChange('mobileFabPosition', value)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="اختر الموضع" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="bottom-right">أسفل اليمين</SelectItem>
+                          <SelectItem value="top-right">أعلى اليمين</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                 </div>
               </CardContent>
               <CardFooter>
                 <Button onClick={handleSave}>حفظ التغييرات</Button>
@@ -200,3 +216,5 @@ export default function SettingsPage() {
     </>
   );
 }
+
+    
