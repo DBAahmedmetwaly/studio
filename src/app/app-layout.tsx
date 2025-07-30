@@ -274,8 +274,14 @@ const AppLayoutContent = ({ children }: { children: React.ReactNode }) => {
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
+         <div className="md:hidden fixed bottom-4 left-4 z-50">
+            <SidebarTrigger asChild>
+                <Button size="icon" className="rounded-full w-14 h-14 shadow-lg">
+                    <PanelLeft />
+                </Button>
+            </SidebarTrigger>
+        </div>
         <header className="flex h-14 items-center gap-4 border-b bg-background px-4 sticky top-0 z-30">
-            <SidebarTrigger className="md:hidden" />
             <Button variant="ghost" size="icon" className="hidden md:flex" onClick={toggleSidebar}>
               <PanelLeft />
             </Button>
