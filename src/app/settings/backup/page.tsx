@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PageHeader from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +28,31 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { Checkbox } from '@/components/ui/checkbox';
+import { Separator } from '@/components/ui/separator';
+
+const RESET_CATEGORIES = {
+    masterData: {
+        label: "البيانات الأساسية",
+        paths: ['items', 'customers', 'suppliers', 'warehouses', 'partners', 'employees', 'itemGroups', 'barcodeDesigns', 'cashAccounts'],
+        description: "الأصناف، العملاء، الموردون، المخازن، الشركاء، الموظفون، مجموعات الأصناف، تصاميم الباركود، الخزائن والبنوك (الغير مرتبطة بمستخدمين)."
+    },
+    transactions: {
+        label: "جميع الحركات والفواتير",
+        paths: ['stockInRecords', 'stockOutRecords', 'stockTransferRecords', 'stockAdjustmentRecords', 'stockIssuesToReps', 'stockReturnsFromReps', 'inventoryClosings', 'salesInvoices', 'salesReturns', 'purchaseInvoices', 'purchaseReturns', 'expenses', 'exceptionalIncomes', 'customerPayments', 'supplierPayments', 'treasuryTransactions', 'profitDistributions', 'employeeAdvances', 'employeeAdjustments', 'repRemittances'],
+        description: "كل الفواتير، أذونات المخزون، الحركات المالية، المصروفات، الإيرادات، المدفوعات، السلف، إلخ."
+    },
+    posData: {
+        label: "بيانات نقاط البيع",
+        paths: ['posSales', 'posReturns', 'posSessions', 'posAuditLogs'],
+        description: "مبيعات الكاشير، المرتجعات، اليوميات، وسجلات التدقيق."
+    },
+    counters: {
+        label: "العدادات التلقائية",
+        paths: ['counters'],
+        description: "إعادة تعيين ترقيم الفواتير والإيصالات لتبدأ من جديد."
+    }
+}
 
 
 export default function BackupPage() {
@@ -37,6 +62,8 @@ export default function BackupPage() {
     const [isLoadingRestore, setIsLoadingRestore] = useState(false);
     const [isLoadingReset, setIsLoadingReset] = useState(false);
     const [restoreFile, setRestoreFile] = useState<File | null>(null);
+    const [selectedResetKeys, setSelectedResetKeys] = useState<string[]>([]);
+
 
     // This is just a simple way to detect a change. We'll use the JSON string length.
     const [lastDataState, setLastDataState] = useState("");
@@ -134,30 +161,39 @@ export default function BackupPage() {
     };
 
     const handleFactoryReset = async () => {
+        if (selectedResetKeys.length === 0) {
+            toast({ variant: "destructive", title: "لم يتم تحديد شيء", description: "يرجى تحديد فئة واحدة على الأقل من البيانات لحذفها." });
+            return;
+        }
+
         setIsLoadingReset(true);
         try {
-            const pathsToClear = [
-                'items', 'customers', 'suppliers', 'warehouses', 'partners',
-                'cashAccounts', 'employees', 'itemGroups', 'barcodeDesigns',
-                'stockInRecords', 'stockOutRecords', 'stockTransferRecords', 'stockAdjustmentRecords', 'stockIssuesToReps', 'stockReturnsFromReps', 'inventoryClosings',
-                'salesInvoices', 'salesReturns', 'purchaseInvoices', 'purchaseReturns',
-                'posSales', 'posReturns', 'posSessions', 'posAuditLogs',
-                'expenses', 'exceptionalIncomes', 'customerPayments', 'supplierPayments',
-                'treasuryTransactions', 'profitDistributions', 'employeeAdvances',
-                'employeeAdjustments', 'repRemittances', 'counters'
-            ];
+            const pathsToClear: string[] = [];
+            selectedResetKeys.forEach(key => {
+                const category = RESET_CATEGORIES[key as keyof typeof RESET_CATEGORIES];
+                if (category) {
+                    pathsToClear.push(...category.paths);
+                }
+            });
 
             for (const path of pathsToClear) {
                 await dbAction(path, 'remove', { id: '' }); // Passing empty id to remove root of the path
             }
-            toast({ title: "تمت إعادة الضبط بنجاح!", description: "تم حذف جميع البيانات الحركية والأساسية." });
+            toast({ title: "تم الحذف بنجاح!", description: "تم حذف البيانات المحددة." });
+            setSelectedResetKeys([]);
         } catch (error) {
             console.error("Factory reset failed:", error);
-            toast({ variant: "destructive", title: "خطأ", description: "فشلت عملية إعادة ضبط المصنع." });
+            toast({ variant: "destructive", title: "خطأ", description: "فشلت عملية إعادة الضبط." });
         } finally {
             setIsLoadingReset(false);
         }
     };
+
+    const handleResetCheckboxChange = (key: string, checked: boolean) => {
+        setSelectedResetKeys(prev => 
+            checked ? [...prev, key] : prev.filter(k => k !== key)
+        );
+    }
 
 
   return (
@@ -238,34 +274,56 @@ export default function BackupPage() {
                 <CardHeader>
                     <CardTitle className="text-destructive flex items-center gap-2">
                         <AlertTriangle />
-                        إعادة ضبط المصنع
+                        إعادة ضبط المصنع (حذف مخصص)
                     </CardTitle>
                     <CardDescription>
-                        حذف جميع البيانات الحركية والأساسية (الأصناف، العملاء، الموردون، الفواتير، إلخ) وإعادة البرنامج إلى حالته الأولية. هذا الإجراء لا يحذف المستخدمين أو الصلاحيات.
+                        حدد فئات البيانات التي تريد حذفها بشكل نهائي. هذا الإجراء لا يحذف المستخدمين أو الصلاحيات. يوصى بأخذ نسخة احتياطية أولاً.
                     </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
+                    {Object.entries(RESET_CATEGORIES).map(([key, value]) => (
+                        <div key={key} className="flex items-start space-x-2 rounded-md border p-4 rtl:space-x-reverse">
+                             <Checkbox 
+                                id={`reset-${key}`}
+                                checked={selectedResetKeys.includes(key)}
+                                onCheckedChange={(checked) => handleResetCheckboxChange(key, !!checked)}
+                             />
+                             <div className="grid gap-1.5 leading-none">
+                                <label
+                                htmlFor={`reset-${key}`}
+                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                >
+                                {value.label}
+                                </label>
+                                <p className="text-sm text-muted-foreground">
+                                {value.description}
+                                </p>
+                            </div>
+                        </div>
+                    ))}
+                </CardContent>
+                <CardFooter>
                     <AlertDialog>
                         <AlertDialogTrigger asChild>
-                            <Button variant="destructive" disabled={isLoadingReset}>
+                            <Button variant="destructive" disabled={isLoadingReset || selectedResetKeys.length === 0}>
                                 {isLoadingReset ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <RefreshCcw className="ml-2 h-4 w-4" />}
-                                {isLoadingReset ? 'جارٍ الحذف...' : 'حذف جميع البيانات والتهيئة'}
+                                {isLoadingReset ? 'جارٍ الحذف...' : 'حذف البيانات المحددة'}
                             </Button>
                         </AlertDialogTrigger>
                          <AlertDialogContent>
                             <AlertDialogHeader>
                             <AlertDialogTitle>تنبيه أخير! هل أنت متأكد تمامًا؟</AlertDialogTitle>
                             <AlertDialogDescription>
-                                أنت على وشك حذف جميع بيانات البرنامج بشكل نهائي ولا يمكن التراجع عن هذا الإجراء. يوصى بشدة بأخذ نسخة احتياطية أولاً.
+                                أنت على وشك حذف جميع البيانات المحددة بشكل نهائي ولا يمكن التراجع عن هذا الإجراء.
                             </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                             <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleFactoryReset} className="bg-destructive hover:bg-destructive/90">نعم، أحذف كل شيء</AlertDialogAction>
+                            <AlertDialogAction onClick={handleFactoryReset} className="bg-destructive hover:bg-destructive/90">نعم، أحذف البيانات المحددة</AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
                     </AlertDialog>
-                </CardContent>
+                </CardFooter>
             </Card>
         </div>
       </main>
