@@ -214,8 +214,8 @@ export default function JournalPage() {
         const getSupplierName = (id?: string) => suppliers.find((s:Supplier) => s.id === id)?.name || 'مورد غير معروف';
         const getPartnerName = (id?: string) => partners.find((p:Partner) => p.id === id)?.name || 'شريك غير معروف';
         
-        // Sales Invoices (financial entry only)
-        salesInvoices.forEach((sale:SaleInvoice) => {
+        // Sales Invoices (financial entry only) - Only if approved
+        salesInvoices.filter((s: SaleInvoice) => s.status === 'approved').forEach((sale:SaleInvoice) => {
             const totalBeforeDiscount = sale.total + (sale.discount || 0);
             const number = sale.invoiceNumber || `ف-ب-${sale.id.slice(-4)}`;
             const amountDue = sale.total - (sale.paidAmount || 0);

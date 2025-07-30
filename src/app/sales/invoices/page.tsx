@@ -281,7 +281,7 @@ export default function SalesInvoicePage() {
             return;
         }
         if (paidAmount > 0 && !paidToAccountId) {
-            toast({ variant: "destructive", title: "بيانات غير كاملة", description: "يرجى تحديد حساب الخزينة/البنك لاستلام الدفعة." });
+            toast({ variant: "destructive", title: "بيانات غير مكتملة", description: "يرجى تحديد حساب الخزينة/البنك لاستلام الدفعة." });
             return;
         }
 
@@ -297,6 +297,7 @@ export default function SalesInvoicePage() {
                 customerName,
                 warehouseId,
                 salesRepId: isRep ? user?.id : undefined,
+                status: isRep ? 'pending' : 'approved',
                 items: items.map(item => {
                     const originalItemId = item.id.split('-')[0];
                     return {
@@ -319,7 +320,8 @@ export default function SalesInvoicePage() {
             
             const newInvoiceId = await dbAction('salesInvoices', 'add', invoiceData);
 
-            if (paidAmount > 0) {
+            // Only create payment record if invoice is approved (not a rep invoice)
+            if (paidAmount > 0 && !isRep) {
                 await dbAction('customerPayments', 'add', {
                     date: new Date().toISOString(),
                     amount: paidAmount,
