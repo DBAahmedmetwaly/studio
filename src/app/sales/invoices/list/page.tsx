@@ -101,8 +101,16 @@ export default function SalesInvoicesListPage() {
   const companySettings = useMemo(() => settings.find((s:any) => s.id === 'main')?.general, [settings]);
 
   const handlePrint = () => {
-    setTimeout(() => window.print(), 100);
+    const printContents = document.querySelector('.printable-area')?.innerHTML;
+    const originalContents = document.body.innerHTML;
+    if (printContents) {
+        document.body.innerHTML = printContents;
+        window.print();
+        document.body.innerHTML = originalContents;
+        window.location.reload(); // To re-attach event listeners
+    }
   };
+
 
   return (
     <>
@@ -217,11 +225,11 @@ export default function SalesInvoicesListPage() {
                                 </DropdownMenu>
                             </TableCell>
                             </TableRow>
-                             <DialogContent className="max-w-4xl p-0">
-                                <div className="p-4 bg-muted/40">
+                             <DialogContent className="p-0 sm:max-w-xs">
+                                <div className="p-4">
                                     <InvoiceTemplate invoice={invoice} company={companySettings} customer={customer} />
                                 </div>
-                                <div className="p-4 border-t flex justify-end">
+                                <div className="p-4 border-t flex justify-end bg-muted/50">
                                     <Button onClick={handlePrint}><Printer className="ml-2 h-4 w-4" />طباعة</Button>
                                 </div>
                             </DialogContent>
