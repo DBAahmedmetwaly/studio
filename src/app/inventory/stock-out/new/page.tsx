@@ -168,7 +168,7 @@ export default function NewStockOutPage() {
                                     <SelectValue placeholder="اختر المصدر" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                   {warehouses.map(w => <SelectItem key={`wh-${w.id}`} value={w.id}>{w.name}</SelectItem>)}
+                                   {warehouses.map(w => <SelectItem key={`from-wh-${w.id}`} value={w.id}>{w.name}</SelectItem>)}
                                 </SelectContent>
                             </Select>
                         </div>
@@ -181,6 +181,9 @@ export default function NewStockOutPage() {
                                 <SelectContent>
                                    <SelectItem value="damaged">تالف</SelectItem>
                                    <SelectItem value="samples">عينات</SelectItem>
+                                   <SelectItem value="internal_use">استخدام داخلي</SelectItem>
+                                   <SelectItem value="giveaway">هدايا ترويجية</SelectItem>
+                                   <SelectItem value="obsolete">بضاعة هالكة/متقادمة</SelectItem>
                                    <SelectItem value="other">أخرى</SelectItem>
                                 </SelectContent>
                             </Select>
@@ -259,3 +262,4 @@ export default function NewStockOutPage() {
     </>
   );
 }
+

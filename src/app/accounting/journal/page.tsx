@@ -342,19 +342,20 @@ export default function JournalPage() {
             entries.push({ id: `trn-credit-${t.id}`, date: t.date, warehouseId: t.fromSourceId, number: number, description: `تحويل إلى ${toWarehouseName}`, debit: 0, credit: transferCost, account: `مخزون - ${fromWarehouseName}` });
         });
         
-         // Stock Outs (Damaged Goods)
-        stockOuts.filter((so:StockOutRecord) => so.reason === 'damaged').forEach((so:StockOutRecord) => {
+         // Stock Outs
+        stockOuts.forEach((so:StockOutRecord) => {
             const number = so.receiptNumber || `إذ-خ-${so.id.slice(-4)}`;
             const warehouse = getWarehouse(so.sourceId);
-            const costOfDamagedGoods = so.items.reduce((acc, stockOutItem) => {
+            const costOfGoods = so.items.reduce((acc, stockOutItem) => {
                  const itemMaster = itemsMap.get(stockOutItem.id);
                  const itemCost = stockOutItem.cost || itemMaster?.cost || 0;
                  return acc + (stockOutItem.qty * itemCost);
             }, 0);
 
-            if (costOfDamagedGoods > 0 && warehouse) {
-                 entries.push({ id: `so-damaged-debit-${so.id}`, date: so.date, warehouseId: so.sourceId, number: number, description: `بضاعة تالفة من مخزن ${warehouse.name}`, debit: costOfDamagedGoods, credit: 0, account: 'مصروف بضاعة تالفة' });
-                 entries.push({ id: `so-damaged-credit-${so.id}`, date: so.date, warehouseId: so.sourceId, number: number, description: `تخفيض مخزون تالف`, debit: 0, credit: costOfDamagedGoods, account: `مخزون - ${warehouse.name}` });
+            if (costOfGoods > 0 && warehouse) {
+                 const reasonLabel = so.reason === 'damaged' ? 'بضاعة تالفة' : `مصروف ${so.reason}`;
+                 entries.push({ id: `so-debit-${so.id}`, date: so.date, warehouseId: so.sourceId, number: number, description: `${reasonLabel} من مخزن ${warehouse.name}`, debit: costOfGoods, credit: 0, account: `مصروف ${reasonLabel}` });
+                 entries.push({ id: `so-credit-${so.id}`, date: so.date, warehouseId: so.sourceId, number: number, description: `تخفيض مخزون`, debit: 0, credit: costOfGoods, account: `مخزون - ${warehouse.name}` });
             }
         });
         
@@ -686,3 +687,4 @@ export default function JournalPage() {
     </TooltipProvider>
   );
 }
+
