@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { PlusCircle, Loader2, MoreHorizontal, FileText, Undo2 } from "lucide-react";
+import { PlusCircle, Loader2, MoreHorizontal, FileText, Undo2, Printer } from "lucide-react";
 import { useRouter } from 'next/navigation';
 import {
   DropdownMenu,
@@ -32,6 +32,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { useData } from '@/contexts/data-provider';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { InvoiceTemplate } from '@/components/invoice-template';
 
 interface SaleInvoice {
   id: string;
@@ -49,7 +51,7 @@ interface Warehouse { id: string; name: string; }
 interface InventoryClosing { id: string; warehouseId: string; closingDate: string; }
 
 export default function SalesInvoicesListPage() {
-  const { salesInvoices: invoices, customers, warehouses, inventoryClosings, loading } = useData();
+  const { salesInvoices: invoices, customers, warehouses, inventoryClosings, settings, loading } = useData();
   const router = useRouter();
   
   const [filters, setFilters] = useState({
@@ -95,6 +97,12 @@ export default function SalesInvoicesListPage() {
         return true;
       }).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [invoices, filters, lastClosingDates]);
+
+  const companySettings = useMemo(() => settings.find((s:any) => s.id === 'main')?.general, [settings]);
+
+  const handlePrint = () => {
+    setTimeout(() => window.print(), 100);
+  };
 
   return (
     <>
@@ -178,8 +186,10 @@ export default function SalesInvoicesListPage() {
                       filteredInvoices.map((invoice:any) => {
                         const paid = invoice.paidAmount || 0;
                         const remaining = invoice.total - paid;
+                        const customer = customers.find((c:any) => c.id === invoice.customerId);
                         return (
-                            <TableRow key={invoice.id} className={invoice.isLocked ? 'bg-muted/30' : ''}>
+                           <Dialog key={invoice.id}>
+                            <TableRow className={invoice.isLocked ? 'bg-muted/30' : ''}>
                             <TableCell className="font-mono">{invoice.invoiceNumber}</TableCell>
                             <TableCell>{invoice.customerName}</TableCell>
                             <TableCell>{new Date(invoice.date).toLocaleDateString('ar-EG')}</TableCell>
@@ -196,9 +206,9 @@ export default function SalesInvoicesListPage() {
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
                                         <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                                        <DropdownMenuItem onClick={() => router.push(`/sales/invoices/${invoice.id}`)}>
-                                            عرض / طباعة
-                                        </DropdownMenuItem>
+                                        <DialogTrigger asChild>
+                                            <DropdownMenuItem>عرض / طباعة</DropdownMenuItem>
+                                        </DialogTrigger>
                                         <DropdownMenuItem onClick={() => router.push(`/sales/returns/new?invoiceId=${invoice.id}`)} disabled={invoice.isLocked}>
                                             <Undo2 className="ml-2 h-4 w-4" />
                                             مرتجع
@@ -207,6 +217,15 @@ export default function SalesInvoicesListPage() {
                                 </DropdownMenu>
                             </TableCell>
                             </TableRow>
+                             <DialogContent className="max-w-4xl p-0">
+                                <div className="p-4 bg-muted/40">
+                                    <InvoiceTemplate invoice={invoice} company={companySettings} customer={customer} />
+                                </div>
+                                <div className="p-4 border-t flex justify-end">
+                                    <Button onClick={handlePrint}><Printer className="ml-2 h-4 w-4" />طباعة</Button>
+                                </div>
+                            </DialogContent>
+                           </Dialog>
                         )
                       })
                     ) : (
