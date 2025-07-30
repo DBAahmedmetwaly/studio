@@ -91,7 +91,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Sales & Purchases
     const { data: salesInvoices, loading: l_salesInvoices, add: add_salesInvoice, update: update_salesInvoice, remove: remove_salesInvoice } = useFirebase('salesInvoices');
     const { data: salesReturns, loading: l_salesReturns, add: add_salesReturn, remove: remove_salesReturn } = useFirebase('salesReturns');
-    const { data: purchaseInvoices, loading: l_purchaseInvoices, add: add_purchaseInvoice, remove: remove_purchaseInvoice } = useFirebase('purchaseInvoices');
+    const { data: purchaseInvoices, loading: l_purchaseInvoices, add: add_purchaseInvoice, update: update_purchaseInvoice, remove: remove_purchaseInvoice } = useFirebase('purchaseInvoices');
     const { data: purchaseReturns, loading: l_purchaseReturns, add: add_purchaseReturn, remove: remove_purchaseReturn } = useFirebase('purchaseReturns');
     const { data: posSales, loading: l_posSales, add: add_posSale, remove: remove_posSale } = useFirebase('posSales');
     const { data: posReturns, loading: l_posReturns, add: add_posReturn, remove: remove_posReturn } = useFirebase('posReturns');
@@ -133,7 +133,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             'barcodeDesigns': { add: add_barcodeDesign, update: update_barcodeDesign, remove: remove_barcodeDesign },
             'salesInvoices': { add: add_salesInvoice, update: update_salesInvoice, remove: remove_salesInvoice },
             'salesReturns': { add: add_salesReturn, remove: remove_salesReturn },
-            'purchaseInvoices': { add: add_purchaseInvoice, remove: remove_purchaseInvoice },
+            'purchaseInvoices': { add: add_purchaseInvoice, update: update_purchaseInvoice, remove: remove_purchaseInvoice },
             'purchaseReturns': { add: add_purchaseReturn, remove: remove_purchaseReturn },
             'posSales': { add: add_posSale, remove: remove_posSale },
             'posReturns': { add: add_posReturn, remove: remove_posReturn },
@@ -167,7 +167,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         if (action === 'add') return actionFn(payload);
         if (action === 'update') return actionFn(payload.id, payload.data);
-        if (action === 'remove') return actionFn(payload.id);
+        if (action === 'remove') return actionFn(payload.root ? '' : payload.id);
     };
 
     const value = {

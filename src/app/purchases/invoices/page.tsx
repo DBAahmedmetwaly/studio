@@ -78,7 +78,7 @@ export default function PurchaseInvoicePage() {
   const { data: suppliers, loading: loadingSuppliers } = useFirebase<Supplier>('suppliers');
   const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
   const { data: cashAccounts, loading: loadingCashAccounts } = useFirebase<CashAccount>('cashAccounts');
-  const { add: addPurchaseInvoice, getNextId } = useFirebase('purchaseInvoices');
+  const { add: addPurchaseInvoice, getNextId, update: updatePurchaseInvoice } = useFirebase('purchaseInvoices');
   const { add: addSupplierPayment } = useFirebase('supplierPayments');
 
   const itemsForCombobox = React.useMemo(() => {
@@ -171,6 +171,7 @@ export default function PurchaseInvoicePage() {
                         id: originalItemId,
                         name: item.name,
                         qty: item.qty,
+                        cost: item.price, // In purchase invoice, price is the cost
                         price: item.price,
                         total: item.total,
                     }
@@ -187,17 +188,6 @@ export default function PurchaseInvoicePage() {
 
             await addPurchaseInvoice(invoiceData);
             
-            if (paidAmount > 0) {
-                await addSupplierPayment({
-                    date: new Date().toISOString(),
-                    amount: paidAmount,
-                    supplierId: supplierId,
-                    paidFromAccountId: paidFromAccountId,
-                    notes: `دفعة لفاتورة شراء رقم ${invoiceNumber}`,
-                    receiptNumber: `س-م-${await getNextId('supplierPayment')}`
-                });
-            }
-
             toast({
                 title: 'تم الحفظ بنجاح',
                 description: `تم حفظ فاتورة الشراء رقم ${invoiceNumber}`
@@ -216,12 +206,7 @@ export default function PurchaseInvoicePage() {
   }
 
   const loading = loadingItems || loadingSuppliers || loadingWarehouses || loadingCashAccounts;
-  const getUnitForItem = (itemId: string) => {
-    if (!itemId) return '';
-    const originalId = itemId.split('-')[0];
-    return availableItems.find(i => i.id === originalId)?.unit || 'قطعة';
-  }
-
+  
   return (
     <>
       <PageHeader title="فاتورة شراء جديدة">
@@ -291,7 +276,7 @@ export default function PurchaseInvoicePage() {
                             <TableHead className="w-[40%]">الصنف</TableHead>
                             <TableHead className="text-center">الوحدة</TableHead>
                             <TableHead className="text-center">الكمية</TableHead>
-                            <TableHead className="text-center">سعر الوحدة</TableHead>
+                            <TableHead className="text-center">سعر الشراء (التكلفة)</TableHead>
                             <TableHead className="text-center">الإجمالي</TableHead>
                             <TableHead className="text-center w-[100px] no-print">الإجراء</TableHead>
                         </TableRow>
@@ -348,7 +333,7 @@ export default function PurchaseInvoicePage() {
                             <AlertTitle>القيد المحاسبي المتوقع</AlertTitle>
                             <AlertDescription>
                                 <ul className="list-disc pr-4 text-xs">
-                                    <li>من ح/ المخزون (مدين بقيمة البضاعة قبل الخصم)</li>
+                                    <li>من ح/ المشتريات (مدين بقيمة البضاعة قبل الخصم)</li>
                                     <li>إلى ح/ حسابات الموردين (دائن بقيمة الفاتورة الإجمالية)</li>
                                     <li>إلى ح/ خصم مكتسب (دائن بقيمة الخصم إن وجد)</li>
                                     {paidAmount > 0 && 

@@ -71,7 +71,7 @@ export default function BackupPage() {
 
     React.useEffect(() => {
         const currentDataState = JSON.stringify(allData);
-        if (allData.length > 0 && currentDataState !== lastDataState) {
+        if (allData && Object.keys(allData).length > 0 && currentDataState !== lastDataState) {
             setLastDataState(currentDataState);
             setLastModified(new Date());
         }
@@ -177,7 +177,7 @@ export default function BackupPage() {
             });
 
             for (const path of pathsToClear) {
-                await dbAction(path, 'remove', { id: '' }); // Passing empty id to remove root of the path
+                await dbAction(path, 'remove', { root: true }); // Pass special flag to remove the whole path
             }
             toast({ title: "تم الحذف بنجاح!", description: "تم حذف البيانات المحددة." });
             setSelectedResetKeys([]);

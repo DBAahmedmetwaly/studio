@@ -79,6 +79,7 @@ const useFirebase = <T extends object>(path: string) => {
   }, [path]);
 
   const remove = useCallback(async (id: string) => {
+    // If id is empty, it means we want to remove the whole path.
     const itemPath = id ? `${path}/${id}` : path;
     const itemRef = ref(database, itemPath);
     try {

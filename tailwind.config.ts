@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -18,7 +19,7 @@ export default {
     extend: {
       fontFamily: {
         body: ["var(--font-inter)", "sans-serif"],
-        headline: ["var(--font-space-grotesk)", "sans-serif"],
+        headline: ["var(--font-noto-kufi-arabic)", "sans-serif"],
       },
       colors: {
         background: "hsl(var(--background))",
@@ -101,5 +102,7 @@ export default {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [require("tailwindcss-animate"), function({ addVariant }: { addVariant: any }) {
+      addVariant('neutral', '.neutral &');
+    },],
 } satisfies Config;

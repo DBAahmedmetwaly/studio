@@ -18,6 +18,7 @@ import { Switch } from "@/components/ui/switch";
 import { usePermissions } from "@/contexts/permissions-context";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAuth } from "@/contexts/auth-context";
+import { Combobox } from "@/components/ui/combobox";
 
 
 interface InvoiceItem {
@@ -350,6 +351,13 @@ export default function SalesInvoicePage() {
         }
     };
 
+    const itemsForCombobox = useMemo(() => {
+        return availableItemsForWarehouse.map((item: any) => ({
+            value: item.id,
+            label: `${item.name} (المتاح: ${item.stock})`
+        }));
+    }, [availableItemsForWarehouse]);
+
 
   return (
     <>
@@ -441,14 +449,14 @@ export default function SalesInvoicePage() {
                             ))}
                             <TableRow className="no-print bg-muted/20">
                                 <TableCell className="p-2">
-                                    <Select value={newItem.id} onValueChange={handleItemSelect} disabled={!isRep && !warehouseId}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder={(!isRep && !warehouseId) ? "اختر المخزن أولاً" : "اختر صنفًا"} />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                        {availableItemsForWarehouse.map((item:any) => <SelectItem key={item.id} value={item.id}>{`${item.name} (المتاح: ${item.stock})`}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
+                                     <Combobox
+                                        options={itemsForCombobox}
+                                        value={newItem.id}
+                                        onValueChange={handleItemSelect}
+                                        placeholder={(!isRep && !warehouseId) ? "اختر المخزن أولاً" : "اختر صنفًا..."}
+                                        emptyMessage="لا توجد أصناف."
+                                        className="w-full"
+                                    />
                                 </TableCell>
                                 <TableCell className="text-center text-muted-foreground">{newItem.unit}</TableCell>
                                 <TableCell className="p-2">
