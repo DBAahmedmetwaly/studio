@@ -123,7 +123,7 @@ export default function WarehousesPage() {
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
             ) : (
-                 <div className="w-full overflow-auto">
+                 <div className="w-full overflow-auto border rounded-lg">
                     <Table>
                         <TableHeader>
                             <TableRow>
