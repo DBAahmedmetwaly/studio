@@ -49,7 +49,7 @@ interface StockTransferRecord {
     items: { id: string, name: string; qty: number, cost?:number }[];
 }
 interface StockOutRecord {
-    id: string; date: string; sourceId: string; receiptNumber?: string; reason?: string;
+    id: string; date: string; sourceId: string; receiptNumber?: string; reason?: string; saleInvoiceId?: string; saleInvoiceNumber?: string;
     items: { id: string; name: string; qty: number, cost?:number }[];
 }
 interface Item {
@@ -214,12 +214,10 @@ export default function JournalPage() {
         const getSupplierName = (id?: string) => suppliers.find((s:Supplier) => s.id === id)?.name || 'مورد غير معروف';
         const getPartnerName = (id?: string) => partners.find((p:Partner) => p.id === id)?.name || 'شريك غير معروف';
         
-        // Sales Invoices (Only approved ones)
-        salesInvoices.filter((s:SaleInvoice) => s.status === 'approved').forEach((sale:SaleInvoice) => {
-            const costOfGoodsSold = sale.items.reduce((acc, item) => acc + (item.qty * (item.cost || item.price * 0.8)), 0);
+        // Sales Invoices (financial entry only)
+        salesInvoices.forEach((sale:SaleInvoice) => {
             const totalBeforeDiscount = sale.total + (sale.discount || 0);
             const number = sale.invoiceNumber || `ف-ب-${sale.id.slice(-4)}`;
-            const warehouse = getWarehouse(sale.warehouseId);
             const amountDue = sale.total - (sale.paidAmount || 0);
 
             // Create debits
@@ -235,11 +233,6 @@ export default function JournalPage() {
             
             // Create credit
             entries.push({ id: `sale-rev-${sale.id}`, date: sale.date, warehouseId: sale.warehouseId, number: number, description: `إيرادات من فاتورة بيع`, debit: 0, credit: totalBeforeDiscount, account: 'إيرادات المبيعات' });
-            
-            // COGS entry
-            entries.push({ id: `sale-cogs-${sale.id}`, date: sale.date, warehouseId: sale.warehouseId, number: number, description: `تكلفة بضاعة مباعة`, debit: costOfGoodsSold, credit: 0, account: 'تكلفة البضاعة المباعة' });
-            entries.push({ id: `sale-inv-${sale.id}`, date: sale.date, warehouseId: sale.warehouseId, number: number, description: `تخفيض المخزون من ${warehouse?.name}`, debit: 0, credit: costOfGoodsSold, account: `مخزون - ${warehouse?.name}` });
-            
         });
 
         // Purchase Invoices
@@ -342,7 +335,7 @@ export default function JournalPage() {
             entries.push({ id: `trn-credit-${t.id}`, date: t.date, warehouseId: t.fromSourceId, number: number, description: `تحويل إلى ${toWarehouseName}`, debit: 0, credit: transferCost, account: `مخزون - ${fromWarehouseName}` });
         });
         
-         // Stock Outs
+         // Stock Outs (Manual & Sales)
         stockOuts.forEach((so:StockOutRecord) => {
             const number = so.receiptNumber || `إذ-خ-${so.id.slice(-4)}`;
             const warehouse = getWarehouse(so.sourceId);
@@ -353,9 +346,14 @@ export default function JournalPage() {
             }, 0);
 
             if (costOfGoods > 0 && warehouse) {
-                 const reasonLabel = so.reason === 'damaged' ? 'بضاعة تالفة' : `مصروف ${so.reason}`;
-                 entries.push({ id: `so-debit-${so.id}`, date: so.date, warehouseId: so.sourceId, number: number, description: `${reasonLabel} من مخزن ${warehouse.name}`, debit: costOfGoods, credit: 0, account: `مصروف ${reasonLabel}` });
-                 entries.push({ id: `so-credit-${so.id}`, date: so.date, warehouseId: so.sourceId, number: number, description: `تخفيض مخزون`, debit: 0, credit: costOfGoods, account: `مخزون - ${warehouse.name}` });
+                if (so.reason === 'sales_invoice') {
+                     entries.push({ id: `so-sale-debit-${so.id}`, date: so.date, warehouseId: so.sourceId, number, description: `تكلفة بضاعة مباعة لفاتورة ${so.saleInvoiceNumber || ''}`, debit: costOfGoods, credit: 0, account: `تكلفة البضاعة المباعة` });
+                     entries.push({ id: `so-sale-credit-${so.id}`, date: so.date, warehouseId: so.sourceId, number, description: `صرف من مخزن ${warehouse.name}`, debit: 0, credit: costOfGoods, account: `مخزون - ${warehouse.name}` });
+                } else {
+                     const reasonLabel = so.reason === 'damaged' ? 'بضاعة تالفة' : `مصروف ${so.reason}`;
+                     entries.push({ id: `so-debit-${so.id}`, date: so.date, warehouseId: so.sourceId, number: number, description: `${reasonLabel} من مخزن ${warehouse.name}`, debit: costOfGoods, credit: 0, account: `مصروف ${reasonLabel}` });
+                     entries.push({ id: `so-credit-${so.id}`, date: so.date, warehouseId: so.sourceId, number: number, description: `تخفيض مخزون`, debit: 0, credit: costOfGoods, account: `مخزون - ${warehouse.name}` });
+                }
             }
         });
         
@@ -687,4 +685,3 @@ export default function JournalPage() {
     </TooltipProvider>
   );
 }
-

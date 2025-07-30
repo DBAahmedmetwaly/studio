@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import PageHeader from "@/components/page-header";
@@ -298,7 +297,6 @@ export default function SalesInvoicePage() {
                 customerName,
                 warehouseId,
                 salesRepId: isRep ? user?.id : undefined,
-                status: isRep ? 'pending' : 'approved',
                 items: items.map(item => {
                     const originalItemId = item.id.split('-')[0];
                     return {
@@ -315,13 +313,13 @@ export default function SalesInvoicePage() {
                 tax,
                 total,
                 paidAmount,
-                paidToAccountId, // Save the account ID for approval step
+                paidToAccountId, 
                 notes,
             };
             
-            await dbAction('salesInvoices', 'add', invoiceData);
+            const newInvoiceId = await dbAction('salesInvoices', 'add', invoiceData);
 
-            if (invoiceData.status === 'approved' && paidAmount > 0) {
+            if (paidAmount > 0) {
                 await dbAction('customerPayments', 'add', {
                     date: new Date().toISOString(),
                     amount: paidAmount,

@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -44,7 +43,6 @@ interface SaleInvoice {
   total: number;
   paidAmount?: number;
   items: any[];
-  status?: 'pending' | 'approved';
 }
 interface Customer { id: string; name: string; }
 interface Warehouse { id: string; name: string; }
@@ -79,7 +77,6 @@ export default function SalesInvoicesListPage() {
 
   const filteredInvoices = useMemo(() => {
     return invoices
-      .filter((invoice: SaleInvoice) => invoice.status === 'approved') // Only show approved invoices
       .map((invoice: SaleInvoice) => {
         const lastClosingDate = lastClosingDates.get(invoice.warehouseId);
         const isLocked = lastClosingDate && new Date(invoice.date) <= lastClosingDate;
@@ -101,7 +98,7 @@ export default function SalesInvoicesListPage() {
 
   return (
     <>
-      <PageHeader title="سجل فواتير البيع المعتمدة">
+      <PageHeader title="سجل فواتير البيع">
         <Button size="sm" className="gap-1" onClick={() => router.push('/sales/invoices')}>
           <PlusCircle className="h-4 w-4" />
           إضافة فاتورة جديدة
@@ -215,7 +212,7 @@ export default function SalesInvoicesListPage() {
                     ) : (
                       <TableRow>
                         <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
-                          لا توجد فواتير معتمدة تطابق الفلاتر المحددة.
+                          لا توجد فواتير تطابق الفلاتر المحددة.
                         </TableCell>
                       </TableRow>
                     )}

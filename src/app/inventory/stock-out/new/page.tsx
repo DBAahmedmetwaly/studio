@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import PageHeader from "@/components/page-header";
@@ -39,6 +38,19 @@ interface Warehouse {
     name: string;
 }
 
+interface SaleInvoice {
+    id: string;
+    invoiceNumber: string;
+    customerName: string;
+    warehouseId: string;
+    items: { id: string; name: string; qty: number; cost: number; }[];
+}
+
+interface StockOutRecord {
+    id: string;
+    saleInvoiceId?: string;
+}
+
 export default function NewStockOutPage() {
     const router = useRouter();
     const { toast } = useToast();
@@ -49,14 +61,53 @@ export default function NewStockOutPage() {
     const [notes, setNotes] = useState<string>("");
     const [reason, setReason] = useState<string>("");
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+    const [selectedSaleInvoice, setSelectedSaleInvoice] = useState<string>("");
 
     const { data: availableItems, loading: loadingItems } = useFirebase<Item>('items');
     const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
+    const { data: salesInvoices, loading: loadingSalesInvoices } = useFirebase<SaleInvoice>('salesInvoices');
+    const { data: stockOutRecords, loading: loadingStockOuts } = useFirebase<StockOutRecord>('stockOutRecords');
     const { add: addStockOutRecord, getNextId } = useFirebase("stockOutRecords");
     
     const itemsForCombobox = useMemo(() => {
         return availableItems.map(item => ({ value: item.id, label: item.name }));
     }, [availableItems]);
+
+    const salesInvoiceOptions = useMemo(() => {
+        const dispatchedInvoiceIds = new Set(stockOutRecords.filter(r => r.saleInvoiceId).map(r => r.saleInvoiceId));
+        return salesInvoices
+            .filter(inv => !dispatchedInvoiceIds.has(inv.id))
+            .map(inv => ({
+                value: inv.id,
+                label: `${inv.invoiceNumber} - ${inv.customerName}`
+            }));
+    }, [salesInvoices, stockOutRecords]);
+
+    useEffect(() => {
+        if(reason === 'sales_invoice' && selectedSaleInvoice) {
+            const invoice = salesInvoices.find(inv => inv.id === selectedSaleInvoice);
+            if(invoice) {
+                setSource(invoice.warehouseId); // Automatically select warehouse from invoice
+                const invoiceItems: StockItem[] = invoice.items.map(item => {
+                    const availableItem = availableItems.find(i => i.id === item.id);
+                    return {
+                        id: item.id,
+                        name: item.name,
+                        qty: item.qty,
+                        cost: item.cost || availableItem?.cost || 0,
+                        unit: availableItem?.unit || 'قطعة',
+                        uniqueId: `${item.id}-${Date.now()}`
+                    }
+                })
+                setItems(invoiceItems);
+            }
+        } else {
+            setItems([]);
+             if (reason !== 'sales_invoice') {
+                setSource("");
+             }
+        }
+    }, [reason, selectedSaleInvoice, salesInvoices, availableItems]);
 
 
     const handleAddItem = () => {
@@ -75,7 +126,7 @@ export default function NewStockOutPage() {
             qty: newItem.qty,
             unit: selectedItem.unit,
             cost: selectedItem.cost || 0,
-            uniqueId: `${selectedItem.id}-${Date.now()}` // Create a unique ID for the key
+            uniqueId: `${selectedItem.id}-${Date.now()}`
         },
         ]);
         setNewItem({ id: "", name: "", qty: 1, unit: "", cost: 0 });
@@ -114,15 +165,20 @@ export default function NewStockOutPage() {
             return;
         }
 
-        const record = {
+        const record:any = {
             sourceId: source,
             date: new Date(date).toISOString(),
-            items: items.map(({id, name, qty, cost}) => ({id, name, qty, cost})), // Include cost
+            items: items.map(({id, name, qty, cost}) => ({id, name, qty, cost})),
             reason,
             notes,
             receiptNumber: `إذ-خ-${nextId}`,
             createdById: user?.id,
             createdByName: user?.name,
+        };
+
+        if (reason === 'sales_invoice' && selectedSaleInvoice) {
+            record.saleInvoiceId = selectedSaleInvoice;
+            record.saleInvoiceNumber = salesInvoices.find(inv => inv.id === selectedSaleInvoice)?.invoiceNumber;
         }
 
         try {
@@ -135,11 +191,13 @@ export default function NewStockOutPage() {
         }
     };
 
-    const loading = loadingItems || loadingWarehouses;
+    const loading = loadingItems || loadingWarehouses || loadingSalesInvoices || loadingStockOuts;
     const getUnitLabel = (unit: string) => {
         const units = { piece: "قطعة", weight: "لتر ", meter: "متر", kilo: "كيلو", gram: "جرام" };
         return units[unit as keyof typeof units] || unit;
     }
+    
+    const isManualEntry = reason !== 'sales_invoice';
 
 
   return (
@@ -162,23 +220,13 @@ export default function NewStockOutPage() {
                 <>
                     <div className="grid md:grid-cols-3 gap-6">
                         <div className="space-y-2">
-                            <Label htmlFor="warehouse">من مخزن</Label>
-                            <Select value={source} onValueChange={setSource}>
-                                <SelectTrigger id="warehouse">
-                                    <SelectValue placeholder="اختر المصدر" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                   {warehouses.map(w => <SelectItem key={`from-wh-${w.id}`} value={w.id}>{w.name}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="space-y-2">
                             <Label htmlFor="reason">سبب الصرف</Label>
                             <Select value={reason} onValueChange={setReason}>
                                 <SelectTrigger id="reason">
                                     <SelectValue placeholder="اختر سبب الصرف" />
                                 </SelectTrigger>
                                 <SelectContent>
+                                   <SelectItem value="sales_invoice">صرف بناءً على فاتورة بيع</SelectItem>
                                    <SelectItem value="damaged">تالف</SelectItem>
                                    <SelectItem value="samples">عينات</SelectItem>
                                    <SelectItem value="internal_use">استخدام داخلي</SelectItem>
@@ -188,11 +236,35 @@ export default function NewStockOutPage() {
                                 </SelectContent>
                             </Select>
                         </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="warehouse">من مخزن</Label>
+                            <Select value={source} onValueChange={setSource} disabled={!isManualEntry}>
+                                <SelectTrigger id="warehouse">
+                                    <SelectValue placeholder="اختر المصدر" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                   {warehouses.map(w => <SelectItem key={`from-wh-${w.id}`} value={w.id}>{w.name}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
                          <div className="space-y-2">
                             <Label htmlFor="date">تاريخ الصرف</Label>
                             <Input type="date" id="date" value={date} onChange={e => setDate(e.target.value)} />
                         </div>
                     </div>
+
+                    {reason === 'sales_invoice' && (
+                        <div className="space-y-2">
+                            <Label htmlFor="sale-invoice">فاتورة البيع</Label>
+                            <Combobox
+                                options={salesInvoiceOptions}
+                                value={selectedSaleInvoice}
+                                onValueChange={setSelectedSaleInvoice}
+                                placeholder="اختر فاتورة البيع..."
+                                emptyMessage="لا توجد فواتير جاهزة للصرف."
+                            />
+                        </div>
+                    )}
                     
                     <div>
                       <Label>الأصناف المصروفة</Label>
@@ -203,7 +275,7 @@ export default function NewStockOutPage() {
                                 <TableHead className="w-[50%]">الصنف</TableHead>
                                 <TableHead className="text-center">الوحدة</TableHead>
                                 <TableHead className="text-center">الكمية</TableHead>
-                                <TableHead className="text-center w-[100px]">الإجراء</TableHead>
+                                {isManualEntry && <TableHead className="text-center w-[100px]">الإجراء</TableHead>}
                             </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -212,13 +284,16 @@ export default function NewStockOutPage() {
                                 <TableCell>{item.name}</TableCell>
                                 <TableCell className="text-center">{getUnitLabel(item.unit)}</TableCell>
                                 <TableCell className="text-center">{item.qty}</TableCell>
-                                <TableCell className="text-center">
-                                    <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.uniqueId)}>
-                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                    </Button>
-                                </TableCell>
+                                {isManualEntry && 
+                                    <TableCell className="text-center">
+                                        <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.uniqueId)}>
+                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                        </Button>
+                                    </TableCell>
+                                }
                                 </TableRow>
                             ))}
+                            {isManualEntry &&
                                 <TableRow className="bg-muted/30">
                                     <TableCell className="p-2">
                                         <Combobox
@@ -240,6 +315,7 @@ export default function NewStockOutPage() {
                                         </Button>
                                     </TableCell>
                                 </TableRow>
+                            }
                             </TableBody>
                         </Table>
                       </div>
@@ -262,4 +338,3 @@ export default function NewStockOutPage() {
     </>
   );
 }
-
