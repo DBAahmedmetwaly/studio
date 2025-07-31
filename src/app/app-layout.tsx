@@ -226,13 +226,12 @@ const AppLayoutContent = ({ children }: { children: React.ReactNode }) => {
                 <NavSubLink href="/reports/supplier-statement" module="reports_supplierStatement">كشف حساب الموردين</NavSubLink>
             </NavCollapsible>
             
-            <NavCollapsible title="المحاسبة والمالية" icon={<BookUser />} modules={['accounting_journal', 'accounting_expenses', 'accounting_exceptionalIncome', 'accounting_treasury', 'accounting_profitDistribution', 'accounting_aiAnalysis', 'reports_financialStatements']}>
+            <NavCollapsible title="المحاسبة والمالية" icon={<BookUser />} modules={['accounting_journal', 'accounting_expenses', 'accounting_exceptionalIncome', 'accounting_treasury', 'accounting_profitDistribution', 'reports_financialStatements']}>
                 <NavSubLink href="/accounting/journal" module="accounting_journal">قيود اليومية</NavSubLink>
                 <NavSubLink href="/accounting/expenses" module="accounting_expenses">إدارة المصروفات</NavSubLink>
                 <NavSubLink href="/accounting/exceptional-income" module="accounting_exceptionalIncome">الدخل الاستثنائي</NavSubLink>
                 <NavSubLink href="/accounting/treasury" module="accounting_treasury">حركة الخزينة</NavSubLink>
                 <NavSubLink href="/accounting/profit-distribution" module="accounting_profitDistribution">توزيعات الأرباح</NavSubLink>
-                <NavSubLink href="/accounting/ai-analysis" module="accounting_aiAnalysis">تحليل مالي بالذكاء الاصطناعي</NavSubLink>
                 <NavSubLink href="/reports/financial-statements" module="reports_financialStatements">القوائم المالية</NavSubLink>
             </NavCollapsible>
             
