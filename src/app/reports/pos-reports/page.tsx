@@ -31,6 +31,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge";
 
 
 interface PosSale {
@@ -90,11 +91,12 @@ export default function PosReportsPage() {
             })
             .map((session: PosSession) => {
                 const sessionSales = posSales.filter((sale: PosSale) => {
+                    if (!session.endTime) return false;
                     const saleDate = new Date(sale.date);
-                    return saleDate >= new Date(session.startTime) && saleDate <= new Date(session.endTime!);
+                    return saleDate >= new Date(session.startTime) && saleDate <= new Date(session.endTime);
                 });
 
-                const cashiersData = Object.values(session.cashierSessions).map(cs => {
+                const cashiersData = session.cashierSessions ? Object.values(session.cashierSessions).map(cs => {
                     const cashierSales = sessionSales.filter(s => s.cashierId === cs.cashierId);
                     const totalSales = cashierSales.reduce((sum, s) => sum + s.subtotal, 0);
                     const totalDiscount = cashierSales.reduce((sum, s) => sum + s.discount, 0);
@@ -109,7 +111,7 @@ export default function PosReportsPage() {
                         totalDiscount,
                         profit,
                     }
-                });
+                }) : [];
                 
                 return {
                     ...session,
