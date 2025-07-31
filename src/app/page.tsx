@@ -183,18 +183,32 @@ export default function Dashboard() {
 
     const inventoryValue = warehouseItems.reduce((acc: number, item: any) => {
         if (item.currentStock <= 0) return acc;
-        const lastPurchase = purchaseInvoices
-            .filter((p: PurchaseInvoice) => p.warehouseId === selectedWarehouseId && p.items.some(pi => pi.id === item.id && pi.cost))
-            .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
         
-        let lastCost = item.cost || 0;
-        if(lastPurchase) {
+        const lastPurchase = purchaseInvoices
+            .filter((p: PurchaseInvoice) => p.warehouseId === selectedWarehouseId && p.items.some(pi => pi.id === item.id && typeof pi.cost === 'number'))
+            .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+
+        const lastStockIn = stockInRecords
+            .filter((si: StockInRecord) => si.warehouseId === selectedWarehouseId && si.items.some(siItem => siItem.id === item.id && typeof siItem.cost === 'number'))
+            .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+
+        let latestCost = item.cost || 0;
+        let lastPurchaseDate = lastPurchase ? new Date(lastPurchase.date) : new Date(0);
+        let lastStockInDate = lastStockIn ? new Date(lastStockIn.date) : new Date(0);
+
+        if (lastPurchaseDate > lastStockInDate) {
             const purchasedItem = lastPurchase.items.find(pi => pi.id === item.id);
-            if(purchasedItem && typeof purchasedItem.cost === 'number') {
-                lastCost = purchasedItem.cost;
+            if (purchasedItem && typeof purchasedItem.cost === 'number') {
+                latestCost = purchasedItem.cost;
+            }
+        } else if (lastStockInDate > lastPurchaseDate) {
+            const stockInItem = lastStockIn.items.find(siItem => siItem.id === item.id);
+             if (stockInItem && typeof stockInItem.cost === 'number') {
+                latestCost = stockInItem.cost;
             }
         }
-        return acc + (item.currentStock * lastCost);
+        
+        return acc + (item.currentStock * latestCost);
     }, 0);
 
 

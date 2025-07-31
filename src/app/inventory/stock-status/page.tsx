@@ -100,11 +100,11 @@ export default function StockStatusPage() {
                 
                 // Find latest cost
                 const lastPurchase = purchaseInvoices
-                    .filter((p: PurchaseInvoice) => p.warehouseId === warehouse.id && p.items.some(pi => pi.id === item.id))
+                    .filter((p: PurchaseInvoice) => p.warehouseId === warehouse.id && p.items.some(pi => pi.id === item.id && typeof pi.cost === 'number'))
                     .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
                 
                 const lastStockIn = stockInRecords
-                    .filter((si: StockInRecord) => si.warehouseId === warehouse.id && si.items.some(si_item => si_item.id === item.id))
+                    .filter((si: StockInRecord) => si.warehouseId === warehouse.id && si.items.some(si_item => si_item.id === item.id && typeof si_item.cost === 'number'))
                     .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
 
                 let latestCost = item.cost || 0;
@@ -113,10 +113,14 @@ export default function StockStatusPage() {
 
                 if (lastPurchaseDate > lastStockInDate) {
                     const purchasedItem = lastPurchase.items.find(pi => pi.id === item.id);
-                    latestCost = purchasedItem?.cost ?? latestCost;
+                    if (purchasedItem && typeof purchasedItem.cost === 'number') {
+                         latestCost = purchasedItem.cost;
+                    }
                 } else if (lastStockInDate > lastPurchaseDate) {
                     const stockInItem = lastStockIn.items.find(si_item => si_item.id === item.id);
-                    latestCost = stockInItem?.cost ?? latestCost;
+                    if (stockInItem && typeof stockInItem.cost === 'number') {
+                        latestCost = stockInItem.cost;
+                    }
                 }
 
                 results.push({
