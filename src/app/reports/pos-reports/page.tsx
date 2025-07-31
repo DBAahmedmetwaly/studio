@@ -93,6 +93,8 @@ export default function PosReportsPage() {
                 const sessionSales = posSales.filter((sale: PosSale) => {
                     if (!session.endTime) return false;
                     const saleDate = new Date(sale.date);
+                    // Corrected the logic here: it should be <= endTime, not < endTime
+                    // to include sales made up until the moment of closing.
                     return saleDate >= new Date(session.startTime) && saleDate <= new Date(session.endTime);
                 });
 
