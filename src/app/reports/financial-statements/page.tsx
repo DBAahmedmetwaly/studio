@@ -272,32 +272,27 @@ function BalanceSheet() {
         
         salesInvoices.filter((s:any) => s.status === 'approved').forEach((s:any) => {
             ar += s.total;
-            ar -= (s.paidAmount || 0);
         });
-
         customerPayments.forEach((p:any) => ar -= p.amount);
         salesReturns.forEach((sr:any) => ar -= sr.total);
         
         purchaseInvoices.forEach((p:any) => {
             ap += p.total;
-            ap -= (p.paidAmount || 0);
         });
         supplierPayments.forEach((p:any) => ap -= p.amount);
         purchaseReturns.forEach((pr:any) => ap -= pr.total);
         
         // Cash calculation
         let cash = cashAccounts.reduce((acc: number, ca: any) => acc + (ca.openingBalance || 0), 0);
-        // Increases
         customerPayments.forEach((p:any) => cash += p.amount);
         exceptionalIncomes.forEach((i:any) => cash += i.amount);
         treasuryTransactions.filter((tx:any) => tx.type === 'deposit').forEach((tx:any) => cash += tx.amount);
-        // Decreases
         expenses.forEach((e:any) => cash -= e.amount);
         supplierPayments.forEach((p:any) => cash -= p.amount);
         employeeAdvances.forEach((ea:any) => cash -= ea.amount);
         profitDistributions.forEach((pd:any) => cash -= pd.amount);
         treasuryTransactions.filter((tx:any) => tx.type === 'withdrawal').forEach((tx:any) => cash -= tx.amount);
-        
+
         return { accountsReceivable: ar, accountsPayable: ap, cashAndEquivalents: cash };
     }, [customers, suppliers, salesInvoices, purchaseInvoices, customerPayments, supplierPayments, salesReturns, purchaseReturns, cashAccounts, treasuryTransactions, expenses, exceptionalIncomes, employeeAdvances, profitDistributions]);
 
@@ -450,17 +445,35 @@ function BalanceSheet() {
 }
 
 function TrialBalance() {
-    const { customers, suppliers, partners, items, loading } = useData();
+    const allData = useData();
+    const { journalEntries } = useJournalData(allData);
+
+    const accountBalances = useMemo(() => {
+        const balances: { [key: string]: { debit: number, credit: number } } = {};
+
+        journalEntries.forEach(entry => {
+            if (!balances[entry.account]) {
+                balances[entry.account] = { debit: 0, credit: 0 };
+            }
+            balances[entry.account].debit += entry.debit;
+            balances[entry.account].credit += entry.credit;
+        });
+
+        return Object.entries(balances).map(([account, { debit, credit }]) => {
+            const balance = debit - credit;
+            return {
+                account,
+                debit: balance > 0 ? balance : 0,
+                credit: balance < 0 ? -balance : 0,
+            };
+        }).filter(item => item.debit !== 0 || item.credit !== 0);
+    }, [journalEntries]);
     
-    const accountsReceivable = customers.reduce((acc: number, cust: any) => acc + (cust.openingBalance || 0), 0); // Debit
-    const inventoryValue = items.reduce((acc: number, item: any) => acc + ((item.openingStock || 0) * (item.price || 0)), 0); // Debit
-    const accountsPayable = suppliers.reduce((acc: number, sup: any) => acc + (sup.openingBalance || 0), 0); // Credit
-    const totalCapital = partners.reduce((acc: number, p: any) => acc + (p.capital || 0), 0); // Credit
+    const totalDebits = accountBalances.reduce((sum, acc) => sum + acc.debit, 0);
+    const totalCredits = accountBalances.reduce((sum, acc) => sum + acc.credit, 0);
 
-    const totalDebits = accountsReceivable + inventoryValue;
-    const totalCredits = accountsPayable + totalCapital;
 
-    if (loading) {
+    if (allData.loading) {
         return <div className="flex justify-center items-center py-10"><Loader2 className="h-8 w-8 animate-spin" /></div>;
     }
 
@@ -474,41 +487,125 @@ function TrialBalance() {
                 </TableRow>
             </TableHeader>
             <TableBody>
-                <TableRow>
-                    <TableCell>حسابات العملاء</TableCell>
-                    <TableCell className="text-center">ج.م {accountsReceivable.toLocaleString()}</TableCell>
-                    <TableCell className="text-center">-</TableCell>
-                </TableRow>
-                 <TableRow>
-                    <TableCell>المخزون</TableCell>
-                    <TableCell className="text-center">ج.م {inventoryValue.toLocaleString()}</TableCell>
-                    <TableCell className="text-center">-</TableCell>
-                </TableRow>
-                <TableRow>
-                    <TableCell>حسابات الموردين</TableCell>
-                    <TableCell className="text-center">-</TableCell>
-                    <TableCell className="text-center">ج.م {accountsPayable.toLocaleString()}</TableCell>
-                </TableRow>
-                 <TableRow>
-                    <TableCell>رأس المال</TableCell>
-                    <TableCell className="text-center">-</TableCell>
-                    <TableCell className="text-center">ج.م {totalCapital.toLocaleString()}</TableCell>
-                </TableRow>
+                {accountBalances.map(acc => (
+                    <TableRow key={acc.account}>
+                        <TableCell>{acc.account}</TableCell>
+                        <TableCell className="text-center">{acc.debit > 0 ? acc.debit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</TableCell>
+                        <TableCell className="text-center">{acc.credit > 0 ? acc.credit.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</TableCell>
+                    </TableRow>
+                ))}
             </TableBody>
             <TableFooter>
                  <TableRow className="bg-muted/50">
                     <TableHead>الإجمالي</TableHead>
-                    <TableHead className="text-center font-bold">ج.م {totalDebits.toLocaleString()}</TableHead>
-                    <TableHead className="text-center font-bold">ج.م {totalCredits.toLocaleString()}</TableHead>
+                    <TableHead className="text-center font-bold">ج.م {totalDebits.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</TableHead>
+                    <TableHead className="text-center font-bold">ج.م {totalCredits.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</TableHead>
                 </TableRow>
                  <TableRow>
-                    <TableCell colSpan={3} className={`text-center font-bold ${totalDebits === totalCredits ? 'text-green-600' : 'text-destructive'}`}>
-                       {totalDebits === totalCredits ? 'ميزان المراجعة متوازن' : 'ميزان المراجعة غير متوازن'}
+                    <TableCell colSpan={3} className={`text-center font-bold ${Math.abs(totalDebits - totalCredits) < 0.01 ? 'text-green-600' : 'text-destructive'}`}>
+                       {Math.abs(totalDebits - totalCredits) < 0.01 ? 'ميزان المراجعة متوازن' : 'ميزان المراجعة غير متوازن'}
                     </TableCell>
                 </TableRow>
             </TableFooter>
         </Table>
     )
+}
+
+const useJournalData = (allData: any) => {
+    const {
+        salesInvoices, purchaseInvoices, expenses, exceptionalIncomes, warehouses,
+        stockTransferRecords: transfers, items: itemsData, cashAccounts, treasuryTransactions: treasuryTxs,
+        employeeAdvances, employees, employeeAdjustments, salesReturns, purchaseReturns,
+        customers, suppliers, supplierPayments, customerPayments, stockOutRecords: stockOuts,
+        profitDistributions, partners, stockInRecords,
+    } = allData;
+    
+     const itemsMap = useMemo(() => {
+        const map = new Map<string, Item>();
+        itemsData.forEach((item:Item) => map.set(item.id, item));
+        return map;
+    }, [itemsData]);
+    
+    const journalEntries = useMemo(() => {
+        const entries: any[] = [];
+        const getWarehouse = (id?: string) => warehouses.find((w:any) => w.id === id);
+        const getCashAccountName = (id?: string) => cashAccounts.find((c:any) => c.id === id)?.name || 'النقدية/البنك';
+        const getEmployeeName = (id?: string) => employees.find((e:any) => e.id === id)?.name || 'موظف غير معروف';
+        const getCustomerName = (id?: string) => customers.find((c:any) => c.id === id)?.name || 'عميل غير معروف';
+        const getSupplierName = (id?: string) => suppliers.find((s:any) => s.id === id)?.name || 'مورد غير معروف';
+        const getPartnerName = (id?: string) => partners.find((p:any) => p.id === id)?.name || 'شريك غير معروف';
+        
+        // This is a simplified version of the logic from the journal page
+        // It's not a complete 1:1 copy, but captures the main transactions for financial statements
+        
+        // Sales
+        salesInvoices.filter((s: SaleInvoice) => s.status === 'approved').forEach((sale:SaleInvoice) => {
+            const totalBeforeDiscount = sale.total + (sale.discount || 0);
+            entries.push({ account: 'إيرادات المبيعات', credit: totalBeforeDiscount, debit: 0 });
+            if(sale.discount > 0) entries.push({ account: 'خصم مسموح به', debit: sale.discount, credit: 0 });
+            entries.push({ account: 'حسابات العملاء', debit: totalBeforeDiscount - (sale.discount || 0), credit: 0 });
+            const cogs = sale.items.reduce((acc, i) => acc + (i.qty * (i.cost || 0)), 0);
+            if(cogs > 0) {
+                entries.push({ account: 'تكلفة البضاعة المباعة', debit: cogs, credit: 0 });
+                sale.items.forEach(item => {
+                    const warehouse = getWarehouse(sale.warehouseId);
+                    if(warehouse) entries.push({ account: `مخزون - ${warehouse.name}`, credit: item.qty * (item.cost || 0), debit: 0 });
+                });
+            }
+        });
+
+        // Customer Payments
+        customerPayments.forEach((p:any) => {
+            entries.push({ account: 'حسابات العملاء', credit: p.amount, debit: 0 });
+            entries.push({ account: getCashAccountName(p.paidToAccountId), debit: p.amount, credit: 0 });
+        });
+        
+        // Purchases
+        purchaseInvoices.forEach((p:any) => {
+            const totalBeforeDiscount = p.total + (p.discount || 0);
+            entries.push({ account: 'المشتريات', debit: totalBeforeDiscount, credit: 0 });
+            if(p.discount > 0) entries.push({ account: 'خصم مكتسب', credit: p.discount, debit: 0 });
+            entries.push({ account: 'حسابات الموردين', credit: totalBeforeDiscount - (p.discount || 0), debit: 0 });
+        });
+
+        // Supplier Payments
+        supplierPayments.forEach((p:any) => {
+            entries.push({ account: 'حسابات الموردين', debit: p.amount, credit: 0 });
+            entries.push({ account: getCashAccountName(p.paidFromAccountId), credit: p.amount, debit: 0 });
+        });
+
+        // Expenses
+        expenses.forEach((e:any) => {
+             entries.push({ account: `${e.expenseType} (عام)`, debit: e.amount, credit: 0 });
+             entries.push({ account: getCashAccountName(e.paidFromAccountId), credit: e.amount, debit: 0 });
+        });
+        
+        // Incomes
+        exceptionalIncomes.forEach((i:any) => {
+            entries.push({ account: 'دخل استثنائي', credit: i.amount, debit: 0 });
+            entries.push({ account: getCashAccountName(i.paidToAccountId), debit: i.amount, credit: 0 });
+        });
+        
+        // Opening Balances
+        customers.forEach((c:any) => { if(c.openingBalance) entries.push({ account: 'حسابات العملاء', debit: c.openingBalance, credit: 0 }) });
+        suppliers.forEach((s:any) => { if(s.openingBalance) entries.push({ account: 'حسابات الموردين', credit: s.openingBalance, debit: 0 }) });
+        cashAccounts.forEach((ca:any) => { if(ca.openingBalance) entries.push({ account: ca.name, debit: ca.openingBalance, credit: 0 }) });
+        partners.forEach((p:any) => { if(p.capital) entries.push({ account: 'رأس المال', credit: p.capital, debit: 0 }) });
+        
+        // Inventory from Stock-in
+        stockInRecords.forEach((si:any) => {
+             const stockInValue = si.items.reduce((acc:number, item:any) => acc + (item.qty * (item.cost || 0)), 0);
+             const warehouse = getWarehouse(si.warehouseId);
+             if(warehouse && stockInValue > 0) {
+                 entries.push({ account: `مخزون - ${warehouse.name}`, debit: stockInValue, credit: 0 });
+                 entries.push({ account: 'المشتريات', credit: stockInValue, debit: 0 });
+             }
+        });
+
+        return entries;
+    }, [allData]);
+
+    return { journalEntries };
 }
 
 
