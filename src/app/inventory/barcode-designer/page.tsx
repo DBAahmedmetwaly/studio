@@ -237,7 +237,7 @@ const BarcodeDesignerPage = () => {
                 </Button>
             </PageHeader>
             <main className="flex flex-col md:flex-row h-[calc(100vh-120px)] p-4 md:p-6 gap-4">
-                <Card className="w-full md:w-1/3 lg:w-1/4 flex flex-col flex-none">
+                <Card className="w-full md:w-1/3 lg:w-1/4 flex flex-col flex-none md:h-full overflow-hidden">
                      <ScrollArea className="flex-grow">
                         <CardContent className="p-4 space-y-4">
                             {/* Templates */}
