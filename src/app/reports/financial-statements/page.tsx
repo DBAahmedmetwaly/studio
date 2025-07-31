@@ -563,7 +563,7 @@ const useJournalData = (allData: any) => {
                 entries.push({ account: `مخزون - ${getWarehouseName(sale.warehouseId)}`, credit: cogs, debit: 0 });
             }
              if (sale.paidAmount && sale.paidAmount > 0) {
-                entries.push({ account: getCashAccountName(sale.paidToAccountId), debit: sale.paidAmount, credit: 0 });
+                entries.push({ account: getCashAccountName((sale as any).paidToAccountId), debit: sale.paidAmount, credit: 0 });
                 entries.push({ account: 'حسابات العملاء', credit: sale.paidAmount, debit: 0 });
             }
         });
@@ -626,7 +626,7 @@ const useJournalData = (allData: any) => {
         });
         
         // Treasury Transactions
-        treasuryTransactions.forEach((tx:TreasuryTransaction) => {
+        treasuryTxs.forEach((tx:TreasuryTransaction) => {
             if (tx.type === 'deposit' && !tx.linkedTransaction) {
                 entries.push({ account: getCashAccountName(tx.accountId), debit: tx.amount, credit: 0 });
                 entries.push({ account: 'رأس المال', credit: tx.amount, debit: 0 });
@@ -643,7 +643,13 @@ const useJournalData = (allData: any) => {
         });
 
         return entries;
-    }, [allData]);
+    }, [
+        salesInvoices, purchaseInvoices, expenses, exceptionalIncomes, warehouses,
+        transfers, itemsData, cashAccounts, treasuryTxs, employeeAdvances, 
+        employees, employeeAdjustments, salesReturns, purchaseReturns, customers, 
+        suppliers, supplierPayments, customerPayments, stockOuts, profitDistributions, 
+        partners, stockInRecords
+    ]);
 
     return { journalEntries };
 }
