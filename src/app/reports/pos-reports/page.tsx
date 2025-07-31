@@ -12,14 +12,26 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useData } from "@/contexts/data-provider";
-import { Loader2, Printer, BarChart2, TrendingDown, TrendingUp, Coins, Percent } from "lucide-react";
+import { Loader2, Printer, BarChart2, TrendingDown, TrendingUp, Coins, Percent, User, Calendar, Tag } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableFooter,
+} from "@/components/ui/table";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+
 
 interface PosSale {
   id: string;
@@ -32,333 +44,178 @@ interface PosSale {
   invoiceNumber: string;
   subtotal: number;
 }
-interface PosAuditLog {
+interface PosSession {
     id: string;
-    date: string;
-    cashierId: string;
-    cashierName: string;
-    action: string;
-    details: any;
+    startTime: string;
+    endTime?: string;
+    isClosed: boolean;
+    openedByName: string;
+    closedByName?: string;
+    cashierSessions: {
+        [cashierId: string]: any;
+    }
 }
 interface User {
   id: string;
   name: string;
   isCashier?: boolean;
-  warehouse: string;
-}
-interface Warehouse {
-  id: string;
-  name: string;
 }
 
-const ReportFilters = ({ onGenerate }: { onGenerate: (filters: any) => void }) => {
-    const { users, warehouses, loading } = useData();
-    const [filters, setFilters] = useState({ fromDate: '', toDate: '', cashierId: 'all', warehouseId: 'all' });
-    const cashiers = users.filter((u: User) => u.isCashier);
+export default function PosReportsPage() {
+    const [filters, setFilters] = useState({ fromDate: '', toDate: '' });
+    const { posSales, posSessions, loading } = useData();
 
-    useEffect(() => {
+     useEffect(() => {
         const today = new Date().toISOString().split('T')[0];
-        setFilters(prev => ({...prev, fromDate: today, toDate: today}));
+        setFilters({ fromDate: today, toDate: today });
     }, []);
 
     const handleFilterChange = (key: string, value: string) => {
         setFilters(prev => ({ ...prev, [key]: value }));
     }
-
-    return (
-        <Card className="no-print">
-            <CardHeader>
-                <CardTitle>فلاتر التقارير</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                    <div className="space-y-2">
-                        <Label>من تاريخ</Label>
-                        <Input type="date" value={filters.fromDate} onChange={e => handleFilterChange('fromDate', e.target.value)} />
-                    </div>
-                    <div className="space-y-2">
-                        <Label>إلى تاريخ</Label>
-                        <Input type="date" value={filters.toDate} onChange={e => handleFilterChange('toDate', e.target.value)} />
-                    </div>
-                    <div className="space-y-2">
-                        <Label>الكاشير</Label>
-                        <Select value={filters.cashierId} onValueChange={v => handleFilterChange('cashierId', v)}>
-                            <SelectTrigger><SelectValue placeholder="الكل" /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">كل الكاشيرات</SelectItem>
-                                {cashiers.map((c:User) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <div className="space-y-2">
-                        <Label>المخزن</Label>
-                        <Select value={filters.warehouseId} onValueChange={v => handleFilterChange('warehouseId', v)}>
-                            <SelectTrigger><SelectValue placeholder="الكل" /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">كل المخازن</SelectItem>
-                                {warehouses.map((w:Warehouse) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <div className="flex items-end">
-                        <Button className="w-full" onClick={() => onGenerate(filters)} disabled={loading}>
-                            <BarChart2 className="ml-2 h-4 w-4" />
-                            عرض التقارير
-                        </Button>
-                    </div>
-                </div>
-            </CardContent>
-        </Card>
-    );
-};
-
-const SalesSummary = ({ sales }: { sales: PosSale[] }) => {
-    const summary = useMemo(() => {
-        const totalSalesValue = sales.reduce((sum, s) => sum + s.subtotal, 0);
-        const totalDiscount = sales.reduce((sum, s) => sum + (s.discount || 0), 0);
-        const netSales = totalSalesValue - totalDiscount;
-        const totalCost = sales.reduce((sum, s) => sum + s.items.reduce((itemSum, item) => itemSum + (item.cost * item.qty), 0), 0);
-        const netProfit = netSales - totalCost;
-        
-        return { totalSalesValue, totalDiscount, netSales, netProfit };
-    }, [sales]);
-
-    return (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card>
-                <CardHeader><CardTitle className="flex items-center gap-2"><Coins className="text-muted-foreground"/>إجمالي المبيعات</CardTitle></CardHeader>
-                <CardContent><p className="text-2xl font-bold">{summary.totalSalesValue.toLocaleString()} ج.م</p></CardContent>
-            </Card>
-            <Card>
-                <CardHeader><CardTitle className="flex items-center gap-2"><TrendingDown className="text-muted-foreground"/>إجمالي الخصومات</CardTitle></CardHeader>
-                <CardContent><p className="text-2xl font-bold text-destructive">{summary.totalDiscount.toLocaleString()} ج.م</p></CardContent>
-            </Card>
-             <Card>
-                <CardHeader><CardTitle className="flex items-center gap-2"><Percent className="text-muted-foreground"/>صافي المبيعات</CardTitle></CardHeader>
-                <CardContent><p className="text-2xl font-bold">{summary.netSales.toLocaleString()} ج.م</p></CardContent>
-            </Card>
-            <Card>
-                <CardHeader><CardTitle className="flex items-center gap-2"><TrendingUp className="text-muted-foreground"/>صافي الربح</CardTitle></CardHeader>
-                <CardContent><p className="text-2xl font-bold text-green-600">{summary.netProfit.toLocaleString()} ج.م</p></CardContent>
-            </Card>
-        </div>
-    );
-}
-
-const SalesByItem = ({ sales }: { sales: PosSale[] }) => {
-    const data = useMemo(() => {
-        const itemMap = new Map<string, { id: string; name: string, qty: number, total: number, cost: number, discount: number }>();
-        sales.forEach(sale => {
-            const saleDiscountRatio = sale.subtotal > 0 ? sale.discount / sale.subtotal : 0;
-            sale.items.forEach(item => {
-                const itemTotal = item.qty * item.price;
-                const itemDiscount = itemTotal * saleDiscountRatio;
-                const existing = itemMap.get(item.id);
-                if (existing) {
-                    existing.qty += item.qty;
-                    existing.total += itemTotal;
-                    existing.cost += item.qty * item.cost;
-                    existing.discount += itemDiscount;
-                } else {
-                    itemMap.set(item.id, { id: item.id, name: item.name, qty: item.qty, total: itemTotal, cost: item.qty * item.cost, discount: itemDiscount });
-                }
-            });
-        });
-        return Array.from(itemMap.values()).map(item => ({
-            ...item,
-            profit: (item.total - item.discount) - item.cost,
-            profitMargin: (item.total - item.discount) > 0 ? (((item.total - item.discount) - item.cost) / (item.total - item.discount)) * 100 : 0
-        })).sort((a, b) => b.qty - a.qty);
-    }, [sales]);
-
-    return (
-        <Table>
-            <TableHeader><TableRow><TableHead>الصنف</TableHead><TableHead className="text-center">الكمية</TableHead><TableHead className="text-center">إجمالي البيع</TableHead><TableHead className="text-center">إجمالي التكلفة</TableHead><TableHead className="text-center">صافي الربح</TableHead><TableHead className="text-center">هامش الربح</TableHead></TableRow></TableHeader>
-            <TableBody>
-                {data.map(item => (
-                    <TableRow key={item.id}>
-                        <TableCell>{item.name}</TableCell>
-                        <TableCell className="text-center">{item.qty}</TableCell>
-                        <TableCell className="text-center">{item.total.toLocaleString()} ج.م</TableCell>
-                        <TableCell className="text-center">{item.cost.toLocaleString()} ج.م</TableCell>
-                        <TableCell className="text-center font-bold text-green-600">{item.profit.toLocaleString()} ج.م</TableCell>
-                        <TableCell className="text-center">{item.profitMargin.toFixed(1)}%</TableCell>
-                    </TableRow>
-                ))}
-            </TableBody>
-        </Table>
-    );
-};
-
-const CashierPerformance = ({ sales }: { sales: PosSale[] }) => {
-     const data = useMemo(() => {
-        const cashierMap = new Map<string, { name: string, sales: number, count: number, discount: number }>();
-        sales.forEach(sale => {
-            const existing = cashierMap.get(sale.cashierId);
-            if (existing) {
-                existing.sales += sale.total;
-                existing.count += 1;
-                existing.discount += sale.discount || 0;
-            } else {
-                cashierMap.set(sale.cashierId, { name: sale.cashierName, sales: sale.total, count: 1, discount: sale.discount || 0 });
-            }
-        });
-        return Array.from(cashierMap.values()).sort((a,b) => b.sales - a.sales);
-    }, [sales]);
-
-     return (
-        <Table>
-            <TableHeader><TableRow><TableHead>الكاشير</TableHead><TableHead className="text-center">صافي المبيعات</TableHead><TableHead className="text-center">الخصومات</TableHead><TableHead className="text-center">عدد الفواتير</TableHead></TableRow></TableHeader>
-            <TableBody>
-                {data.map(cashier => (
-                    <TableRow key={cashier.name}>
-                        <TableCell>{cashier.name}</TableCell>
-                        <TableCell className="text-center">{cashier.sales.toLocaleString()} ج.م</TableCell>
-                        <TableCell className="text-center">{cashier.discount.toLocaleString()} ج.م</TableCell>
-                        <TableCell className="text-center">{cashier.count}</TableCell>
-                    </TableRow>
-                ))}
-            </TableBody>
-        </Table>
-    );
-};
-
-const SalesDetails = ({ sales }: { sales: PosSale[] }) => {
-    const [selectedInvoice, setSelectedInvoice] = useState<PosSale | null>(null);
-
-    return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-                <CardTitle className="mb-4">الفواتير</CardTitle>
-                <ScrollArea className="h-[500px] border rounded-lg">
-                <Table>
-                     <TableHeader><TableRow><TableHead>رقم الفاتورة</TableHead><TableHead>الكاشير</TableHead><TableHead className="text-center">الإجمالي</TableHead></TableRow></TableHeader>
-                    <TableBody>
-                        {sales.map(s => (
-                            <TableRow key={s.id} onClick={() => setSelectedInvoice(s)} className={`cursor-pointer ${selectedInvoice?.id === s.id ? 'bg-muted' : ''}`}>
-                                <TableCell>{s.invoiceNumber}</TableCell>
-                                <TableCell>{s.cashierName}</TableCell>
-                                <TableCell className="text-center">{s.total.toLocaleString()} ج.م</TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-                </ScrollArea>
-            </div>
-             <div>
-                <CardTitle className="mb-4">أصناف الفاتورة المحددة</CardTitle>
-                 <ScrollArea className="h-[500px] border rounded-lg">
-                    {selectedInvoice ? (
-                        <Table>
-                            <TableHeader><TableRow><TableHead>الصنف</TableHead><TableHead className="text-center">الكمية</TableHead><TableHead className="text-center">السعر</TableHead><TableHead className="text-center">الإجمالي</TableHead></TableRow></TableHeader>
-                            <TableBody>
-                                {selectedInvoice.items.map(item => (
-                                     <TableRow key={item.id}>
-                                        <TableCell>{item.name}</TableCell>
-                                        <TableCell className="text-center">{item.qty}</TableCell>
-                                        <TableCell className="text-center">{item.price.toLocaleString()}</TableCell>
-                                        <TableCell className="text-center">{item.total.toLocaleString()}</TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    ) : (
-                        <div className="flex items-center justify-center h-full text-muted-foreground">
-                            <p>اختر فاتورة لعرض تفاصيلها</p>
-                        </div>
-                    )}
-                 </ScrollArea>
-            </div>
-        </div>
-    );
-}
-
-const AuditLogReport = ({ logs }: { logs: PosAuditLog[] }) => {
-    return (
-         <Table>
-            <TableHeader><TableRow><TableHead>الوقت</TableHead><TableHead>الكاشير</TableHead><TableHead>الحدث</TableHead><TableHead>التفاصيل</TableHead></TableRow></TableHeader>
-            <TableBody>
-                {logs.map(log => (
-                    <TableRow key={log.id}>
-                        <TableCell>{new Date(log.date).toLocaleString('ar-EG')}</TableCell>
-                        <TableCell>{log.cashierName}</TableCell>
-                        <TableCell><Badge variant="destructive">{log.action === 'INVOICE_CANCELLED' ? 'إلغاء فاتورة' : log.action}</Badge></TableCell>
-                        <TableCell className="text-xs">{log.details.invoiceNumber}</TableCell>
-                    </TableRow>
-                ))}
-                 {logs.length === 0 && <TableRow><TableCell colSpan={4} className="text-center py-4">لا توجد سجلات.</TableCell></TableRow>}
-            </TableBody>
-        </Table>
-    )
-};
-
-
-export default function PosReportsPage() {
-    const [filteredData, setFilteredData] = useState<{ sales: PosSale[], logs: PosAuditLog[] } | null>(null);
-    const { posSales, posAuditLogs, users, loading } = useData();
     
-    const handleGenerate = (filters: any) => {
-        const { fromDate, toDate, cashierId, warehouseId } = filters;
-        const start = new Date(fromDate);
-        start.setHours(0, 0, 0, 0);
-        const end = new Date(toDate);
-        end.setHours(23, 59, 59, 999);
+    const filteredSessions = useMemo(() => {
+        return posSessions
+            .filter((session: PosSession) => {
+                if (!session.isClosed) return false;
+                const sessionDate = new Date(session.startTime);
+                const from = filters.fromDate ? new Date(filters.fromDate) : null;
+                const to = filters.toDate ? new Date(filters.toDate) : null;
+                if(from) from.setHours(0,0,0,0);
+                if(to) to.setHours(23,59,59,999);
 
-        const cashierWarehouseMap = new Map<string, string>();
-        users.forEach((u:User) => cashierWarehouseMap.set(u.id, u.warehouse));
+                if (from && sessionDate < from) return false;
+                if (to && sessionDate > to) return false;
+                return true;
+            })
+            .map((session: PosSession) => {
+                const sessionSales = posSales.filter((sale: PosSale) => {
+                    const saleDate = new Date(sale.date);
+                    return saleDate >= new Date(session.startTime) && saleDate <= new Date(session.endTime!);
+                });
 
-        const sales = posSales.filter((s: PosSale) => {
-            const saleDate = new Date(s.date);
-            const saleWarehouseId = cashierWarehouseMap.get(s.cashierId);
-            return saleDate >= start && saleDate <= end &&
-                   (cashierId === 'all' || s.cashierId === cashierId) &&
-                   (warehouseId === 'all' || saleWarehouseId === warehouseId);
-        });
+                const cashiersData = Object.values(session.cashierSessions).map(cs => {
+                    const cashierSales = sessionSales.filter(s => s.cashierId === cs.cashierId);
+                    const totalSales = cashierSales.reduce((sum, s) => sum + s.subtotal, 0);
+                    const totalDiscount = cashierSales.reduce((sum, s) => sum + s.discount, 0);
+                    const netSales = totalSales - totalDiscount;
+                    const totalCost = cashierSales.reduce((sum, s) => sum + s.items.reduce((itemSum, item) => itemSum + (item.cost * item.qty), 0), 0);
+                    const profit = netSales - totalCost;
 
-        const logs = posAuditLogs.filter((l: PosAuditLog) => {
-            const logDate = new Date(l.date);
-            const logWarehouseId = cashierWarehouseMap.get(l.cashierId);
-            return logDate >= start && logDate <= end &&
-                   (cashierId === 'all' || l.cashierId === cashierId) &&
-                   (warehouseId === 'all' || logWarehouseId === warehouseId);
-        });
+                    return {
+                        name: cs.cashierName,
+                        invoiceCount: cashierSales.length,
+                        totalSales,
+                        totalDiscount,
+                        profit,
+                    }
+                });
+                
+                return {
+                    ...session,
+                    cashiersData,
+                    totalSales: cashiersData.reduce((sum, d) => sum + d.totalSales, 0),
+                    totalDiscount: cashiersData.reduce((sum, d) => sum + d.totalDiscount, 0),
+                    totalProfit: cashiersData.reduce((sum, d) => sum + d.profit, 0),
+                }
 
-        setFilteredData({ sales, logs });
-    };
+            }).sort((a,b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
+    }, [posSessions, posSales, filters]);
+
+
+    if (loading) {
+        return <div className="flex flex-1 justify-center items-center"><Loader2 className="h-10 w-10 animate-spin text-muted-foreground" /></div>
+    }
 
     return (
         <>
             <PageHeader title="تقارير نقاط البيع" />
             <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
-                <ReportFilters onGenerate={handleGenerate} />
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>فلاتر البحث</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div className="space-y-2">
+                                <Label>من تاريخ</Label>
+                                <Input type="date" value={filters.fromDate} onChange={e => handleFilterChange('fromDate', e.target.value)} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>إلى تاريخ</Label>
+                                <Input type="date" value={filters.toDate} onChange={e => handleFilterChange('toDate', e.target.value)} />
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
                 
-                {loading && <div className="flex justify-center py-10"><Loader2 className="animate-spin h-8 w-8" /></div>}
-                
-                {filteredData && !loading && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>نتائج التقارير</CardTitle>
-                            <CardDescription>عرض تفصيلي لجميع أنشطة نقاط البيع للفترة المحددة.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <Tabs defaultValue="summary">
-                                <TabsList className="grid w-full grid-cols-5">
-                                    <TabsTrigger value="summary">الملخص</TabsTrigger>
-                                    <TabsTrigger value="details">تفاصيل المبيعات</TabsTrigger>
-                                    <TabsTrigger value="by_item">حسب الصنف</TabsTrigger>
-                                    <TabsTrigger value="by_cashier">حسب الكاشير</TabsTrigger>
-                                    <TabsTrigger value="audit">سجل التدقيق</TabsTrigger>
-                                </TabsList>
-                                <TabsContent value="summary" className="pt-4"><SalesSummary sales={filteredData.sales} /></TabsContent>
-                                <TabsContent value="details" className="pt-4"><SalesDetails sales={filteredData.sales} /></TabsContent>
-                                <TabsContent value="by_item" className="pt-4"><SalesByItem sales={filteredData.sales} /></TabsContent>
-                                <TabsContent value="by_cashier" className="pt-4"><CashierPerformance sales={filteredData.sales} /></TabsContent>
-                                <TabsContent value="audit" className="pt-4"><AuditLogReport logs={filteredData.logs} /></TabsContent>
-                            </Tabs>
-                        </CardContent>
-                    </Card>
-                )}
+                <Card>
+                    <CardHeader>
+                        <CardTitle>سجل أيام العمل المغلقة</CardTitle>
+                        <CardDescription>عرض تفصيلي لكل يوم عمل مغلق وأداء الكاشيرات خلاله.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {filteredSessions.length > 0 ? (
+                             <Accordion type="single" collapsible className="w-full">
+                                {filteredSessions.map(session => (
+                                    <AccordionItem value={session.id} key={session.id}>
+                                        <AccordionTrigger>
+                                            <div className="flex justify-between items-center w-full pr-4">
+                                                <div className="flex items-center gap-2">
+                                                    <Calendar className="h-5 w-5 text-primary" />
+                                                    <span className="font-bold text-lg">يوم: {new Date(session.startTime).toLocaleDateString('ar-EG')}</span>
+                                                </div>
+                                                <div className="text-sm text-muted-foreground">
+                                                    فتح بواسطة: {session.openedByName} | أغلق بواسطة: {session.closedByName}
+                                                </div>
+                                                <Badge>صافي الربح: {session.totalProfit.toLocaleString()} ج.م</Badge>
+                                            </div>
+                                        </AccordionTrigger>
+                                        <AccordionContent className="p-4 bg-muted/50 rounded-b-md">
+                                             <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>الكاشير</TableHead>
+                                                        <TableHead className="text-center">عدد الفواتير</TableHead>
+                                                        <TableHead className="text-center">إجمالي المبيعات</TableHead>
+                                                        <TableHead className="text-center">إجمالي الخصومات</TableHead>
+                                                        <TableHead className="text-center">صافي الربح</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {session.cashiersData.map(cd => (
+                                                        <TableRow key={cd.name}>
+                                                            <TableCell>{cd.name}</TableCell>
+                                                            <TableCell className="text-center">{cd.invoiceCount}</TableCell>
+                                                            <TableCell className="text-center">{cd.totalSales.toLocaleString()} ج.م</TableCell>
+                                                            <TableCell className="text-center text-destructive">{cd.totalDiscount.toLocaleString()} ج.م</TableCell>
+                                                            <TableCell className="text-center font-bold text-green-600">{cd.profit.toLocaleString()} ج.م</TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                                <TableFooter>
+                                                    <TableRow className="font-bold bg-muted">
+                                                        <TableCell>الإجمالي</TableCell>
+                                                        <TableCell className="text-center">{session.cashiersData.reduce((sum,d) => sum + d.invoiceCount, 0)}</TableCell>
+                                                        <TableCell className="text-center">{session.totalSales.toLocaleString()} ج.م</TableCell>
+                                                        <TableCell className="text-center text-destructive">{session.totalDiscount.toLocaleString()} ج.م</TableCell>
+                                                        <TableCell className="text-center text-green-600">{session.totalProfit.toLocaleString()} ج.م</TableCell>
+                                                    </TableRow>
+                                                </TableFooter>
+                                             </Table>
+                                        </AccordionContent>
+                                    </AccordionItem>
+                                ))}
+                             </Accordion>
+                        ) : (
+                            <div className="text-center text-muted-foreground py-10">
+                                <p>لا توجد أيام عمل مغلقة في الفترة المحددة.</p>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
             </main>
         </>
     );
 }
+
