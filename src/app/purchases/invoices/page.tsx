@@ -74,15 +74,18 @@ export default function PurchaseInvoicePage() {
   const [invoiceDate, setInvoiceDate] = useState<string>('');
   const [dueDate, setDueDate] = useState<string>('');
   
-  const { data: availableItems, loading: loadingItems } = useFirebase<Item>('items');
-  const { data: suppliers, loading: loadingSuppliers } = useFirebase<Supplier>('suppliers');
-  const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
-  const { data: cashAccounts, loading: loadingCashAccounts } = useFirebase<CashAccount>('cashAccounts');
-  const { add: addPurchaseInvoice, getNextId, update: updatePurchaseInvoice } = useFirebase('purchaseInvoices');
-  const { add: addSupplierPayment } = useFirebase('supplierPayments');
+  const { 
+    items: availableItems, 
+    suppliers, 
+    warehouses, 
+    cashAccounts, 
+    dbAction, 
+    getNextId, 
+    loading 
+  } = useData();
 
   const itemsForCombobox = React.useMemo(() => {
-    return availableItems.map(item => ({ value: item.id, label: item.name }));
+    return availableItems.map((item: Item) => ({ value: item.id, label: item.name }));
   }, [availableItems]);
 
   useEffect(() => {
@@ -105,7 +108,7 @@ export default function PurchaseInvoicePage() {
 
   const handleAddItem = () => {
     if (!newItem.id || newItem.qty <= 0 || newItem.price <= 0) return;
-    const selectedItem = availableItems.find(i => i.id === newItem.id);
+    const selectedItem = availableItems.find((i: Item) => i.id === newItem.id);
     if (!selectedItem) return;
 
     setItems([
@@ -130,7 +133,7 @@ export default function PurchaseInvoicePage() {
   };
   
   const handleItemSelect = (itemId: string) => {
-    const selectedItem = availableItems.find(i => i.id === itemId);
+    const selectedItem = availableItems.find((i: Item) => i.id === itemId);
     if (selectedItem) {
         setNewItem({
             ...newItem,
@@ -157,7 +160,7 @@ export default function PurchaseInvoicePage() {
         setIsSaving(true);
         try {
             const invoiceNumber = `ف-ش-${await getNextId('purchaseInvoice')}`;
-            const supplierName = suppliers.find(s => s.id === supplierId)?.name || '';
+            const supplierName = suppliers.find((s: Supplier) => s.id === supplierId)?.name || '';
 
             const invoiceData = {
                 invoiceNumber,
@@ -181,12 +184,13 @@ export default function PurchaseInvoicePage() {
                 tax,
                 total,
                 paidAmount,
+                paidFromAccountId,
                 notes,
                 createdById: user?.id,
                 createdByName: user?.name,
             };
 
-            await addPurchaseInvoice(invoiceData);
+            await dbAction('purchaseInvoices', 'add', invoiceData);
             
             toast({
                 title: 'تم الحفظ بنجاح',
@@ -205,7 +209,6 @@ export default function PurchaseInvoicePage() {
         }
   }
 
-  const loading = loadingItems || loadingSuppliers || loadingWarehouses || loadingCashAccounts;
   
   return (
     <>
@@ -249,7 +252,7 @@ export default function PurchaseInvoicePage() {
                                 <SelectValue placeholder="اختر موردًا" />
                             </SelectTrigger>
                             <SelectContent>
-                               {suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                               {suppliers.map((s: Supplier) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
@@ -260,7 +263,7 @@ export default function PurchaseInvoicePage() {
                                 <SelectValue placeholder="اختر مخزنًا" />
                             </SelectTrigger>
                             <SelectContent>
-                               {warehouses.map(w => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
+                               {warehouses.map((w: Warehouse) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
@@ -382,7 +385,7 @@ export default function PurchaseInvoicePage() {
                                         <SelectValue placeholder="اختر حساب الدفع" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                    {cashAccounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
+                                    {cashAccounts.map((acc: CashAccount) => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                             </div>}
