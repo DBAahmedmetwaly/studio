@@ -28,7 +28,7 @@ import { useData } from "@/contexts/data-provider";
 import { Loader2 } from "lucide-react";
 import { useMemo } from "react";
 
-// Interfaces for Firebase data
+// Data Interfaces
 interface SaleInvoice {
   id: string;
   total: number;
@@ -54,11 +54,13 @@ interface Expense {
   amount: number;
   expenseType: string;
   date: string;
+  paidFromAccountId: string;
 }
 interface ExceptionalIncome {
     id: string;
     amount: number;
     date: string;
+    paidToAccountId: string;
 }
 interface Customer {
   id: string;
@@ -82,12 +84,14 @@ interface CustomerPayment {
     id: string;
     amount: number;
     customerId: string;
+    paidToAccountId: string;
     date: string;
 }
 interface SupplierPayment {
     id: string;
     amount: number;
     supplierId: string;
+    paidFromAccountId: string;
     date: string;
 }
 interface SalesReturn {
@@ -114,13 +118,67 @@ interface IssueToRep { id: string; warehouseId: string; items: { id: string; qty
 interface ReturnFromRep { id: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
 interface WarehouseData { id: string; name: string; autoStockUpdate?: boolean; }
 interface InventoryClosing { id: string; warehouseId: string; closingDate: string; balances: { itemId: string, balance: number }[] }
-
+interface CashAccount {
+    id: string;
+    name: string;
+    openingBalance: number;
+}
+interface TreasuryTransaction {
+    id: string;
+    type: 'deposit' | 'withdrawal';
+    amount: number;
+    accountId: string;
+}
+interface EmployeeAdvance {
+    id: string;
+    amount: number;
+    paidFromAccountId: string;
+}
+interface ProfitDistribution {
+    id: string;
+    amount: number;
+    paidFromAccountId: string;
+}
 
 // --- Financial Statement Components ---
 
-function IncomeStatement() {
-  const { salesInvoices, expenses, exceptionalIncomes, items, salesReturns, loading } = useData();
+const useIncomeStatementData = () => {
+  const { salesInvoices, expenses, exceptionalIncomes, items, salesReturns } = useData();
 
+  return useMemo(() => {
+    const approvedSales = salesInvoices.filter((s: SaleInvoice) => s.status === 'approved');
+    
+    const grossRevenue = approvedSales.reduce((acc, sale) => acc + (sale.subtotal || (sale.total + (sale.discount || 0))), 0);
+    const totalSalesDiscount = approvedSales.reduce((acc, sale) => acc + (sale.discount || 0), 0);
+    const totalSalesReturns = salesReturns.reduce((acc, ret) => acc + ret.total, 0);
+    
+    const costOfGoodsSold = approvedSales.reduce((acc, sale) => {
+        return acc + (sale.items?.reduce((itemAcc, saleItem) => {
+            const itemMaster = items.find((i:Item) => i.id === saleItem.id);
+            const itemCost = typeof saleItem.cost === 'number' ? saleItem.cost : (typeof itemMaster?.cost === 'number' ? itemMaster.cost : 0);
+            return itemAcc + (saleItem.qty * itemCost);
+        }, 0) || 0);
+    }, 0);
+
+    const totalExceptionalIncome = exceptionalIncomes.reduce((acc, income) => acc + income.amount, 0);
+
+    const expensesByType: { [key: string]: number } = {};
+    expenses.forEach(expense => {
+        expensesByType[expense.expenseType] = (expensesByType[expense.expenseType] || 0) + expense.amount;
+    });
+    const totalExpenses = Object.values(expensesByType).reduce((acc, amount) => acc + amount, 0);
+
+    const netRevenue = grossRevenue - totalSalesReturns - totalSalesDiscount;
+    const grossProfit = netRevenue - costOfGoodsSold;
+    const netOperatingIncome = grossProfit - totalExpenses;
+    const netIncome = netOperatingIncome + totalExceptionalIncome;
+    
+    return { grossRevenue, totalSalesReturns, totalSalesDiscount, costOfGoodsSold, totalExceptionalIncome, expensesByType, totalExpenses, netRevenue, grossProfit, netOperatingIncome, netIncome };
+  }, [salesInvoices, expenses, exceptionalIncomes, items, salesReturns]);
+};
+
+function IncomeStatement() {
+  const { loading } = useData();
   const {
       grossRevenue,
       totalSalesReturns,
@@ -128,39 +186,12 @@ function IncomeStatement() {
       costOfGoodsSold,
       totalExceptionalIncome,
       expensesByType,
-      totalExpenses
-  } = useMemo(() => {
-      const approvedSales = salesInvoices.filter((s: SaleInvoice) => s.status === 'approved');
-      
-      const grossRevenue = approvedSales.reduce((acc, sale) => acc + (sale.subtotal || (sale.total + (sale.discount || 0))), 0);
-      const totalSalesDiscount = approvedSales.reduce((acc, sale) => acc + (sale.discount || 0), 0);
-      const totalSalesReturns = salesReturns.reduce((acc, ret) => acc + ret.total, 0);
-      
-      const costOfGoodsSold = approvedSales.reduce((acc, sale) => {
-          return acc + (sale.items?.reduce((itemAcc, saleItem) => {
-              const itemMaster = items.find((i:Item) => i.id === saleItem.id);
-              // Ensure cost is a number, default to 0 if not present
-              const itemCost = typeof saleItem.cost === 'number' ? saleItem.cost : (typeof itemMaster?.cost === 'number' ? itemMaster.cost : 0);
-              return itemAcc + (saleItem.qty * itemCost);
-          }, 0) || 0);
-      }, 0);
-
-      const totalExceptionalIncome = exceptionalIncomes.reduce((acc, income) => acc + income.amount, 0);
-
-      const expensesByType: { [key: string]: number } = {};
-      expenses.forEach(expense => {
-          expensesByType[expense.expenseType] = (expensesByType[expense.expenseType] || 0) + expense.amount;
-      });
-      const totalExpenses = Object.values(expensesByType).reduce((acc, amount) => acc + amount, 0);
-      
-      return { grossRevenue, totalSalesReturns, totalSalesDiscount, costOfGoodsSold, totalExceptionalIncome, expensesByType, totalExpenses };
-  }, [salesInvoices, expenses, exceptionalIncomes, items, salesReturns]);
-
+      netRevenue,
+      grossProfit,
+      netOperatingIncome,
+      netIncome
+  } = useIncomeStatementData();
   
-  const netRevenue = grossRevenue - totalSalesReturns - totalSalesDiscount;
-  const grossProfit = netRevenue - costOfGoodsSold;
-  const netOperatingIncome = grossProfit - totalExpenses;
-  const netIncome = netOperatingIncome + totalExceptionalIncome;
 
   if (loading) {
     return <div className="flex justify-center items-center py-10"><Loader2 className="h-8 w-8 animate-spin" /></div>;
@@ -229,10 +260,13 @@ function BalanceSheet() {
         customerPayments, supplierPayments, salesReturns, purchaseReturns, 
         warehouses, stockInRecords, stockOutRecords, stockTransferRecords, stockAdjustmentRecords, 
         stockIssuesToReps, stockReturnsFromReps, inventoryClosings,
+        cashAccounts, treasuryTransactions, expenses, exceptionalIncomes, employeeAdvances, profitDistributions,
         loading 
     } = useData();
 
-    const { accountsReceivable, accountsPayable } = useMemo(() => {
+    const { netIncome } = useIncomeStatementData();
+
+    const { accountsReceivable, accountsPayable, cashAndEquivalents } = useMemo(() => {
         let ar = customers.reduce((acc: number, cust: any) => acc + (cust.openingBalance || 0), 0);
         let ap = suppliers.reduce((acc: number, sup: any) => acc + (sup.openingBalance || 0), 0);
         
@@ -250,11 +284,25 @@ function BalanceSheet() {
         });
         supplierPayments.forEach((p:any) => ap -= p.amount);
         purchaseReturns.forEach((pr:any) => ap -= pr.total);
-
-        return { accountsReceivable: ar, accountsPayable: ap };
-    }, [customers, suppliers, salesInvoices, purchaseInvoices, customerPayments, supplierPayments, salesReturns, purchaseReturns]);
+        
+        // Cash calculation
+        let cash = cashAccounts.reduce((acc: number, ca: any) => acc + (ca.openingBalance || 0), 0);
+        // Increases
+        customerPayments.forEach((p:any) => cash += p.amount);
+        exceptionalIncomes.forEach((i:any) => cash += i.amount);
+        treasuryTransactions.filter((tx:any) => tx.type === 'deposit').forEach((tx:any) => cash += tx.amount);
+        // Decreases
+        expenses.forEach((e:any) => cash -= e.amount);
+        supplierPayments.forEach((p:any) => cash -= p.amount);
+        employeeAdvances.forEach((ea:any) => cash -= ea.amount);
+        profitDistributions.forEach((pd:any) => cash -= pd.amount);
+        treasuryTransactions.filter((tx:any) => tx.type === 'withdrawal').forEach((tx:any) => cash -= tx.amount);
+        
+        return { accountsReceivable: ar, accountsPayable: ap, cashAndEquivalents: cash };
+    }, [customers, suppliers, salesInvoices, purchaseInvoices, customerPayments, supplierPayments, salesReturns, purchaseReturns, cashAccounts, treasuryTransactions, expenses, exceptionalIncomes, employeeAdvances, profitDistributions]);
 
     const totalCapital = partners.reduce((acc:number, p:any) => acc + (p.capital || 0), 0);
+    const totalDistributions = profitDistributions.reduce((acc, d) => acc + d.amount, 0);
     
     const inventoryValue = useMemo(() => {
         let totalValue = 0;
@@ -309,9 +357,9 @@ function BalanceSheet() {
         return totalValue;
     }, [allItems, warehouses, salesInvoices, purchaseInvoices, stockInRecords, stockOutRecords, stockTransferRecords, stockAdjustmentRecords, salesReturns, purchaseReturns, stockIssuesToReps, stockReturnsFromReps, inventoryClosings]);
 
-    const totalAssets = accountsReceivable + inventoryValue; // Assuming cash is managed separately
+    const totalAssets = cashAndEquivalents + accountsReceivable + inventoryValue;
     const totalLiabilities = accountsPayable;
-    const totalEquity = totalCapital;
+    const totalEquity = totalCapital + netIncome - totalDistributions;
     const totalLiabilitiesAndEquity = totalLiabilities + totalEquity;
 
     if (loading) {
@@ -325,6 +373,10 @@ function BalanceSheet() {
                 <h3 className="text-lg font-semibold mb-2 border-b pb-2">الأصول</h3>
                 <Table>
                     <TableBody>
+                        <TableRow>
+                            <TableCell>النقدية وما في حكمها</TableCell>
+                            <TableCell className="text-left">ج.م {cashAndEquivalents.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                        </TableRow>
                         <TableRow>
                             <TableCell>حسابات العملاء (الذمم المدينة)</TableCell>
                             <TableCell className="text-left">ج.م {accountsReceivable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
@@ -367,6 +419,14 @@ function BalanceSheet() {
                          <TableRow>
                             <TableCell>رأس المال</TableCell>
                             <TableCell className="text-left">ج.م {totalCapital.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                        </TableRow>
+                         <TableRow>
+                            <TableCell>الأرباح المحتجزة (صافي الدخل)</TableCell>
+                            <TableCell className="text-left">ج.م {netIncome.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell className="pl-8 text-muted-foreground">(-) توزيعات الأرباح</TableCell>
+                            <TableCell className="text-left text-destructive">- ج.م {totalDistributions.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                         </TableRow>
                     </TableBody>
                      <TableFooter>
