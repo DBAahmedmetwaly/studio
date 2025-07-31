@@ -128,16 +128,20 @@ interface TreasuryTransaction {
     type: 'deposit' | 'withdrawal';
     amount: number;
     accountId: string;
+    date: string;
+    linkedTransaction?: boolean;
 }
 interface EmployeeAdvance {
     id: string;
     amount: number;
     paidFromAccountId: string;
+    date: string;
 }
 interface ProfitDistribution {
     id: string;
     amount: number;
     paidFromAccountId: string;
+    date: string;
 }
 
 // --- Financial Statement Components ---
@@ -266,18 +270,19 @@ function BalanceSheet() {
 
     const { netIncome } = useIncomeStatementData();
 
-    const { accountsReceivable, accountsPayable, cashAndEquivalents } = useMemo(() => {
+    const { accountsReceivable, accountsPayable, cashAndEquivalents, inventoryValue } = useMemo(() => {
         let ar = customers.reduce((acc: number, cust: any) => acc + (cust.openingBalance || 0), 0);
-        let ap = suppliers.reduce((acc: number, sup: any) => acc + (sup.openingBalance || 0), 0);
-        
         salesInvoices.filter((s:any) => s.status === 'approved').forEach((s:any) => {
             ar += s.total;
+            ar -= s.paidAmount || 0;
         });
         customerPayments.forEach((p:any) => ar -= p.amount);
         salesReturns.forEach((sr:any) => ar -= sr.total);
-        
+
+        let ap = suppliers.reduce((acc: number, sup: any) => acc + (sup.openingBalance || 0), 0);
         purchaseInvoices.forEach((p:any) => {
             ap += p.total;
+            ap -= p.paidAmount || 0;
         });
         supplierPayments.forEach((p:any) => ap -= p.amount);
         purchaseReturns.forEach((pr:any) => ap -= pr.total);
@@ -285,22 +290,22 @@ function BalanceSheet() {
         // Cash calculation
         let cash = cashAccounts.reduce((acc: number, ca: any) => acc + (ca.openingBalance || 0), 0);
         customerPayments.forEach((p:any) => cash += p.amount);
+        salesInvoices.filter((s:any) => s.status === 'approved').forEach((s:any) => cash += s.paidAmount || 0);
         exceptionalIncomes.forEach((i:any) => cash += i.amount);
-        treasuryTransactions.filter((tx:any) => tx.type === 'deposit').forEach((tx:any) => cash += tx.amount);
+        // Capital injections are not cash movements themselves but increases in equity, handled separately.
+        // We only consider deposits that are NOT linked to internal transfers.
+        treasuryTransactions.filter((tx:any) => tx.type === 'deposit' && !tx.linkedTransaction).forEach((tx:any) => cash += tx.amount);
+
         expenses.forEach((e:any) => cash -= e.amount);
         supplierPayments.forEach((p:any) => cash -= p.amount);
+        purchaseInvoices.forEach((p:any) => cash -= p.paidAmount || 0);
         employeeAdvances.forEach((ea:any) => cash -= ea.amount);
         profitDistributions.forEach((pd:any) => cash -= pd.amount);
-        treasuryTransactions.filter((tx:any) => tx.type === 'withdrawal').forEach((tx:any) => cash -= tx.amount);
+         // We only consider withdrawals that are NOT linked to internal transfers.
+        treasuryTransactions.filter((tx:any) => tx.type === 'withdrawal' && !tx.linkedTransaction).forEach((tx:any) => cash -= tx.amount);
 
-        return { accountsReceivable: ar, accountsPayable: ap, cashAndEquivalents: cash };
-    }, [customers, suppliers, salesInvoices, purchaseInvoices, customerPayments, supplierPayments, salesReturns, purchaseReturns, cashAccounts, treasuryTransactions, expenses, exceptionalIncomes, employeeAdvances, profitDistributions]);
-
-    const totalCapital = partners.reduce((acc:number, p:any) => acc + (p.capital || 0), 0);
-    const totalDistributions = profitDistributions.reduce((acc, d) => acc + d.amount, 0);
-    
-    const inventoryValue = useMemo(() => {
-        let totalValue = 0;
+        // --- Inventory Value Calculation ---
+        let totalInventoryValue = 0;
         warehouses.forEach((warehouse: WarehouseData) => {
             allItems.forEach((item: Item) => {
                 const closingsForWarehouse = inventoryClosings.filter((c: InventoryClosing) => c.warehouseId === warehouse.id);
@@ -311,8 +316,7 @@ function BalanceSheet() {
                 
                 const filterTransactions = (t: any) => new Date(t.date) > lastClosingDate;
                 
-                // --- Stock Calculation ---
-                 const autoStockUpdate = warehouse?.autoStockUpdate;
+                const autoStockUpdate = warehouse?.autoStockUpdate;
                 // Increases
                 if (autoStockUpdate) {
                     purchaseInvoices.filter(p => p.warehouseId === warehouse.id && filterTransactions(p)).forEach(p => p.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
@@ -329,7 +333,6 @@ function BalanceSheet() {
                 stockAdjustmentRecords.filter(adj => adj.warehouseId === warehouse.id && filterTransactions(adj)).forEach(adj => adj.items.filter(i => i.itemId === item.id && i.difference < 0).forEach(i => stock += i.difference));
                 purchaseReturns.filter(pr => pr.warehouseId === warehouse.id && filterTransactions(pr)).forEach(pr => pr.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
                 stockIssuesToReps.filter(itr => itr.warehouseId === warehouse.id && filterTransactions(itr)).forEach(itr => itr.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
-                // --- End Stock Calculation ---
 
                 if (stock > 0) {
                      const lastPurchase = purchaseInvoices.filter((p: PurchaseInvoice) => p.warehouseId === warehouse.id && p.items.some(pi => pi.id === item.id && typeof pi.cost === 'number')).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
@@ -345,13 +348,17 @@ function BalanceSheet() {
                          const stockInItem = lastStockIn.items.find(si_item => si_item.id === item.id);
                          if (stockInItem && typeof stockInItem.cost === 'number') { latestCost = stockInItem.cost; }
                      }
-                    totalValue += stock * latestCost;
+                    totalInventoryValue += stock * latestCost;
                 }
             });
         });
-        return totalValue;
-    }, [allItems, warehouses, salesInvoices, purchaseInvoices, stockInRecords, stockOutRecords, stockTransferRecords, stockAdjustmentRecords, salesReturns, purchaseReturns, stockIssuesToReps, stockReturnsFromReps, inventoryClosings]);
 
+        return { accountsReceivable: ar, accountsPayable: ap, cashAndEquivalents: cash, inventoryValue: totalInventoryValue };
+    }, [customers, suppliers, salesInvoices, purchaseInvoices, customerPayments, supplierPayments, salesReturns, purchaseReturns, cashAccounts, treasuryTransactions, expenses, exceptionalIncomes, employeeAdvances, profitDistributions, allItems, warehouses, inventoryClosings, stockInRecords, stockOutRecords, stockTransferRecords, stockAdjustmentRecords, stockIssuesToReps, stockReturnsFromReps]);
+
+    const totalCapital = partners.reduce((acc:number, p:any) => acc + (p.capital || 0), 0);
+    const totalDistributions = profitDistributions.reduce((acc, d) => acc + d.amount, 0);
+    
     const totalAssets = cashAndEquivalents + accountsReceivable + inventoryValue;
     const totalLiabilities = accountsPayable;
     const totalEquity = totalCapital + netIncome - totalDistributions;
@@ -528,55 +535,87 @@ const useJournalData = (allData: any) => {
     
     const journalEntries = useMemo(() => {
         const entries: any[] = [];
-        const getWarehouse = (id?: string) => warehouses.find((w:any) => w.id === id);
+        const getWarehouseName = (id?: string) => warehouses.find((w:any) => w.id === id)?.name || 'غير معروف';
         const getCashAccountName = (id?: string) => cashAccounts.find((c:any) => c.id === id)?.name || 'النقدية/البنك';
         const getEmployeeName = (id?: string) => employees.find((e:any) => e.id === id)?.name || 'موظف غير معروف';
         const getCustomerName = (id?: string) => customers.find((c:any) => c.id === id)?.name || 'عميل غير معروف';
         const getSupplierName = (id?: string) => suppliers.find((s:any) => s.id === id)?.name || 'مورد غير معروف';
         const getPartnerName = (id?: string) => partners.find((p:any) => p.id === id)?.name || 'شريك غير معروف';
         
-        // This is a simplified version of the logic from the journal page
-        // It's not a complete 1:1 copy, but captures the main transactions for financial statements
+        // --- OPENING BALANCES ---
+        customers.forEach((c:any) => { if(c.openingBalance > 0) entries.push({ account: 'حسابات العملاء', debit: c.openingBalance, credit: 0 }) });
+        suppliers.forEach((s:any) => { if(s.openingBalance > 0) entries.push({ account: 'حسابات الموردين', credit: s.openingBalance, debit: 0 }) });
+        cashAccounts.forEach((ca:any) => { if(ca.openingBalance > 0) entries.push({ account: ca.name, debit: ca.openingBalance, credit: 0 }) });
+        partners.forEach((p:any) => { if(p.capital > 0) entries.push({ account: 'رأس المال', credit: p.capital, debit: 0 }) });
+
+        // --- TRANSACTIONS ---
         
-        // Sales
+        // Sales Invoices
         salesInvoices.filter((s: SaleInvoice) => s.status === 'approved').forEach((sale:SaleInvoice) => {
-            const totalBeforeDiscount = sale.total + (sale.discount || 0);
-            entries.push({ account: 'إيرادات المبيعات', credit: totalBeforeDiscount, debit: 0 });
+            const totalBeforeDiscount = sale.subtotal || (sale.total + (sale.discount || 0));
             if(sale.discount > 0) entries.push({ account: 'خصم مسموح به', debit: sale.discount, credit: 0 });
-            entries.push({ account: 'حسابات العملاء', debit: totalBeforeDiscount - (sale.discount || 0), credit: 0 });
+            entries.push({ account: 'إيرادات المبيعات', credit: totalBeforeDiscount, debit: 0 });
+            entries.push({ account: 'حسابات العملاء', debit: sale.total, credit: 0 });
+            
             const cogs = sale.items.reduce((acc, i) => acc + (i.qty * (i.cost || 0)), 0);
             if(cogs > 0) {
                 entries.push({ account: 'تكلفة البضاعة المباعة', debit: cogs, credit: 0 });
-                sale.items.forEach(item => {
-                    const warehouse = getWarehouse(sale.warehouseId);
-                    if(warehouse) entries.push({ account: `مخزون - ${warehouse.name}`, credit: item.qty * (item.cost || 0), debit: 0 });
-                });
+                entries.push({ account: `مخزون - ${getWarehouseName(sale.warehouseId)}`, credit: cogs, debit: 0 });
+            }
+             if (sale.paidAmount && sale.paidAmount > 0) {
+                entries.push({ account: getCashAccountName(sale.paidToAccountId), debit: sale.paidAmount, credit: 0 });
+                entries.push({ account: 'حسابات العملاء', credit: sale.paidAmount, debit: 0 });
             }
         });
 
-        // Customer Payments
+        // Customer Payments (Separate)
         customerPayments.forEach((p:any) => {
-            entries.push({ account: 'حسابات العملاء', credit: p.amount, debit: 0 });
             entries.push({ account: getCashAccountName(p.paidToAccountId), debit: p.amount, credit: 0 });
-        });
-        
-        // Purchases
-        purchaseInvoices.forEach((p:any) => {
-            const totalBeforeDiscount = p.total + (p.discount || 0);
-            entries.push({ account: 'المشتريات', debit: totalBeforeDiscount, credit: 0 });
-            if(p.discount > 0) entries.push({ account: 'خصم مكتسب', credit: p.discount, debit: 0 });
-            entries.push({ account: 'حسابات الموردين', credit: totalBeforeDiscount - (p.discount || 0), debit: 0 });
+            entries.push({ account: 'حسابات العملاء', credit: p.amount, debit: 0 });
         });
 
-        // Supplier Payments
+        // Sales Returns
+        salesReturns.forEach((sr:any) => {
+            entries.push({ account: 'مرتجعات ومسموحات المبيعات', debit: sr.total, credit: 0 });
+            entries.push({ account: 'حسابات العملاء', credit: sr.total, debit: 0 });
+             const costOfGoodsReturned = sr.items.reduce((acc: number, item: any) => acc + (item.qty * (itemsMap.get(item.id)?.cost || 0)), 0);
+             if (costOfGoodsReturned > 0) {
+                 entries.push({ account: `مخزون - ${getWarehouseName(sr.warehouseId)}`, debit: costOfGoodsReturned, credit: 0 });
+                 entries.push({ account: 'تكلفة البضاعة المباعة', credit: costOfGoodsReturned, debit: 0 });
+             }
+        });
+        
+        // Purchase Invoices
+        purchaseInvoices.forEach((p:any) => {
+            const totalBeforeDiscount = p.subtotal || (p.total + (p.discount || 0));
+            entries.push({ account: 'المشتريات', debit: totalBeforeDiscount, credit: 0 });
+            if(p.discount > 0) entries.push({ account: 'خصم مكتسب', credit: p.discount, debit: 0 });
+            entries.push({ account: 'حسابات الموردين', credit: p.total, debit: 0 });
+
+            if (p.paidAmount && p.paidAmount > 0) {
+                entries.push({ account: 'حسابات الموردين', debit: p.paidAmount, credit: 0 });
+                entries.push({ account: getCashAccountName(p.paidFromAccountId), credit: p.paidAmount, debit: 0 });
+            }
+        });
+        
+        // Stock In (for inventory accounting)
+        stockInRecords.forEach((si:any) => {
+             const stockInValue = si.items.reduce((acc:number, item:any) => acc + (item.qty * (item.cost || 0)), 0);
+             if (stockInValue > 0) {
+                 entries.push({ account: `مخزون - ${getWarehouseName(si.warehouseId)}`, debit: stockInValue, credit: 0 });
+                 entries.push({ account: 'المشتريات', credit: stockInValue, debit: 0 });
+             }
+        });
+
+        // Supplier Payments (Separate)
         supplierPayments.forEach((p:any) => {
             entries.push({ account: 'حسابات الموردين', debit: p.amount, credit: 0 });
             entries.push({ account: getCashAccountName(p.paidFromAccountId), credit: p.amount, debit: 0 });
         });
-
-        // Expenses
+        
+         // Expenses
         expenses.forEach((e:any) => {
-             entries.push({ account: `${e.expenseType} (عام)`, debit: e.amount, credit: 0 });
+             entries.push({ account: e.expenseType, debit: e.amount, credit: 0 });
              entries.push({ account: getCashAccountName(e.paidFromAccountId), credit: e.amount, debit: 0 });
         });
         
@@ -586,20 +625,21 @@ const useJournalData = (allData: any) => {
             entries.push({ account: getCashAccountName(i.paidToAccountId), debit: i.amount, credit: 0 });
         });
         
-        // Opening Balances
-        customers.forEach((c:any) => { if(c.openingBalance) entries.push({ account: 'حسابات العملاء', debit: c.openingBalance, credit: 0 }) });
-        suppliers.forEach((s:any) => { if(s.openingBalance) entries.push({ account: 'حسابات الموردين', credit: s.openingBalance, debit: 0 }) });
-        cashAccounts.forEach((ca:any) => { if(ca.openingBalance) entries.push({ account: ca.name, debit: ca.openingBalance, credit: 0 }) });
-        partners.forEach((p:any) => { if(p.capital) entries.push({ account: 'رأس المال', credit: p.capital, debit: 0 }) });
-        
-        // Inventory from Stock-in
-        stockInRecords.forEach((si:any) => {
-             const stockInValue = si.items.reduce((acc:number, item:any) => acc + (item.qty * (item.cost || 0)), 0);
-             const warehouse = getWarehouse(si.warehouseId);
-             if(warehouse && stockInValue > 0) {
-                 entries.push({ account: `مخزون - ${warehouse.name}`, debit: stockInValue, credit: 0 });
-                 entries.push({ account: 'المشتريات', credit: stockInValue, debit: 0 });
-             }
+        // Treasury Transactions
+        treasuryTransactions.forEach((tx:TreasuryTransaction) => {
+            if (tx.type === 'deposit' && !tx.linkedTransaction) {
+                entries.push({ account: getCashAccountName(tx.accountId), debit: tx.amount, credit: 0 });
+                entries.push({ account: 'رأس المال', credit: tx.amount, debit: 0 });
+            } else if (tx.type === 'withdrawal' && !tx.linkedTransaction) {
+                entries.push({ account: 'مسحوبات الشركاء', debit: tx.amount, credit: 0 });
+                entries.push({ account: getCashAccountName(tx.accountId), credit: tx.amount, debit: 0 });
+            }
+        });
+
+        // Profit Distribution
+        profitDistributions.forEach((d:any) => {
+             entries.push({ account: 'توزيعات أرباح', debit: d.amount, credit: 0 });
+             entries.push({ account: getCashAccountName(d.paidFromAccountId), credit: d.amount, debit: 0 });
         });
 
         return entries;
