@@ -38,6 +38,7 @@ interface SaleInvoice {
   paidAmount?: number;
   date: string;
   subtotal: number;
+  warehouseId: string;
 }
 interface PurchaseInvoice {
   id: string;
@@ -45,6 +46,8 @@ interface PurchaseInvoice {
   discount: number;
   paidAmount?: number;
   date: string;
+  warehouseId: string;
+  items: { id: string; qty: number; cost?: number }[];
 }
 interface Expense {
   id: string;
@@ -92,13 +95,25 @@ interface SalesReturn {
     total: number;
     customerId: string;
     date: string;
+    warehouseId: string;
+    items: { id: string; qty: number; }[];
 }
 interface PurchaseReturn {
     id: string;
     total: number;
     supplierId: string;
     date: string;
+    warehouseId: string;
+    items: { id: string; qty: number; }[];
 }
+interface StockInRecord { id: string; warehouseId: string; items: { id: string; name: string; qty: number; cost?: number; }[]; date: string;}
+interface StockOutRecord { id: string; sourceId: string; items: { id: string; name: string; qty: number; }[]; date: string;}
+interface StockTransferRecord { id: string; fromSourceId: string; toSourceId: string; items: { id: string; qty: number; }[]; date: string; }
+interface StockAdjustmentRecord { id: string; warehouseId: string; items: { itemId: string; difference: number; }[]; date: string;}
+interface IssueToRep { id: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
+interface ReturnFromRep { id: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
+interface WarehouseData { id: string; name: string; autoStockUpdate?: boolean; }
+interface InventoryClosing { id: string; warehouseId: string; closingDate: string; balances: { itemId: string, balance: number }[] }
 
 
 // --- Financial Statement Components ---
@@ -209,17 +224,30 @@ function IncomeStatement() {
 }
 
 function BalanceSheet() {
-    const { customers, suppliers, partners, items, salesInvoices, purchaseInvoices, customerPayments, supplierPayments, salesReturns, purchaseReturns, loading } = useData();
+    const { 
+        customers, suppliers, partners, items: allItems, salesInvoices, purchaseInvoices, 
+        customerPayments, supplierPayments, salesReturns, purchaseReturns, 
+        warehouses, stockInRecords, stockOutRecords, stockTransferRecords, stockAdjustmentRecords, 
+        stockIssuesToReps, stockReturnsFromReps, inventoryClosings,
+        loading 
+    } = useData();
 
     const { accountsReceivable, accountsPayable } = useMemo(() => {
         let ar = customers.reduce((acc: number, cust: any) => acc + (cust.openingBalance || 0), 0);
         let ap = suppliers.reduce((acc: number, sup: any) => acc + (sup.openingBalance || 0), 0);
         
-        salesInvoices.filter((s:any) => s.status === 'approved').forEach((s:any) => ar += s.total);
+        salesInvoices.filter((s:any) => s.status === 'approved').forEach((s:any) => {
+            ar += s.total;
+            ar -= (s.paidAmount || 0);
+        });
+
         customerPayments.forEach((p:any) => ar -= p.amount);
         salesReturns.forEach((sr:any) => ar -= sr.total);
         
-        purchaseInvoices.forEach((p:any) => ap += p.total);
+        purchaseInvoices.forEach((p:any) => {
+            ap += p.total;
+            ap -= (p.paidAmount || 0);
+        });
         supplierPayments.forEach((p:any) => ap -= p.amount);
         purchaseReturns.forEach((pr:any) => ap -= pr.total);
 
@@ -227,8 +255,59 @@ function BalanceSheet() {
     }, [customers, suppliers, salesInvoices, purchaseInvoices, customerPayments, supplierPayments, salesReturns, purchaseReturns]);
 
     const totalCapital = partners.reduce((acc:number, p:any) => acc + (p.capital || 0), 0);
-    // This is a simplified inventory valuation. A more accurate one would track purchases and sales of each item.
-    const inventoryValue = items.reduce((acc:number, item:any) => acc + ((item.openingStock || 0) * (item.price || 0)), 0);
+    
+    const inventoryValue = useMemo(() => {
+        let totalValue = 0;
+        warehouses.forEach((warehouse: WarehouseData) => {
+            allItems.forEach((item: Item) => {
+                const closingsForWarehouse = inventoryClosings.filter((c: InventoryClosing) => c.warehouseId === warehouse.id);
+                const lastClosing = closingsForWarehouse.length > 0 ? closingsForWarehouse.reduce((latest: any, current: any) => new Date(latest.closingDate) > new Date(current.closingDate) ? latest : current) : null;
+                const lastClosingDate = lastClosing ? new Date(lastClosing.closingDate) : new Date(0);
+                
+                let stock = lastClosing?.balances.find((b: any) => b.itemId === item.id)?.balance || 0;
+                
+                const filterTransactions = (t: any) => new Date(t.date) > lastClosingDate;
+                
+                // --- Stock Calculation ---
+                 const autoStockUpdate = warehouse?.autoStockUpdate;
+                // Increases
+                if (autoStockUpdate) {
+                    purchaseInvoices.filter(p => p.warehouseId === warehouse.id && filterTransactions(p)).forEach(p => p.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
+                }
+                stockInRecords.filter(si => si.warehouseId === warehouse.id && filterTransactions(si)).forEach(si => si.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
+                stockTransferRecords.filter(t => t.toSourceId === warehouse.id && filterTransactions(t)).forEach(t => t.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
+                stockAdjustmentRecords.filter(adj => adj.warehouseId === warehouse.id && filterTransactions(adj)).forEach(adj => adj.items.filter(i => i.itemId === item.id && i.difference > 0).forEach(i => stock += i.difference));
+                salesReturns.filter(sr => sr.warehouseId === warehouse.id && filterTransactions(sr)).forEach(sr => sr.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
+                stockReturnsFromReps.filter(rfr => rfr.warehouseId === warehouse.id && filterTransactions(rfr)).forEach(rfr => rfr.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
+                // Decreases
+                salesInvoices.filter(s => s.warehouseId === warehouse.id && s.status === 'approved' && filterTransactions(s)).forEach(s => s.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
+                stockOutRecords.filter(so => so.sourceId === warehouse.id && filterTransactions(so)).forEach(so => so.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
+                stockTransferRecords.filter(t => t.fromSourceId === warehouse.id && filterTransactions(t)).forEach(t => t.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
+                stockAdjustmentRecords.filter(adj => adj.warehouseId === warehouse.id && filterTransactions(adj)).forEach(adj => adj.items.filter(i => i.itemId === item.id && i.difference < 0).forEach(i => stock += i.difference));
+                purchaseReturns.filter(pr => pr.warehouseId === warehouse.id && filterTransactions(pr)).forEach(pr => pr.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
+                stockIssuesToReps.filter(itr => itr.warehouseId === warehouse.id && filterTransactions(itr)).forEach(itr => itr.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
+                // --- End Stock Calculation ---
+
+                if (stock > 0) {
+                     const lastPurchase = purchaseInvoices.filter((p: PurchaseInvoice) => p.warehouseId === warehouse.id && p.items.some(pi => pi.id === item.id && typeof pi.cost === 'number')).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+                     const lastStockIn = stockInRecords.filter((si: StockInRecord) => si.warehouseId === warehouse.id && si.items.some(si_item => si_item.id === item.id && typeof si_item.cost === 'number')).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+                     let latestCost = item.cost || 0;
+                     let lastPurchaseDate = lastPurchase ? new Date(lastPurchase.date) : new Date(0);
+                     let lastStockInDate = lastStockIn ? new Date(lastStockIn.date) : new Date(0);
+
+                     if (lastPurchaseDate > lastStockInDate) {
+                         const purchasedItem = lastPurchase.items.find(pi => pi.id === item.id);
+                         if (purchasedItem && typeof purchasedItem.cost === 'number') { latestCost = purchasedItem.cost; }
+                     } else if (lastStockInDate > lastPurchaseDate) {
+                         const stockInItem = lastStockIn.items.find(si_item => si_item.id === item.id);
+                         if (stockInItem && typeof stockInItem.cost === 'number') { latestCost = stockInItem.cost; }
+                     }
+                    totalValue += stock * latestCost;
+                }
+            });
+        });
+        return totalValue;
+    }, [allItems, warehouses, salesInvoices, purchaseInvoices, stockInRecords, stockOutRecords, stockTransferRecords, stockAdjustmentRecords, salesReturns, purchaseReturns, stockIssuesToReps, stockReturnsFromReps, inventoryClosings]);
 
     const totalAssets = accountsReceivable + inventoryValue; // Assuming cash is managed separately
     const totalLiabilities = accountsPayable;
@@ -251,7 +330,7 @@ function BalanceSheet() {
                             <TableCell className="text-left">ج.م {accountsReceivable.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                         </TableRow>
                          <TableRow>
-                            <TableCell>قيمة المخزون (كرصيد افتتاحي)</TableCell>
+                            <TableCell>قيمة المخزون الحالية (بالتكلفة)</TableCell>
                             <TableCell className="text-left">ج.م {inventoryValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                         </TableRow>
                     </TableBody>
