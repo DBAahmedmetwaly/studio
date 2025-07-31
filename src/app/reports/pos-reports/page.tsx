@@ -93,9 +93,9 @@ export default function PosReportsPage() {
                 const sessionSales = posSales.filter((sale: PosSale) => {
                     if (!session.endTime) return false;
                     const saleDate = new Date(sale.date);
-                    // Corrected the logic here: it should be <= endTime, not < endTime
-                    // to include sales made up until the moment of closing.
-                    return saleDate >= new Date(session.startTime) && saleDate <= new Date(session.endTime);
+                    const sessionStartDate = new Date(session.startTime);
+                    const sessionEndDate = new Date(session.endTime);
+                    return saleDate >= sessionStartDate && saleDate <= sessionEndDate;
                 });
 
                 const cashiersData = session.cashierSessions ? Object.values(session.cashierSessions).map(cs => {
@@ -222,4 +222,3 @@ export default function PosReportsPage() {
         </>
     );
 }
-
