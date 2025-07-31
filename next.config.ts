@@ -1,4 +1,4 @@
-import type {NextConfig} from 'next';
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -18,18 +18,21 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  webpack: (config, { isServer }) => {
-    // Add a rule to handle .node files
-    config.module.rules.push({
-      test: /\.node$/,
-      use: 'node-loader',
-    });
+  webpack: (config, { isServer, dev, turbopack }) => {
+    // Apply custom webpack configurations only when not using Turbopack
+    if (!turbopack) {
+      // Add a rule to handle .node files
+      config.module.rules.push({
+        test: /\.node$/,
+        use: 'node-loader',
+      });
 
-    // Fix for require.extensions error with certain packages like handlebars
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      'handlebars': 'handlebars/dist/cjs/handlebars',
-    };
+      // Fix for require.extensions error with certain packages like handlebars
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        'handlebars': 'handlebars/dist/cjs/handlebars',
+      };
+    }
 
     return config;
   },
