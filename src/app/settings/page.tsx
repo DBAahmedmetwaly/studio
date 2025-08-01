@@ -35,7 +35,7 @@ interface GeneralSettings {
     companyName: string;
     companyAddress: string;
     language: 'ar' | 'en';
-    mobileFabPosition: 'bottom-right' | 'top-right';
+    mobileFabPosition: 'bottom-right' | 'top-right' | 'bottom-left' | 'top-left' | 'middle-right' | 'middle-left';
 }
 
 interface FinancialSettings {
@@ -156,6 +156,10 @@ export default function SettingsPage() {
                         <SelectContent>
                           <SelectItem value="bottom-right">أسفل اليمين</SelectItem>
                           <SelectItem value="top-right">أعلى اليمين</SelectItem>
+                          <SelectItem value="middle-right">وسط اليمين</SelectItem>
+                          <SelectItem value="bottom-left">أسفل اليسار</SelectItem>
+                          <SelectItem value="top-left">أعلى اليسار</SelectItem>
+                          <SelectItem value="middle-left">وسط اليسار</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -216,5 +220,3 @@ export default function SettingsPage() {
     </>
   );
 }
-
-    

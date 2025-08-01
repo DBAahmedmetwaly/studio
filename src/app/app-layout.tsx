@@ -288,7 +288,11 @@ const AppLayoutContent = ({ children }: { children: React.ReactNode }) => {
                 "rounded-full w-14 h-14 shadow-lg bg-primary text-primary-foreground hover:bg-primary/90",
                 {
                     'bottom-4 right-4': fabPosition === 'bottom-right',
-                    'top-4 right-4': fabPosition === 'top-right'
+                    'top-4 right-4': fabPosition === 'top-right',
+                    'bottom-4 left-4': fabPosition === 'bottom-left',
+                    'top-4 left-4': fabPosition === 'top-left',
+                    'top-1/2 -translate-y-1/2 right-4': fabPosition === 'middle-right',
+                    'top-1/2 -translate-y-1/2 left-4': fabPosition === 'middle-left',
                 }
             )} />
         </div>
