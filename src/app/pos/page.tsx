@@ -59,19 +59,29 @@ export default function PosPage() {
     const [searchTerm, setSearchTerm] = useState("");
     
     const openWorkDay = useMemo(() => posSessions.find((s: any) => !s.isClosed), [posSessions]);
-    const hasOpenCashierSession = useMemo(() => {
-        if (!openWorkDay || !user) return false;
-        const cashierSession = openWorkDay.cashierSessions?.[user.id];
-        return cashierSession && !cashierSession.isClosed;
+    
+    const activeCashierSession = useMemo(() => {
+        if (!openWorkDay || !user) return null;
+        return openWorkDay.cashierSessions?.[user.id];
     }, [openWorkDay, user]);
+
+    const hasOpenCashierSession = useMemo(() => {
+       return activeCashierSession && !activeCashierSession.isClosed;
+    }, [activeCashierSession]);
 
     const companySettings = useMemo(() => settings?.main?.general || {}, [settings]);
     const receiptDesign = useMemo(() => settings?.posReceipt || {}, [settings]);
 
     const warehouseForCashier = useMemo(() => {
-        if (!user || !user.warehouse) return null;
-        return warehouses.find((w: any) => w.id === user.warehouse);
-    }, [user, warehouses]);
+        if (!user) return null;
+        const sessionWarehouseId = activeCashierSession?.sessionWarehouseId;
+        const userWarehouseId = user.warehouse;
+
+        const warehouseIdToUse = sessionWarehouseId || userWarehouseId;
+        if (!warehouseIdToUse || warehouseIdToUse === 'all') return null;
+
+        return warehouses.find((w: any) => w.id === warehouseIdToUse);
+    }, [user, warehouses, activeCashierSession]);
     
     const allowNegativeStock = useMemo(() => settings?.main?.financial?.allowNegativeStock || false, [settings]);
 
@@ -221,7 +231,7 @@ export default function PosPage() {
             change,
             cashierId: user?.id,
             cashierName: user?.name,
-            warehouseId: user?.warehouse, // Link the sale to the cashier's warehouse
+            warehouseId: warehouseForCashier?.id, // Link the sale to the cashier's warehouse for the session
         };
 
         try {

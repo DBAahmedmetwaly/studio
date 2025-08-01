@@ -47,21 +47,23 @@ interface CashierSession {
     difference?: number;
     remittedToAccountId?: string;
     custodyFromAccountId?: string;
+    sessionWarehouseId?: string; // Warehouse for this specific session
 }
 
-const AssignCustodyDialog = ({ users, onConfirm, onClose, cashAccounts, accountBalances }: { users: any[], onConfirm: (data: { cashierId: string, openingBalance: number, fromAccountId?: string }) => void, onClose: () => void, cashAccounts: any[], accountBalances: Map<string, number> }) => {
+const AssignCustodyDialog = ({ users, onConfirm, onClose, cashAccounts, accountBalances, warehouses }: { users: any[], onConfirm: (data: { cashierId: string, openingBalance: number, fromAccountId?: string, sessionWarehouseId?: string }) => void, onClose: () => void, cashAccounts: any[], accountBalances: Map<string, number>, warehouses: any[] }) => {
     const [cashierId, setCashierId] = useState('');
     const [openingBalance, setOpeningBalance] = useState(0);
     const [fromAccountId, setFromAccountId] = useState('');
+    const [sessionWarehouseId, setSessionWarehouseId] = useState('');
     
     const cashierOptions = useMemo(() => users.map(u => ({ value: u.id, label: u.name })), [users]);
+    const warehouseOptions = useMemo(() => warehouses.map(w => ({ value: w.id, label: w.name })), [warehouses]);
+    
+    const selectedCashier = useMemo(() => users.find(u => u.id === cashierId), [cashierId, users]);
+    const needsWarehouseSelection = selectedCashier && selectedCashier.warehouse === 'all';
+
 
     const handleSubmit = () => {
-        if (!cashierId || (openingBalance > 0 && !fromAccountId) || openingBalance < 0) {
-            alert("يرجى إدخال جميع البيانات بشكل صحيح.");
-            return;
-        }
-        
         if (openingBalance > 0 && fromAccountId) {
             const accountBalance = accountBalances.get(fromAccountId) || 0;
             if (accountBalance < openingBalance) {
@@ -70,11 +72,11 @@ const AssignCustodyDialog = ({ users, onConfirm, onClose, cashAccounts, accountB
             }
         }
         
-        onConfirm({ cashierId, openingBalance, fromAccountId: openingBalance > 0 ? fromAccountId : undefined });
+        onConfirm({ cashierId, openingBalance, fromAccountId: openingBalance > 0 ? fromAccountId : undefined, sessionWarehouseId: needsWarehouseSelection ? sessionWarehouseId : undefined });
         onClose();
     };
     
-    const isButtonDisabled = !cashierId || openingBalance < 0 || (openingBalance > 0 && !fromAccountId);
+    const isButtonDisabled = !cashierId || openingBalance < 0 || (openingBalance > 0 && !fromAccountId) || (needsWarehouseSelection && !sessionWarehouseId);
 
     return (
         <div className="space-y-4">
@@ -83,11 +85,25 @@ const AssignCustodyDialog = ({ users, onConfirm, onClose, cashAccounts, accountB
                  <Combobox
                     options={cashierOptions}
                     value={cashierId}
-                    onValueChange={setCashierId}
+                    onValueChange={(v) => { setCashierId(v); setSessionWarehouseId(''); }} // Reset warehouse on cashier change
                     placeholder="اختر الكاشير..."
                     emptyMessage="لم يتم العثور على كاشير."
                 />
             </div>
+            
+            {needsWarehouseSelection && (
+                <div className="space-y-2">
+                    <Label htmlFor="session-warehouse">مخزن العمل لهذه الوردية</Label>
+                    <Combobox
+                        options={warehouseOptions}
+                        value={sessionWarehouseId}
+                        onValueChange={setSessionWarehouseId}
+                        placeholder="اختر مخزن العمل..."
+                        emptyMessage="لم يتم العثور على مخزن."
+                    />
+                </div>
+            )}
+
             <div className="space-y-2">
                 <Label htmlFor="opening-balance">عهدة بداية الوردية</Label>
                 <Input id="opening-balance" type="number" value={openingBalance} onChange={e => setOpeningBalance(Number(e.target.value))} placeholder="0.00" />
@@ -156,7 +172,7 @@ const CloseCashierSessionDialog = ({ cashierSession, onConfirm, onClose }: { cas
 }
 
 export default function PosSessionsPage() {
-    const { posSales, posSessions, dbAction, users, loading, getNextId, cashAccounts, expenses, customerPayments, exceptionalIncomes, treasuryTransactions, supplierPayments, employeeAdvances } = useData();
+    const { posSales, posSessions, dbAction, users, loading, getNextId, cashAccounts, expenses, customerPayments, exceptionalIncomes, treasuryTransactions, supplierPayments, employeeAdvances, warehouses } = useData();
     const { toast } = useToast();
     const { user } = useAuth();
     
@@ -214,9 +230,9 @@ export default function PosSessionsPage() {
         }
     }
 
-    const handleAssignCustody = async (data: { cashierId: string, openingBalance: number, fromAccountId?: string }) => {
+    const handleAssignCustody = async (data: { cashierId: string, openingBalance: number, fromAccountId?: string, sessionWarehouseId?: string }) => {
         if (!openWorkDay) return;
-        const { cashierId, openingBalance, fromAccountId } = data;
+        const { cashierId, openingBalance, fromAccountId, sessionWarehouseId } = data;
         const cashier = users.find((u:any) => u.id === cashierId);
         if (!cashier) return;
 
@@ -226,7 +242,8 @@ export default function PosSessionsPage() {
             startTime: new Date().toISOString(),
             openingBalance: openingBalance,
             isClosed: false,
-            custodyFromAccountId: fromAccountId
+            custodyFromAccountId: fromAccountId,
+            sessionWarehouseId: sessionWarehouseId || cashier.warehouse,
         };
         
         // Record the expense for giving custody only if amount > 0
@@ -353,7 +370,7 @@ export default function PosSessionsPage() {
                                         description="اختر الكاشير وأدخل رصيد بداية الوردية."
                                         triggerButton={<Button><UserPlus className="ml-2 h-4 w-4" />تسليم عهدة جديدة</Button>}
                                     >
-                                        <AssignCustodyDialog users={availableCashiers} onConfirm={handleAssignCustody} onClose={()=>{}} cashAccounts={mainCashAccounts} accountBalances={accountBalances} />
+                                        <AssignCustodyDialog users={availableCashiers} onConfirm={handleAssignCustody} onClose={()=>{}} cashAccounts={mainCashAccounts} accountBalances={accountBalances} warehouses={warehouses} />
                                     </AddEntityDialog>
                                )}
                                 <Button variant="secondary" onClick={handleCloseWorkDay} disabled={!allSessionsClosed}>
