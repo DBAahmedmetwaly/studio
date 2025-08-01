@@ -46,7 +46,7 @@ interface TreasuryTransaction {
     linkedTransaction?: boolean;
 }
 
-interface Expense { id: string; amount: number; paidFromAccountId: string; }
+interface Expense { id: string; amount: number; paidFromAccountId: string; expenseType: string; }
 interface SupplierPayment { id: string; amount: number; paidFromAccountId: string; }
 interface EmployeeAdvance { id: string; amount: number; paidFromAccountId: string; }
 interface CustomerPayment { id: string; amount: number; paidToAccountId: string; }
@@ -170,29 +170,23 @@ export default function TreasuryPage() {
 
     const accountBalances = useMemo(() => {
         return cashAccounts.map(account => {
-            const openingBalance = account.openingBalance || 0;
+            let balance = account.openingBalance || 0;
 
-            const totalDeposits = [
-                ...customerPayments.filter((p:CustomerPayment) => p.paidToAccountId === account.id),
-                ...salesInvoices.filter((s:SaleInvoice) => s.status === 'approved' && s.paidToAccountId === account.id),
-                ...exceptionalIncomes.filter((i:any) => i.paidToAccountId === account.id),
-            ].reduce((sum, item) => sum + (item.amount || item.paidAmount || 0), 0);
+            // Deposits
+            customerPayments.filter((p:CustomerPayment) => p.paidToAccountId === account.id).forEach(p => balance += p.amount);
+            salesInvoices.filter((s:SaleInvoice) => s.status === 'approved' && s.paidToAccountId === account.id).forEach(s => balance += (s.paidAmount || 0));
+            exceptionalIncomes.filter((i:any) => i.paidToAccountId === account.id).forEach(i => balance += i.amount);
+            transactions.filter(tx => tx.accountId === account.id && tx.type === 'deposit').forEach(tx => balance += tx.amount);
 
-            const totalWithdrawals = [
-                ...expenses.filter(ex => ex.paidFromAccountId === account.id),
-                ...supplierPayments.filter(sp => sp.paidFromAccountId === account.id),
-                ...employeeAdvances.filter(ea => ea.paidFromAccountId === account.id)
-            ].reduce((sum, item) => sum + item.amount, 0);
-            
-            // Handle direct treasury transactions
-            const directDeposits = transactions.filter(tx => tx.accountId === account.id && tx.type === 'deposit').reduce((s,tx)=>s+tx.amount,0);
-            const directWithdrawals = transactions.filter(tx => tx.accountId === account.id && tx.type === 'withdrawal').reduce((s,tx)=>s+tx.amount,0);
-
-            const currentBalance = openingBalance + totalDeposits + directDeposits - totalWithdrawals - directWithdrawals;
+            // Withdrawals
+            expenses.filter(ex => ex.paidFromAccountId === account.id).forEach(ex => balance -= ex.amount);
+            supplierPayments.filter(sp => sp.paidFromAccountId === account.id).forEach(sp => balance -= sp.amount);
+            employeeAdvances.filter(ea => ea.paidFromAccountId === account.id).forEach(ea => balance -= ea.amount);
+            transactions.filter(tx => tx.accountId === account.id && tx.type === 'withdrawal').forEach(tx => balance -= tx.amount);
 
             return {
                 ...account,
-                currentBalance
+                currentBalance: balance
             };
         });
     }, [cashAccounts, transactions, expenses, supplierPayments, employeeAdvances, customerPayments, salesInvoices, exceptionalIncomes]);

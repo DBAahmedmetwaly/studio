@@ -45,11 +45,29 @@ interface CashierSession {
     actualCash?: number;
     difference?: number;
     remittedToAccountId?: string;
+    custodyFromAccountId?: string;
 }
 
-const AssignCustodyDialog = ({ users, onConfirm, onClose }: { users: any[], onConfirm: (data: { cashierId: string, openingBalance: number }) => void, onClose: () => void }) => {
+const AssignCustodyDialog = ({ users, onConfirm, onClose, cashAccounts, accountBalances }: { users: any[], onConfirm: (data: { cashierId: string, openingBalance: number, fromAccountId: string }) => void, onClose: () => void, cashAccounts: any[], accountBalances: Map<string, number> }) => {
     const [cashierId, setCashierId] = useState('');
     const [openingBalance, setOpeningBalance] = useState(0);
+    const [fromAccountId, setFromAccountId] = useState('');
+
+    const handleSubmit = () => {
+        if (!cashierId || !fromAccountId || openingBalance <= 0) {
+            alert("يرجى إدخال جميع البيانات بشكل صحيح.");
+            return;
+        }
+
+        const accountBalance = accountBalances.get(fromAccountId) || 0;
+        if (accountBalance < openingBalance) {
+            alert(`رصيد الخزينة المحدد (${accountBalance.toLocaleString()}) غير كافٍ لصرف عهدة بقيمة ${openingBalance.toLocaleString()}.`);
+            return;
+        }
+        
+        onConfirm({ cashierId, openingBalance, fromAccountId });
+        onClose();
+    };
 
     return (
         <div className="space-y-4">
@@ -66,8 +84,17 @@ const AssignCustodyDialog = ({ users, onConfirm, onClose }: { users: any[], onCo
                 <Label htmlFor="opening-balance">عهدة بداية الوردية</Label>
                 <Input id="opening-balance" type="number" value={openingBalance} onChange={e => setOpeningBalance(Number(e.target.value))} placeholder="0.00" />
             </div>
+            <div className="space-y-2">
+                <Label htmlFor="from-account">صرف من خزينة</Label>
+                <Select value={fromAccountId} onValueChange={setFromAccountId}>
+                     <SelectTrigger id="from-account"><SelectValue placeholder="اختر الخزينة" /></SelectTrigger>
+                    <SelectContent>
+                        {cashAccounts.map((acc:any) => <SelectItem key={acc.id} value={acc.id}>{`${acc.name} (الرصيد: ${(accountBalances.get(acc.id) || 0).toLocaleString()})`}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+            </div>
             <div className="flex justify-end">
-                <Button onClick={() => onConfirm({ cashierId, openingBalance })} disabled={!cashierId}>تسليم العهدة وبدء الوردية</Button>
+                <Button onClick={handleSubmit} disabled={!cashierId || !fromAccountId || openingBalance <= 0}>تسليم العهدة وبدء الوردية</Button>
             </div>
         </div>
     )
@@ -119,12 +146,32 @@ const CloseCashierSessionDialog = ({ cashierSession, onConfirm, onClose }: { cas
 }
 
 export default function PosSessionsPage() {
-    const { posSales, posSessions, dbAction, users, loading, getNextId } = useData();
+    const { posSales, posSessions, dbAction, users, loading, getNextId, cashAccounts, expenses, customerPayments, exceptionalIncomes, treasuryTransactions, supplierPayments, employeeAdvances } = useData();
     const { toast } = useToast();
     const { user } = useAuth();
     
     const openWorkDay = useMemo(() => posSessions.find((s: any) => !s.isClosed), [posSessions]);
     const cashiers = users.filter((u:any) => u.isCashier);
+    const mainCashAccounts = useMemo(() => cashAccounts.filter((acc:any) => !acc.salesRepId && !acc.userId), [cashAccounts]);
+
+    const accountBalances = useMemo(() => {
+        const balances = new Map<string, number>();
+        mainCashAccounts.forEach((account:any) => {
+            let balance = account.openingBalance || 0;
+            // Add other transactions to calculate current balance
+             customerPayments.filter((p: any) => p.paidToAccountId === account.id).forEach((p:any) => balance += p.amount);
+             exceptionalIncomes.filter((i: any) => i.paidToAccountId === account.id).forEach((i:any) => balance += i.amount);
+             treasuryTransactions.filter((tx:any) => tx.accountId === account.id && tx.type === 'deposit').forEach((tx:any) => balance += tx.amount);
+
+             expenses.filter((ex: any) => ex.paidFromAccountId === account.id).forEach((ex:any) => balance -= ex.amount);
+             supplierPayments.filter((sp: any) => sp.paidFromAccountId === account.id).forEach((sp:any) => balance -= sp.amount);
+             treasuryTransactions.filter((tx:any) => tx.accountId === account.id && tx.type === 'withdrawal').forEach((tx:any) => balance -= tx.amount);
+             employeeAdvances.filter((ea: any) => ea.paidFromAccountId === account.id).forEach((ea:any) => balance -= ea.amount);
+
+            balances.set(account.id, balance);
+        });
+        return balances;
+    }, [mainCashAccounts, customerPayments, exceptionalIncomes, treasuryTransactions, expenses, supplierPayments, employeeAdvances]);
 
     const cashierSessionsData = useMemo(() => {
         if (!openWorkDay) return [];
@@ -157,9 +204,9 @@ export default function PosSessionsPage() {
         }
     }
 
-    const handleAssignCustody = async (data: { cashierId: string, openingBalance: number }) => {
+    const handleAssignCustody = async (data: { cashierId: string, openingBalance: number, fromAccountId: string }) => {
         if (!openWorkDay) return;
-        const { cashierId, openingBalance } = data;
+        const { cashierId, openingBalance, fromAccountId } = data;
         const cashier = users.find((u:any) => u.id === cashierId);
         if (!cashier) return;
 
@@ -169,7 +216,17 @@ export default function PosSessionsPage() {
             startTime: new Date().toISOString(),
             openingBalance: openingBalance,
             isClosed: false,
+            custodyFromAccountId: fromAccountId
         };
+        
+        // Record the expense for giving custody
+        await dbAction('expenses', 'add', {
+            date: new Date().toISOString(),
+            amount: openingBalance,
+            expenseType: 'عهدة موظف',
+            description: `صرف عهدة بداية الوردية للكاشير ${cashier.name}`,
+            paidFromAccountId: fromAccountId
+        });
 
         const updatedSessions = { ...openWorkDay.cashierSessions, [cashierId]: newCashierSession };
         await dbAction('posSessions', 'update', { id: openWorkDay.id, data: { cashierSessions: updatedSessions } });
@@ -284,7 +341,7 @@ export default function PosSessionsPage() {
                                         description="اختر الكاشير وأدخل رصيد بداية الوردية."
                                         triggerButton={<Button><UserPlus className="ml-2 h-4 w-4" />تسليم عهدة جديدة</Button>}
                                     >
-                                        <AssignCustodyDialog users={availableCashiers} onConfirm={handleAssignCustody} onClose={()=>{}} />
+                                        <AssignCustodyDialog users={availableCashiers} onConfirm={handleAssignCustody} onClose={()=>{}} cashAccounts={mainCashAccounts} accountBalances={accountBalances} />
                                     </AddEntityDialog>
                                )}
                                 <Button variant="secondary" onClick={handleCloseWorkDay} disabled={!allSessionsClosed}>
