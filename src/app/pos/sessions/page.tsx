@@ -20,6 +20,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/auth-context';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Combobox } from '@/components/ui/combobox';
 
 interface PosSession {
     id: string;
@@ -52,6 +53,8 @@ const AssignCustodyDialog = ({ users, onConfirm, onClose, cashAccounts, accountB
     const [cashierId, setCashierId] = useState('');
     const [openingBalance, setOpeningBalance] = useState(0);
     const [fromAccountId, setFromAccountId] = useState('');
+    
+    const cashierOptions = useMemo(() => users.map(u => ({ value: u.id, label: u.name })), [users]);
 
     const handleSubmit = () => {
         if (!cashierId || !fromAccountId || openingBalance <= 0) {
@@ -73,12 +76,13 @@ const AssignCustodyDialog = ({ users, onConfirm, onClose, cashAccounts, accountB
         <div className="space-y-4">
             <div className="space-y-2">
                 <Label htmlFor="cashier">الكاشير</Label>
-                <Select value={cashierId} onValueChange={setCashierId}>
-                    <SelectTrigger><SelectValue placeholder="اختر الكاشير" /></SelectTrigger>
-                    <SelectContent>
-                        {users.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
-                    </SelectContent>
-                </Select>
+                 <Combobox
+                    options={cashierOptions}
+                    value={cashierId}
+                    onValueChange={setCashierId}
+                    placeholder="اختر الكاشير..."
+                    emptyMessage="لم يتم العثور على كاشير."
+                />
             </div>
             <div className="space-y-2">
                 <Label htmlFor="opening-balance">عهدة بداية الوردية</Label>
@@ -259,9 +263,9 @@ export default function PosSessionsPage() {
         if (difference !== 0) {
             const receiptNumber = `ت-ي-${await getNextId('dailyClosing')}`;
             if (difference > 0) {
-                await dbAction('exceptionalIncomes', 'add', { date: new Date().toISOString(), amount: difference, description: `فائض وردية الكاشير ${sessionToClose.cashierName}` });
+                await dbAction('exceptionalIncomes', 'add', { date: new Date().toISOString(), amount: difference, paidToAccountId: toAccountId, description: `فائض وردية الكاشير ${sessionToClose.cashierName}` });
             } else {
-                await dbAction('expenses', 'add', { date: new Date().toISOString(), amount: Math.abs(difference), description: `عجز وردية الكاشير ${sessionToClose.cashierName}`, expenseType: "عجز خزينة" });
+                await dbAction('expenses', 'add', { date: new Date().toISOString(), amount: Math.abs(difference), paidFromAccountId: toAccountId, description: `عجز وردية الكاشير ${sessionToClose.cashierName}`, expenseType: "عجز خزينة" });
             }
         }
         if (actualCash > 0) {
@@ -278,7 +282,7 @@ export default function PosSessionsPage() {
 
     const availableCashiers = useMemo(() => {
         if (!openWorkDay || !cashiers) return [];
-        const activeCashierIds = new Set(Object.keys(openWorkDay.cashierSessions || {}));
+        const activeCashierIds = new Set(Object.keys(openWorkDay.cashierSessions || {}).filter(key => !openWorkDay.cashierSessions[key].isClosed));
         return cashiers.filter((c:any) => !activeCashierIds.has(c.id));
     }, [openWorkDay, cashiers]);
 
@@ -367,4 +371,3 @@ export default function PosSessionsPage() {
         </>
     );
 }
-
