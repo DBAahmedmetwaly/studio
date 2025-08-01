@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import PageHeader from "@/components/page-header";
@@ -484,8 +483,8 @@ export default function SalesInvoicePage() {
                     </div>
                     </div>
                     
-                    <div className="flex justify-between items-start">
-                        <div className="w-full max-w-sm space-y-2 text-sm">
+                    <div className="flex flex-col-reverse md:flex-row justify-between items-start gap-8">
+                        <div className="w-full md:max-w-sm space-y-2 text-sm mt-4 md:mt-0">
                             <Alert>
                                 <Info className="h-4 w-4" />
                                 <AlertTitle>القيد المحاسبي المتوقع</AlertTitle>
@@ -508,7 +507,7 @@ export default function SalesInvoicePage() {
                                 </AlertDescription>
                             </Alert>
                         </div>
-                        <div className="w-full max-w-sm space-y-4">
+                        <div className="w-full md:max-w-sm space-y-4">
                             <div className="space-y-2">
                                 <div className="flex justify-between">
                                     <span>الإجمالي الفرعي</span>

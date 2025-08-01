@@ -65,14 +65,14 @@ const DistributionForm = ({ onSave, partners, cashAccounts }: { onSave: (data: O
     return (
         <form onSubmit={handleSubmit}>
             <div className="grid gap-4 py-4">
-                 <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="dist-date" className="text-right">التاريخ</Label>
-                    <Input id="dist-date" type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="col-span-3" required/>
+                 <div className="space-y-2">
+                    <Label htmlFor="dist-date">التاريخ</Label>
+                    <Input id="dist-date" type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} required/>
                 </div>
-                 <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="dist-partner" className="text-right">الشريك</Label>
+                 <div className="space-y-2">
+                    <Label htmlFor="dist-partner">الشريك</Label>
                     <Select value={formData.partnerId} onValueChange={v => setFormData({...formData, partnerId: v})} required>
-                        <SelectTrigger className="col-span-3">
+                        <SelectTrigger>
                             <SelectValue placeholder="اختر شريكًا" />
                         </SelectTrigger>
                         <SelectContent>
@@ -80,10 +80,10 @@ const DistributionForm = ({ onSave, partners, cashAccounts }: { onSave: (data: O
                         </SelectContent>
                     </Select>
                 </div>
-                 <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="paid-from" className="text-right">مدفوع من</Label>
+                 <div className="space-y-2">
+                    <Label htmlFor="paid-from">مدفوع من</Label>
                     <Select value={formData.paidFromAccountId} onValueChange={v => setFormData({...formData, paidFromAccountId: v})} required>
-                        <SelectTrigger className="col-span-3">
+                        <SelectTrigger>
                             <SelectValue placeholder="اختر حساب الدفع" />
                         </SelectTrigger>
                         <SelectContent>
@@ -91,13 +91,13 @@ const DistributionForm = ({ onSave, partners, cashAccounts }: { onSave: (data: O
                         </SelectContent>
                     </Select>
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="dist-amount" className="text-right">المبلغ</Label>
-                    <Input id="dist-amount" type="number" value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value as any})} className="col-span-3" placeholder="أدخل مبلغ التوزيع" required/>
+                <div className="space-y-2">
+                    <Label htmlFor="dist-amount">المبلغ</Label>
+                    <Input id="dist-amount" type="number" value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value as any})} placeholder="أدخل مبلغ التوزيع" required/>
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="dist-notes" className="text-right">ملاحظات</Label>
-                    <Textarea id="dist-notes" value={formData.notes || ''} onChange={e => setFormData({...formData, notes: e.target.value})} className="col-span-3" placeholder="أدخل أي ملاحظات (اختياري)" />
+                <div className="space-y-2">
+                    <Label htmlFor="dist-notes">ملاحظات</Label>
+                    <Textarea id="dist-notes" value={formData.notes || ''} onChange={e => setFormData({...formData, notes: e.target.value})} placeholder="أدخل أي ملاحظات (اختياري)" />
                 </div>
             </div>
              <Alert className="mt-4">

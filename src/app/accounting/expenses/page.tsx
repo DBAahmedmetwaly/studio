@@ -71,14 +71,14 @@ const ExpenseForm = ({ expense, onSave, onClose, warehouses, cashAccounts }: { e
     return (
         <form onSubmit={handleSubmit}>
             <div className="grid gap-4 py-4">
-                 <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="expense-date" className="text-right">التاريخ</Label>
-                    <Input id="expense-date" type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} className="col-span-3" required/>
+                 <div className="space-y-2">
+                    <Label htmlFor="expense-date">التاريخ</Label>
+                    <Input id="expense-date" type="date" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} required/>
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="expense-type" className="text-right">نوع المصروف</Label>
+                <div className="space-y-2">
+                    <Label htmlFor="expense-type">نوع المصروف</Label>
                     <Select value={formData.expenseType} onValueChange={v => setFormData({...formData, expenseType: v})} required>
-                        <SelectTrigger className="col-span-3">
+                        <SelectTrigger>
                             <SelectValue placeholder="اختر نوع المصروف" />
                         </SelectTrigger>
                         <SelectContent>
@@ -86,18 +86,18 @@ const ExpenseForm = ({ expense, onSave, onClose, warehouses, cashAccounts }: { e
                         </SelectContent>
                     </Select>
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="expense-amount" className="text-right">المبلغ</Label>
-                    <Input id="expense-amount" type="number" value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value as any})} className="col-span-3" placeholder="أدخل مبلغ المصروف" required/>
+                <div className="space-y-2">
+                    <Label htmlFor="expense-amount">المبلغ</Label>
+                    <Input id="expense-amount" type="number" value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value as any})} placeholder="أدخل مبلغ المصروف" required/>
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="expense-description" className="text-right">الوصف</Label>
-                    <Textarea id="expense-description" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="col-span-3" placeholder="أدخل وصفًا للمصروف" required/>
+                <div className="space-y-2">
+                    <Label htmlFor="expense-description">الوصف</Label>
+                    <Textarea id="expense-description" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="أدخل وصفًا للمصروف" required/>
                 </div>
-                 <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="expense-warehouse" className="text-right">تحميل على</Label>
+                 <div className="space-y-2">
+                    <Label htmlFor="expense-warehouse">تحميل على</Label>
                     <Select value={formData.warehouseId} onValueChange={v => setFormData({...formData, warehouseId: v})}>
-                        <SelectTrigger className="col-span-3">
+                        <SelectTrigger>
                             <SelectValue placeholder="اختياري: اختر مخزنًا" />
                         </SelectTrigger>
                         <SelectContent>
@@ -106,10 +106,10 @@ const ExpenseForm = ({ expense, onSave, onClose, warehouses, cashAccounts }: { e
                         </SelectContent>
                     </Select>
                 </div>
-                 <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="paid-from" className="text-right">مدفوع من</Label>
+                 <div className="space-y-2">
+                    <Label htmlFor="paid-from">مدفوع من</Label>
                     <Select value={formData.paidFromAccountId} onValueChange={v => setFormData({...formData, paidFromAccountId: v})} required>
-                        <SelectTrigger className="col-span-3">
+                        <SelectTrigger>
                             <SelectValue placeholder="اختر حساب الدفع" />
                         </SelectTrigger>
                         <SelectContent>
@@ -118,14 +118,6 @@ const ExpenseForm = ({ expense, onSave, onClose, warehouses, cashAccounts }: { e
                     </Select>
                 </div>
             </div>
-            <Alert className="mt-4">
-                <Info className="h-4 w-4" />
-                <AlertTitle>القيد المحاسبي المتوقع</AlertTitle>
-                <AlertDescription>
-                    من ح/ {formData.expenseType || "المصروفات"} (مدين) <br/>
-                    إلى ح/ {cashAccounts.find(c => c.id === formData.paidFromAccountId)?.name || "النقدية"} (دائن)
-                </AlertDescription>
-            </Alert>
             <div className="flex justify-end mt-4">
                 <Button type="submit">
                     <PlusCircle className="ml-2 h-4 w-4" />
@@ -191,6 +183,14 @@ export default function ExpensesPage() {
             </CardHeader>
             <CardContent>
                 <ExpenseForm onSave={handleSave} onClose={()=>{}} warehouses={warehouses} cashAccounts={cashAccounts} />
+                 <Alert className="mt-4">
+                    <Info className="h-4 w-4" />
+                    <AlertTitle>القيد المحاسبي المتوقع</AlertTitle>
+                    <AlertDescription>
+                        من ح/ المصروفات (مدين) <br/>
+                        إلى ح/ النقدية أو البنك (دائن)
+                    </AlertDescription>
+                </Alert>
             </CardContent>
             </Card>
             
