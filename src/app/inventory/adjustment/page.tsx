@@ -15,6 +15,8 @@ import useFirebase from "@/hooks/use-firebase";
 import { useToast } from "@/hooks/use-toast";
 import { Combobox } from "@/components/ui/combobox";
 import { useAuth } from "@/contexts/auth-context";
+import { useData } from "@/contexts/data-provider";
+
 
 interface AdjustmentItem {
   itemId: string;
@@ -30,7 +32,7 @@ interface Item {
     name: string;
 }
 interface Warehouse { id: string; name: string; }
-interface SaleInvoice { id: string; warehouseId: string; items: { id: string; qty: number; }[]; }
+interface SaleInvoice { id: string; warehouseId: string; items: { id: string; qty: number; }[]; status?: 'approved'|'pending' }
 interface PurchaseInvoice { id: string; warehouseId: string; items: { id: string; qty: number; }[]; }
 interface StockInRecord { id: string; warehouseId: string; items: { id: string; qty: number; }[]; }
 interface StockOutRecord { id: string; sourceId: string; items: { id: string; qty: number; }[]; }
@@ -42,6 +44,12 @@ interface StockAdjustmentRecord {
     createdById?: string;
     createdByName?: string;
 }
+interface SalesReturn { id: string; warehouseId: string; items: { id: string; qty: number; }[]; }
+interface PurchaseReturn { id: string; warehouseId: string; items: { id: string; qty: number; }[]; }
+interface IssueToRep { id: string; warehouseId: string; items: { id: string; qty: number; }[]; }
+interface ReturnFromRep { id: string; warehouseId: string; items: { id: string; qty: number; }[]; }
+interface PosSale { id: string; warehouseId: string; items: { id: string; qty: number; }[]; }
+interface InventoryClosing { id: string; warehouseId: string; closingDate: string; balances: { itemId: string, balance: number }[] }
 
 
 export default function StockAdjustmentPage() {
@@ -52,17 +60,25 @@ export default function StockAdjustmentPage() {
     const [notes, setNotes] = useState<string>("");
     const { user } = useAuth();
     
-    const { data: availableItems, loading: l1 } = useFirebase<Item>('items');
-    const { data: warehouses, loading: l2 } = useFirebase<Warehouse>('warehouses');
-    const { data: sales, loading: l3 } = useFirebase<SaleInvoice>('salesInvoices');
-    const { data: purchases, loading: l4 } = useFirebase<PurchaseInvoice>('purchaseInvoices');
-    const { data: stockIns, loading: l5 } = useFirebase<StockInRecord>('stockInRecords');
-    const { data: stockOuts, loading: l6 } = useFirebase<StockOutRecord>('stockOutRecords');
-    const { data: transfers, loading: l7 } = useFirebase<StockTransferRecord>('stockTransferRecords');
-    const { data: adjustments, loading: l8 } = useFirebase<StockAdjustmentRecord>('stockAdjustmentRecords');
-    const { add: addAdjustmentRecord, getNextId } = useFirebase("stockAdjustmentRecords");
+    const { 
+        items: availableItems, 
+        warehouses, 
+        salesInvoices, 
+        stockInRecords, 
+        stockOutRecords, 
+        stockTransferRecords,
+        stockAdjustmentRecords,
+        salesReturns,
+        purchaseReturns,
+        stockIssuesToReps,
+        stockReturnsFromReps,
+        posSales,
+        inventoryClosings,
+        dbAction, 
+        getNextId, 
+        loading 
+    } = useData();
     
-    const loading = l1 || l2 || l3 || l4 || l5 || l6 || l7 || l8;
 
     const availableItemsForCombobox = useMemo(() => {
         return availableItems.map(item => ({ value: item.id, label: item.name }));
@@ -71,26 +87,41 @@ export default function StockAdjustmentPage() {
     const warehouseOptions = useMemo(() => warehouses.map(w => ({ value: w.id, label: w.name })), [warehouses]);
 
 
-    const calculateSystemStock = useCallback((itemId: string, warehouseId: string) => {
+    const calculateSystemStock = useCallback((itemId: string, warehouseId: string): number => {
         if (!itemId || !warehouseId) return 0;
         
-        let stock = 0;
-
+        const closingsForWarehouse = inventoryClosings.filter((c: InventoryClosing) => c.warehouseId === warehouseId);
+        const lastClosing = closingsForWarehouse.length > 0 ? closingsForWarehouse.reduce((latest: any, current: any) => new Date(latest.closingDate) > new Date(current.closingDate) ? latest : current) : null;
+        
+        let stock = lastClosing?.balances.find((b: any) => b.itemId === itemId)?.balance || 0;
+        const lastClosingDate = lastClosing ? new Date(lastClosing.closingDate) : new Date(0);
+        
+        const filterTransactions = (t: any) => new Date(t.date) > lastClosingDate;
+        
         // Increases
-        purchases.filter(p => p.warehouseId === warehouseId).forEach(p => p.items.filter(i => i.id === itemId).forEach(i => stock += i.qty));
-        stockIns.filter(si => si.warehouseId === warehouseId).forEach(si => si.items.filter(i => i.id === itemId).forEach(i => stock += i.qty));
-        transfers.filter(t => t.toSourceId === warehouseId).forEach(t => t.items.filter(i => i.id === itemId).forEach(i => stock += i.qty));
+        stockInRecords.filter((si: any) => si.warehouseId === warehouseId && filterTransactions(si)).forEach((si: any) => si.items.filter((i: any) => i.id === itemId).forEach((i: any) => stock += i.qty));
+        stockTransferRecords.filter((t: any) => t.toSourceId === warehouseId && filterTransactions(t)).forEach((t: any) => t.items.filter((i: any) => i.id === itemId).forEach((i: any) => stock += i.qty));
+        stockAdjustmentRecords.filter((adj: any) => adj.warehouseId === warehouseId && filterTransactions(adj)).forEach((adj: any) => adj.items.filter((i: any) => i.itemId === itemId && i.difference > 0).forEach((i: any) => stock += i.difference));
+        salesReturns.filter((sr: any) => sr.warehouseId === warehouseId && filterTransactions(sr)).forEach((sr: any) => sr.items.filter((i: any) => i.id === itemId).forEach((i: any) => stock += i.qty));
+        stockReturnsFromReps.filter((rfr: any) => rfr.warehouseId === warehouseId && filterTransactions(rfr)).forEach((rfr: any) => rfr.items.filter((i: any) => i.id === itemId).forEach((i: any) => stock += i.qty));
 
         // Decreases
-        sales.filter(s => s.warehouseId === warehouseId).forEach(s => s.items.filter(i => i.id === itemId).forEach(i => stock -= i.qty));
-        stockOuts.filter(so => so.sourceId === warehouseId).forEach(so => so.items.filter(i => i.id === itemId).forEach(i => stock -= i.qty));
-        transfers.filter(t => t.fromSourceId === warehouseId).forEach(t => t.items.filter(i => i.id === itemId).forEach(i => stock -= i.qty));
+        salesInvoices.filter((s: any) => s.warehouseId === warehouseId && s.status === 'approved' && filterTransactions(s)).forEach((s: any) => s.items.filter((i: any) => i.id === itemId).forEach((i: any) => stock -= i.qty));
+        posSales.filter((s: any) => s.warehouseId === warehouseId && filterTransactions(s)).forEach((s: any) => s.items.filter((i: any) => i.id === itemId).forEach((i: any) => stock -= i.qty));
+        stockOutRecords.filter((so: any) => so.sourceId === warehouseId && filterTransactions(so)).forEach((so: any) => so.items.filter((i: any) => i.id === itemId).forEach((i: any) => stock -= i.qty));
+        stockTransferRecords.filter((t: any) => t.fromSourceId === warehouseId && filterTransactions(t)).forEach((t: any) => t.items.filter((i: any) => i.id === itemId).forEach((i: any) => stock -= i.qty));
+        stockAdjustmentRecords.filter((adj: any) => adj.warehouseId === warehouseId && filterTransactions(adj)).forEach((adj: any) => adj.items.filter((i: any) => i.itemId === itemId && i.difference < 0).forEach((i: any) => stock += i.difference));
+        purchaseReturns.filter((pr: any) => pr.warehouseId === warehouseId && filterTransactions(pr)).forEach((pr: any) => pr.items.filter((i: any) => i.id === itemId).forEach((i: any) => stock -= i.qty));
+        stockIssuesToReps.filter((itr: any) => itr.warehouseId === warehouseId && filterTransactions(itr)).forEach((itr: any) => itr.items.filter((i: any) => i.id === itemId).forEach((i: any) => stock -= i.qty));
         
-        // Adjustments
-        adjustments.filter(adj => adj.warehouseId === warehouseId).forEach(adj => adj.items.filter(i => i.itemId === itemId).forEach(i => stock += i.difference));
-
         return stock;
-    }, [purchases, sales, stockIns, stockOuts, transfers, adjustments]);
+
+    }, [
+        inventoryClosings, stockInRecords, stockTransferRecords, stockAdjustmentRecords,
+        salesReturns, stockReturnsFromReps, salesInvoices, posSales, stockOutRecords,
+        purchaseReturns, stockIssuesToReps
+    ]);
+
 
     const handleAddItem = () => {
         if (!newItem.itemId || !selectedWarehouse) {
@@ -159,7 +190,7 @@ export default function StockAdjustmentPage() {
         };
 
         try {
-            await addAdjustmentRecord(record);
+            await dbAction('stockAdjustmentRecords', 'add', record);
             toast({ title: "تم بنجاح", description: `تم حفظ تسوية المخزون برقم إيصال: ${record.receiptNumber}` });
             resetForm();
         } catch(error) {

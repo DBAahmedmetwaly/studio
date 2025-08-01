@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import PageHeader from "@/components/page-header";
@@ -190,8 +191,6 @@ export default function SalesInvoicePage() {
             return [];
         }
         
-        const warehouse = warehouses.find((w: Warehouse) => w.id === warehouseId);
-        const autoStockUpdate = warehouse?.autoStockUpdate;
         const mainSettings = settings?.main;
         
         return allItems.map((item:any) => {
@@ -203,9 +202,6 @@ export default function SalesInvoicePage() {
             const filterTransactions = (t: any) => new Date(t.date) > lastClosingDate;
             
             // Increases
-            if (autoStockUpdate) {
-                purchases.filter(p => p.warehouseId === warehouseId && filterTransactions(p)).forEach(p => p.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
-            }
             stockIns.filter(si => si.warehouseId === warehouseId && filterTransactions(si)).forEach(si => si.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
             transfers.filter(t => t.toSourceId === warehouseId && filterTransactions(t)).forEach(t => t.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
             adjustments.filter(adj => adj.warehouseId === warehouseId && filterTransactions(adj)).forEach(adj => adj.items.filter(i => i.itemId === item.id && i.difference > 0).forEach(i => stock += i.difference));
