@@ -13,7 +13,7 @@ import {
   CardFooter
 } from "@/components/ui/card";
 import { useData } from "@/contexts/data-provider";
-import { Loader2, PlayCircle, PowerOff, Coins, TrendingDown, TrendingUp, HandCoins, UserCheck, UserPlus } from 'lucide-react';
+import { Loader2, PlayCircle, PowerOff, Coins, TrendingDown, TrendingUp, HandCoins, UserCheck, UserPlus, Warehouse } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { AddEntityDialog } from '@/components/add-entity-dialog';
 import { Label } from '@/components/ui/label';
@@ -206,14 +206,16 @@ export default function PosSessionsPage() {
         return activeCashierSessions.map((cs: any) => {
             const sessionSales = posSales.filter((sale: any) => sale.cashierId === cs.cashierId && new Date(sale.date) >= new Date(cs.startTime));
             const totalSalesValue = sessionSales.reduce((sum: number, sale: any) => sum + sale.total, 0);
+            const warehouse = warehouses.find((w:any) => w.id === cs.sessionWarehouseId);
             return {
                 ...cs,
                 totalSalesValue,
                 transactionCount: sessionSales.length,
-                expectedCash: cs.openingBalance + totalSalesValue
+                expectedCash: cs.openingBalance + totalSalesValue,
+                warehouseName: warehouse?.name || 'غير محدد'
             };
         });
-    }, [openWorkDay, posSales]);
+    }, [openWorkDay, posSales, warehouses]);
 
     const handleOpenWorkDay = async () => {
         try {
@@ -242,7 +244,7 @@ export default function PosSessionsPage() {
             startTime: new Date().toISOString(),
             openingBalance: openingBalance,
             isClosed: false,
-            custodyFromAccountId: fromAccountId || null, // Ensure null is saved instead of undefined
+            custodyFromAccountId: fromAccountId || null,
             sessionWarehouseId: sessionWarehouseId || cashier.warehouse,
         };
         
@@ -335,10 +337,11 @@ export default function PosSessionsPage() {
                             <CardContent className="space-y-4">
                                 {cashierSessionsData.map(cs => (
                                     <Card key={cs.cashierId} className="p-4">
-                                        <div className="flex justify-between items-center">
-                                            <div>
+                                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 items-center">
+                                            <div className="col-span-2 md:col-span-1">
                                                 <h3 className="font-bold flex items-center gap-2"><UserCheck />{cs.cashierName}</h3>
                                                 <p className="text-xs text-muted-foreground">بدأت في: {new Date(cs.startTime).toLocaleTimeString('ar-EG')}</p>
+                                                <p className="text-xs text-muted-foreground flex items-center gap-1"><Warehouse className="h-3 w-3" />{cs.warehouseName}</p>
                                             </div>
                                             <div className="text-center">
                                                 <p className="text-sm text-muted-foreground">مبيعات</p>
@@ -348,13 +351,15 @@ export default function PosSessionsPage() {
                                                 <p className="text-sm text-muted-foreground">متوقع</p>
                                                 <p className="font-bold">{cs.expectedCash.toLocaleString()} ج.م</p>
                                             </div>
-                                            <AddEntityDialog
-                                                title="إقفال وردية الكاشير"
-                                                description="تأكيد المبالغ وتوريدها إلى الخزينة الرئيسية."
-                                                triggerButton={<Button variant="destructive"><PowerOff className="ml-2 h-4 w-4"/>إقفال وردية</Button>}
-                                            >
-                                                <CloseCashierSessionDialog cashierSession={cs} onConfirm={(data) => handleCloseCashierSession(cs.cashierId, data)} onClose={()=>{}} />
-                                            </AddEntityDialog>
+                                            <div className="col-span-2 md:col-span-1 flex justify-end">
+                                                <AddEntityDialog
+                                                    title="إقفال وردية الكاشير"
+                                                    description="تأكيد المبالغ وتوريدها إلى الخزينة الرئيسية."
+                                                    triggerButton={<Button variant="destructive"><PowerOff className="ml-2 h-4 w-4"/>إقفال وردية</Button>}
+                                                >
+                                                    <CloseCashierSessionDialog cashierSession={cs} onConfirm={(data) => handleCloseCashierSession(cs.cashierId, data)} onClose={()=>{}} />
+                                                </AddEntityDialog>
+                                            </div>
                                         </div>
                                     </Card>
                                 ))}

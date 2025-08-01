@@ -12,10 +12,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useData } from "@/contexts/data-provider";
-import { Loader2, Printer, BarChart2, TrendingDown, TrendingUp, Coins, Percent, User, Calendar, Tag } from "lucide-react";
+import { Loader2, Printer, Calendar, Warehouse } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -64,7 +63,7 @@ interface User {
 
 export default function PosReportsPage() {
     const [filters, setFilters] = useState({ fromDate: '', toDate: '' });
-    const { posSales, posSessions, loading } = useData();
+    const { posSales, posSessions, loading, warehouses } = useData();
 
      useEffect(() => {
         const today = new Date().toISOString().split('T')[0];
@@ -105,9 +104,12 @@ export default function PosReportsPage() {
                     const netSales = totalSales - totalDiscount;
                     const totalCost = cashierSales.reduce((sum, s) => sum + s.items.reduce((itemSum, item) => itemSum + (item.cost * item.qty), 0), 0);
                     const profit = netSales - totalCost;
+                    const warehouseName = warehouses.find((w:any) => w.id === cs.sessionWarehouseId)?.name || 'غير محدد';
+
 
                     return {
                         name: cs.cashierName,
+                        warehouseName: warehouseName,
                         invoiceCount: cashierSales.length,
                         totalSales,
                         totalDiscount,
@@ -124,7 +126,7 @@ export default function PosReportsPage() {
                 }
 
             }).sort((a,b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
-    }, [posSessions, posSales, filters]);
+    }, [posSessions, posSales, filters, warehouses]);
 
 
     if (loading) {
@@ -179,7 +181,7 @@ export default function PosReportsPage() {
                                              <Table>
                                                 <TableHeader>
                                                     <TableRow>
-                                                        <TableHead>الكاشير</TableHead>
+                                                        <TableHead>الكاشير / المخزن</TableHead>
                                                         <TableHead className="text-center">عدد الفواتير</TableHead>
                                                         <TableHead className="text-center">إجمالي المبيعات</TableHead>
                                                         <TableHead className="text-center">إجمالي الخصومات</TableHead>
@@ -189,7 +191,10 @@ export default function PosReportsPage() {
                                                 <TableBody>
                                                     {session.cashiersData.map(cd => (
                                                         <TableRow key={cd.name}>
-                                                            <TableCell>{cd.name}</TableCell>
+                                                            <TableCell>
+                                                                <div>{cd.name}</div>
+                                                                <div className="text-xs text-muted-foreground flex items-center gap-1"><Warehouse className="h-3 w-3"/>{cd.warehouseName}</div>
+                                                            </TableCell>
                                                             <TableCell className="text-center">{cd.invoiceCount}</TableCell>
                                                             <TableCell className="text-center">{cd.totalSales.toLocaleString()} ج.م</TableCell>
                                                             <TableCell className="text-center text-destructive">{cd.totalDiscount.toLocaleString()} ج.م</TableCell>
