@@ -140,7 +140,9 @@ export default function AnalyticsPage() {
         const profitMap = new Map<string, { totalRevenue: number, totalCost: number }>();
         
         const processSaleItems = (saleItems: any[], itemMasterList: any[]) => {
+            if (!saleItems || !Array.isArray(saleItems)) return;
             saleItems.forEach(saleItem => {
+                if (!saleItem.id) return;
                 const itemMaster = itemMasterList.find(i => i.id === saleItem.id);
                 if (!itemMaster) return;
 

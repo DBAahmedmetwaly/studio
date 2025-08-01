@@ -93,8 +93,9 @@ export default function ItemProfitLossPage() {
         const resultsMap = new Map();
 
         const processSaleItems = (saleItems: any[]) => {
-             if (!saleItems) return;
+             if (!saleItems || !Array.isArray(saleItems)) return;
              saleItems.forEach(saleItem => {
+                if (!saleItem.id) return;
                 const itemMaster = items.find(i => i.id === saleItem.id);
                 if (!itemMaster) return;
 
