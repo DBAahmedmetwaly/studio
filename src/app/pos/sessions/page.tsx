@@ -242,7 +242,7 @@ export default function PosSessionsPage() {
             startTime: new Date().toISOString(),
             openingBalance: openingBalance,
             isClosed: false,
-            custodyFromAccountId: fromAccountId,
+            custodyFromAccountId: fromAccountId || null, // Ensure null is saved instead of undefined
             sessionWarehouseId: sessionWarehouseId || cashier.warehouse,
         };
         
