@@ -49,7 +49,7 @@ interface CashierSession {
     custodyFromAccountId?: string;
 }
 
-const AssignCustodyDialog = ({ users, onConfirm, onClose, cashAccounts, accountBalances }: { users: any[], onConfirm: (data: { cashierId: string, openingBalance: number, fromAccountId: string }) => void, onClose: () => void, cashAccounts: any[], accountBalances: Map<string, number> }) => {
+const AssignCustodyDialog = ({ users, onConfirm, onClose, cashAccounts, accountBalances }: { users: any[], onConfirm: (data: { cashierId: string, openingBalance: number, fromAccountId?: string }) => void, onClose: () => void, cashAccounts: any[], accountBalances: Map<string, number> }) => {
     const [cashierId, setCashierId] = useState('');
     const [openingBalance, setOpeningBalance] = useState(0);
     const [fromAccountId, setFromAccountId] = useState('');
@@ -57,20 +57,24 @@ const AssignCustodyDialog = ({ users, onConfirm, onClose, cashAccounts, accountB
     const cashierOptions = useMemo(() => users.map(u => ({ value: u.id, label: u.name })), [users]);
 
     const handleSubmit = () => {
-        if (!cashierId || !fromAccountId || openingBalance <= 0) {
+        if (!cashierId || (openingBalance > 0 && !fromAccountId) || openingBalance < 0) {
             alert("يرجى إدخال جميع البيانات بشكل صحيح.");
             return;
         }
-
-        const accountBalance = accountBalances.get(fromAccountId) || 0;
-        if (accountBalance < openingBalance) {
-            alert(`رصيد الخزينة المحدد (${accountBalance.toLocaleString()}) غير كافٍ لصرف عهدة بقيمة ${openingBalance.toLocaleString()}.`);
-            return;
+        
+        if (openingBalance > 0 && fromAccountId) {
+            const accountBalance = accountBalances.get(fromAccountId) || 0;
+            if (accountBalance < openingBalance) {
+                alert(`رصيد الخزينة المحدد (${accountBalance.toLocaleString()}) غير كافٍ لصرف عهدة بقيمة ${openingBalance.toLocaleString()}.`);
+                return;
+            }
         }
         
-        onConfirm({ cashierId, openingBalance, fromAccountId });
+        onConfirm({ cashierId, openingBalance, fromAccountId: openingBalance > 0 ? fromAccountId : undefined });
         onClose();
     };
+    
+    const isButtonDisabled = !cashierId || openingBalance < 0 || (openingBalance > 0 && !fromAccountId);
 
     return (
         <div className="space-y-4">
@@ -88,17 +92,19 @@ const AssignCustodyDialog = ({ users, onConfirm, onClose, cashAccounts, accountB
                 <Label htmlFor="opening-balance">عهدة بداية الوردية</Label>
                 <Input id="opening-balance" type="number" value={openingBalance} onChange={e => setOpeningBalance(Number(e.target.value))} placeholder="0.00" />
             </div>
-            <div className="space-y-2">
-                <Label htmlFor="from-account">صرف من خزينة</Label>
-                <Select value={fromAccountId} onValueChange={setFromAccountId}>
-                     <SelectTrigger id="from-account"><SelectValue placeholder="اختر الخزينة" /></SelectTrigger>
-                    <SelectContent>
-                        {cashAccounts.map((acc:any) => <SelectItem key={acc.id} value={acc.id}>{`${acc.name} (الرصيد: ${(accountBalances.get(acc.id) || 0).toLocaleString()})`}</SelectItem>)}
-                    </SelectContent>
-                </Select>
-            </div>
+            {openingBalance > 0 && (
+                <div className="space-y-2">
+                    <Label htmlFor="from-account">صرف من خزينة</Label>
+                    <Select value={fromAccountId} onValueChange={setFromAccountId}>
+                        <SelectTrigger id="from-account"><SelectValue placeholder="اختر الخزينة" /></SelectTrigger>
+                        <SelectContent>
+                            {cashAccounts.map((acc:any) => <SelectItem key={acc.id} value={acc.id}>{`${acc.name} (الرصيد: ${(accountBalances.get(acc.id) || 0).toLocaleString()})`}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+            )}
             <div className="flex justify-end">
-                <Button onClick={handleSubmit} disabled={!cashierId || !fromAccountId || openingBalance <= 0}>تسليم العهدة وبدء الوردية</Button>
+                <Button onClick={handleSubmit} disabled={isButtonDisabled}>تسليم العهدة وبدء الوردية</Button>
             </div>
         </div>
     )
@@ -208,7 +214,7 @@ export default function PosSessionsPage() {
         }
     }
 
-    const handleAssignCustody = async (data: { cashierId: string, openingBalance: number, fromAccountId: string }) => {
+    const handleAssignCustody = async (data: { cashierId: string, openingBalance: number, fromAccountId?: string }) => {
         if (!openWorkDay) return;
         const { cashierId, openingBalance, fromAccountId } = data;
         const cashier = users.find((u:any) => u.id === cashierId);
@@ -223,14 +229,16 @@ export default function PosSessionsPage() {
             custodyFromAccountId: fromAccountId
         };
         
-        // Record the expense for giving custody
-        await dbAction('expenses', 'add', {
-            date: new Date().toISOString(),
-            amount: openingBalance,
-            expenseType: 'عهدة موظف',
-            description: `صرف عهدة بداية الوردية للكاشير ${cashier.name}`,
-            paidFromAccountId: fromAccountId
-        });
+        // Record the expense for giving custody only if amount > 0
+        if (openingBalance > 0 && fromAccountId) {
+            await dbAction('expenses', 'add', {
+                date: new Date().toISOString(),
+                amount: openingBalance,
+                expenseType: 'عهدة موظف',
+                description: `صرف عهدة بداية الوردية للكاشير ${cashier.name}`,
+                paidFromAccountId: fromAccountId
+            });
+        }
 
         const updatedSessions = { ...openWorkDay.cashierSessions, [cashierId]: newCashierSession };
         await dbAction('posSessions', 'update', { id: openWorkDay.id, data: { cashierSessions: updatedSessions } });
