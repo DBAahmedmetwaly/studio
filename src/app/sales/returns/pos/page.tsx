@@ -55,7 +55,7 @@ export default function PosReturnPage() {
         const invoice = posSales.find((s: PosSale) => s.invoiceNumber === invoiceNumber);
         if (invoice) {
             setFoundInvoice(invoice);
-            setReturnedItems(invoice.items.map(item => ({...item, maxQty: item.qty, total: 0})));
+            setReturnedItems(invoice.items.map(item => ({...item, maxQty: item.qty, total: 0, qty: 0 })));
         } else {
             toast({ variant: 'destructive', title: 'خطأ', description: 'لم يتم العثور على فاتورة بهذا الرقم.' });
             setFoundInvoice(null);
@@ -130,16 +130,16 @@ export default function PosReturnPage() {
                         <CardTitle>البحث عن الفاتورة الأصلية</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="flex items-end gap-2">
+                        <form onSubmit={(e) => { e.preventDefault(); handleSearch(); }} className="flex items-end gap-2">
                              <div className="space-y-2 flex-1">
                                 <Label htmlFor="invoiceNumber">رقم فاتورة الكاشير</Label>
-                                <Input id="invoiceNumber" value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} placeholder="أدخل الرقم المطبوع على الإيصال..." />
+                                <Input id="invoiceNumber" value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} placeholder="أدخل الرقم المطبوع على الإيصال أو امسح الباركود ضوئيًا..." />
                             </div>
-                            <Button onClick={handleSearch} disabled={loading || !invoiceNumber}>
+                            <Button type="submit" disabled={loading || !invoiceNumber}>
                                 {loading ? <Loader2 className="animate-spin ml-2" /> : <Search className="ml-2 h-4 w-4" />}
                                 بحث
                             </Button>
-                        </div>
+                        </form>
                     </CardContent>
                 </Card>
                 

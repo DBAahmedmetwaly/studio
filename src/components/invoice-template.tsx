@@ -1,5 +1,6 @@
 
 import React from 'react';
+import Barcode from 'react-barcode';
 
 interface InvoiceTemplateProps {
   invoice: any; 
@@ -115,8 +116,14 @@ export const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({ invoice, compa
         <p style={{...pStyle, display: 'flex', justifyContent: 'space-between', fontWeight: 'bold'}}><span>المتبقي:</span> <span>{(invoice.total - (invoice.paidAmount || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></p>
       </div>
 
-      <div style={footerStyle}>
-        <p>شكرًا لتعاملكم معنا!</p>
+       <div style={footerStyle}>
+         {invoice.invoiceNumber && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
+                <Barcode value={invoice.invoiceNumber} height={40} displayValue={false} />
+                <p style={{ ...pStyle, letterSpacing: '2px' }}>{invoice.invoiceNumber}</p>
+            </div>
+         )}
+        <p>{company?.invoiceFooter || 'شكرًا لتعاملكم معنا!'}</p>
       </div>
     </div>
   );

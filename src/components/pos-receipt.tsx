@@ -1,6 +1,7 @@
 
 
 import React from 'react';
+import Barcode from 'react-barcode';
 
 export const PosReceipt = ({ invoice, company }: { invoice: any, company: any }) => {
   const receiptStyle: React.CSSProperties = {
@@ -100,7 +101,13 @@ export const PosReceipt = ({ invoice, company }: { invoice: any, company: any })
       </div>
 
       <div style={footerStyle}>
-        <p>شكرًا لتسوقكم معنا!</p>
+        {invoice.invoiceNumber && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
+                <Barcode value={invoice.invoiceNumber} height={40} displayValue={false} />
+                <p style={{ ...pStyle, letterSpacing: '2px' }}>{invoice.invoiceNumber}</p>
+            </div>
+        )}
+        <p style={{marginTop: '10px'}}>{company.invoiceFooter || 'شكرًا لتسوقكم معنا!'}</p>
       </div>
     </div>
   );

@@ -36,6 +36,7 @@ interface GeneralSettings {
     companyAddress: string;
     language: 'ar' | 'en';
     mobileFabPosition: 'bottom-right' | 'top-right' | 'bottom-left' | 'top-left' | 'middle-right' | 'middle-left';
+    invoiceFooter?: string;
 }
 
 interface FinancialSettings {
@@ -63,7 +64,7 @@ export default function SettingsPage() {
             } else {
                 // Initialize with default settings if none exist
                 setSettings({
-                    general: { companyName: '', companyAddress: '', language: 'ar', mobileFabPosition: 'bottom-right' },
+                    general: { companyName: '', companyAddress: '', language: 'ar', mobileFabPosition: 'bottom-right', invoiceFooter: '' },
                     financial: { openingCapital: 0, fiscalYearStart: '', currency: 'EGP', allowNegativeStock: false }
                 });
             }
@@ -133,6 +134,10 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <Label htmlFor="company-address">عنوان الشركة</Label>
                   <Textarea id="company-address" placeholder="أدخل عنوان الشركة" value={settings.general.companyAddress} onChange={e => handleGeneralChange('companyAddress', e.target.value)} />
+                </div>
+                 <div className="space-y-2">
+                  <Label htmlFor="company-footer">تذييل الفاتورة</Label>
+                  <Textarea id="company-footer" placeholder="أضف رسالة شكر أو معلومات إضافية تظهر في نهاية كل فاتورة..." value={settings.general.invoiceFooter || ''} onChange={e => handleGeneralChange('invoiceFooter', e.target.value)} />
                 </div>
                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
