@@ -357,6 +357,10 @@ export default function SalesInvoicePage() {
             label: `${item.name} (المتاح: ${item.stock})`
         }));
     }, [availableItemsForWarehouse]);
+    
+    const customersForCombobox = useMemo(() => {
+        return customers.map((c: any) => ({ value: c.id, label: c.name }));
+    }, [customers]);
 
 
   return (
@@ -396,14 +400,13 @@ export default function SalesInvoicePage() {
                     <div className="grid md:grid-cols-2 gap-6">
                         <div className="space-y-2">
                             <Label htmlFor="customer">العميل</Label>
-                            <Select value={customerId} onValueChange={setCustomerId}>
-                                <SelectTrigger id="customer">
-                                    <SelectValue placeholder="اختر عميلاً" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                   {customers.map((c:any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
+                            <Combobox
+                                options={customersForCombobox}
+                                value={customerId}
+                                onValueChange={setCustomerId}
+                                placeholder="اختر عميلاً..."
+                                emptyMessage="لم يتم العثور على العميل."
+                            />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="warehouse">من مخزن</Label>

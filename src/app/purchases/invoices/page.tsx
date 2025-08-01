@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { PlusCircle, Trash2, Printer, Save, Info, Loader2 } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useData } from "@/contexts/data-provider";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from 'next/navigation';
@@ -87,6 +87,10 @@ export default function PurchaseInvoicePage() {
   const itemsForCombobox = React.useMemo(() => {
     return availableItems.map((item: Item) => ({ value: item.id, label: item.name }));
   }, [availableItems]);
+  
+  const suppliersForCombobox = React.useMemo(() => {
+    return suppliers.map((s: Supplier) => ({ value: s.id, label: s.name }));
+  }, [suppliers]);
 
   useEffect(() => {
     const newSubtotal = items.reduce((acc, item) => acc + item.total, 0);
@@ -102,8 +106,8 @@ export default function PurchaseInvoicePage() {
     const today = new Date();
     const futureDate = new Date();
     futureDate.setDate(today.getDate() + 30);
-    setInvoiceDate(today.toLocaleDateString('ar-EG'));
-    setDueDate(futureDate.toLocaleDateString('ar-EG'));
+    setInvoiceDate(new Date().toISOString().split('T')[0]);
+    setDueDate(futureDate.toISOString().split('T')[0]);
   }, []);
 
   const handleAddItem = () => {
@@ -164,7 +168,8 @@ export default function PurchaseInvoicePage() {
 
             const invoiceData = {
                 invoiceNumber,
-                date: new Date().toISOString(),
+                date: new Date(invoiceDate).toISOString(),
+                dueDate: new Date(dueDate).toISOString(),
                 supplierId,
                 supplierName,
                 warehouseId,
@@ -232,8 +237,8 @@ export default function PurchaseInvoicePage() {
                 </div>
                 <div className="text-left text-sm md:text-base">
                     <div className="font-bold text-lg">فاتورة #(سيتم إنشاؤه)</div>
-                    <div>تاريخ الفاتورة: {invoiceDate}</div>
-                    <div>تاريخ الاستحقاق: {dueDate}</div>
+                    <div>تاريخ الفاتورة: {new Date(invoiceDate).toLocaleDateString('ar-EG')}</div>
+                    <div>تاريخ الاستحقاق: {new Date(dueDate).toLocaleDateString('ar-EG')}</div>
                 </div>
             </div>
           </CardHeader>
@@ -247,14 +252,13 @@ export default function PurchaseInvoicePage() {
                 <div className="grid md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                         <Label htmlFor="supplier">المورد</Label>
-                        <Select value={supplierId} onValueChange={setSupplierId}>
-                            <SelectTrigger id="supplier">
-                                <SelectValue placeholder="اختر موردًا" />
-                            </SelectTrigger>
-                            <SelectContent>
-                               {suppliers.map((s: Supplier) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
+                        <Combobox
+                          options={suppliersForCombobox}
+                          value={supplierId}
+                          onValueChange={setSupplierId}
+                          placeholder="اختر موردًا..."
+                          emptyMessage="لم يتم العثور على المورد."
+                        />
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="warehouse">المخزن المستلم</Label>
