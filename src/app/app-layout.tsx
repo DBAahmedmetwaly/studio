@@ -291,8 +291,8 @@ const AppLayoutContent = ({ children }: { children: React.ReactNode }) => {
                     'top-4 right-4': fabPosition === 'top-right',
                     'bottom-4 left-4': fabPosition === 'bottom-left',
                     'top-4 left-4': fabPosition === 'top-left',
-                    'top-1/2 -translate-y-1/2 right-4': fabPosition === 'middle-right',
-                    'top-1/2 -translate-y-1/2 left-4': fabPosition === 'middle-left',
+                    'top-1/2 right-4 -translate-y-1/2': fabPosition === 'middle-right',
+                    'top-1/2 left-4 -translate-y-1/2': fabPosition === 'middle-left',
                 }
             )} />
         </div>
