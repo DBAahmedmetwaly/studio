@@ -253,12 +253,13 @@ const AppLayoutContent = ({ children }: { children: React.ReactNode }) => {
                 <NavSubLink href="/hr/payroll" module="hr_payroll">احتساب الرواتب</NavSubLink>
             </NavCollapsible>
             
-            <NavCollapsible title="الإعدادات" icon={<Settings />} modules={['settings_users', 'settings_roles', 'settings_general', 'settings_backup', 'settings_periodClosing', 'settings_cashAccounts', 'settings_printers']}>
+            <NavCollapsible title="الإعدادات" icon={<Settings />} modules={['settings_users', 'settings_roles', 'settings_general', 'settings_backup', 'settings_periodClosing', 'settings_cashAccounts', 'settings_printers', 'settings_receiptDesigner']}>
               <NavSubLink href="/users" module="settings_users">المستخدمون</NavSubLink>
               <NavSubLink href="/roles" module="settings_roles">الوظائف والصلاحيات</NavSubLink>
               <NavSubLink href="/master-data/cash-accounts" module="settings_cashAccounts">الخزائن والبنوك</NavSubLink>
               <NavSubLink href="/settings" module="settings_general">الإعدادات العامة</NavSubLink>
               <NavSubLink href="/settings/printers" module="settings_printers">إعدادات الطباعة</NavSubLink>
+              <NavSubLink href="/settings/receipt-designer" module="settings_receiptDesigner">مصمم الإيصالات</NavSubLink>
               <NavSubLink href="/settings/backup" module="settings_backup">النسخ الاحتياطي</NavSubLink>
               <NavSubLink href="/settings/period-closing" module="settings_periodClosing">إقفال الفترات</NavSubLink>
             </NavCollapsible>

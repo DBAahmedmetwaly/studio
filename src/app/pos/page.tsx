@@ -65,6 +65,7 @@ export default function PosPage() {
     }, [openWorkDay, user]);
 
     const companySettings = useMemo(() => settings?.main?.general || {}, [settings]);
+    const receiptDesign = useMemo(() => settings?.posReceipt || {}, [settings]);
 
 
     const resetSale = useCallback(async () => {
@@ -169,7 +170,7 @@ export default function PosPage() {
                 const root = createRoot(printDocument.body);
                 root.render(
                     <React.StrictMode>
-                        <PosReceipt invoice={saleData} company={companySettings} />
+                        <PosReceipt invoice={saleData} company={companySettings} design={receiptDesign} />
                     </React.StrictMode>
                 );
                 
