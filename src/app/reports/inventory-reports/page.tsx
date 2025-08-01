@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
@@ -131,16 +132,12 @@ const StockStatusReport = ({ filters, data }: any) => {
                 ? closingsForWarehouse.reduce((latest:any, current:any) => new Date(latest.closingDate) > new Date(current.closingDate) ? latest : current)
                 : null;
             const lastClosingDate = lastClosing ? new Date(lastClosing.closingDate) : new Date(0);
-            const autoStockUpdate = warehouse.autoStockUpdate;
-
+            
             allItems.forEach((item: Item) => {
                 let stock = lastClosing?.balances.find((b:any) => b.itemId === item.id)?.balance || 0;
                 const filterTransactions = (t: any) => new Date(t.date) > lastClosingDate;
 
                 // Increases
-                if (autoStockUpdate) {
-                    purchaseInvoices.filter((p:any) => p.warehouseId === warehouse.id && filterTransactions(p)).forEach((p:any) => p.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
-                }
                 stockInRecords.filter((si:any) => si.warehouseId === warehouse.id && filterTransactions(si)).forEach((si:any) => si.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
                 stockTransferRecords.filter((t:any) => t.toSourceId === warehouse.id && filterTransactions(t)).forEach((t:any) => t.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
                 stockAdjustmentRecords.filter((adj:any) => adj.warehouseId === warehouse.id && filterTransactions(adj)).forEach((adj:any) => adj.items.filter((i:any) => i.itemId === item.id && i.difference > 0).forEach((i:any) => stock += i.difference));
@@ -223,14 +220,10 @@ const ItemLedgerReport = ({ filters, data }: any) => {
                 
                 stock += lastRelevantClosing?.balances.find((b:any) => b.itemId === itemId)?.balance || 0;
                 const txStartDate = lastRelevantClosing ? new Date(lastRelevantClosing.closingDate) : new Date(0);
-                const autoStockUpdate = warehouse.autoStockUpdate;
-
+                
                 const filterTxs = (t:any) => new Date(t.date) > txStartDate && new Date(t.date) < date;
                 
                 // Increases
-                if (autoStockUpdate) {
-                    purchaseInvoices.filter((t:any) => t.warehouseId === warehouse.id && filterTxs(t)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => stock += i.qty));
-                }
                 stockInRecords.filter((t:any) => t.warehouseId === warehouse.id && filterTxs(t)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => stock += i.qty));
                 stockTransferRecords.filter((t:any) => t.toSourceId === warehouse.id && filterTxs(t)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => stock += i.qty));
                 salesReturns.filter((t:any) => t.warehouseId === warehouse.id && filterTxs(t)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => stock += i.qty));
@@ -252,12 +245,8 @@ const ItemLedgerReport = ({ filters, data }: any) => {
         openingBalance = calculateStockUpTo(startDate);
         
         let transactions: any[] = [{ date: fromDate || 'بداية', description: "رصيد أول المدة", incoming: 0, outgoing: 0, balance: openingBalance }];
-        const autoStockUpdate = warehouses.find((w:any) => w.id === warehouseId)?.autoStockUpdate;
-
-        const purchaseTx = autoStockUpdate ? purchaseInvoices : [];
-
+        
         const withinPeriodTransactions = [
-            ...purchaseTx.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'in', qty: i.qty, warehouseId: t.warehouseId, source: `فاتورة شراء #${t.invoiceNumber}`}))),
             ...stockInRecords.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'in', qty: i.qty, warehouseId: t.warehouseId, source: `إذن استلام #${t.receiptNumber}`}))),
             ...salesReturns.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'in', qty: i.qty, warehouseId: t.warehouseId, source: `مرتجع بيع #${t.receiptNumber}`}))),
             ...stockReturnsFromReps.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'in', qty: i.qty, warehouseId: t.warehouseId, source: `مرتجع مندوب #${t.receiptNumber}`}))),

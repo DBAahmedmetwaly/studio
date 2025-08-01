@@ -258,7 +258,7 @@ export default function JournalPage() {
         });
 
         // Stock In Records (from purchase)
-        stockInRecords.filter((si:StockInRecord) => si.purchaseInvoiceId).forEach((si:StockInRecord) => {
+        stockInRecords.forEach((si:StockInRecord) => {
             const number = si.receiptNumber || `إذ-د-${si.id.slice(-4)}`;
             const warehouse = getWarehouse(si.warehouseId);
             const stockInValue = si.items.reduce((acc, item) => acc + (item.qty * (item.cost || 0)), 0);
