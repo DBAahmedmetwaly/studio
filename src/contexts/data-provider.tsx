@@ -17,7 +17,7 @@ interface DataContextType {
     itemGroups: any[];
     barcodeDesigns: any[];
     roles: any; 
-    settings: any[];
+    settings: any;
 
     // Inventory
     stockInRecords: any[];

@@ -167,8 +167,8 @@ const AppLayoutContent = ({ children }: { children: React.ReactNode }) => {
   const { user, signOut } = useAuth();
   const { toggleSidebar } = useSidebar();
   const { settings } = useData();
-
-  const generalSettings = settings.find((s:any) => s.id === 'main')?.general || {};
+  
+  const generalSettings = settings?.main?.general || {};
   const fabPosition = generalSettings.mobileFabPosition || 'bottom-right';
 
   return (

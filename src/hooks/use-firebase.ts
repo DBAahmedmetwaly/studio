@@ -25,9 +25,8 @@ const useFirebase = <T extends object>(path: string) => {
     const unsubscribe = onValue(dbRef, (snapshot) => {
         if (snapshot.exists()) {
             const snapshotData = snapshot.val();
-            // The 'roles' path has a different structure (object of objects)
-            // where the key is the role name. It should not be converted to an array.
-            if (path === 'roles' || path === '/') {
+            // Certain paths like 'roles' or 'settings' are single objects, not lists.
+            if (path === 'roles' || path === 'settings' || path === '/') {
                 setData(snapshotData);
             } else {
                  // All other paths are converted to arrays of objects with IDs.
