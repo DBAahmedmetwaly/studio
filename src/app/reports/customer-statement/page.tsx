@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import PageHeader from "@/components/page-header";
@@ -6,11 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
 import { useData } from "@/contexts/data-provider";
 import { Loader2, Printer } from "lucide-react";
 import React, { useState } from "react";
+import { Combobox } from "@/components/ui/combobox";
 
 interface SaleInvoice {
   id: string;
@@ -51,6 +52,8 @@ export default function CustomerStatementPage() {
   const [reportData, setReportData] = useState<any[] | null>(null);
 
   const { customers, salesInvoices, customerPayments, salesReturns, loading } = useData();
+  
+  const customerOptions = React.useMemo(() => customers.map(c => ({ value: c.id, label: c.name })), [customers]);
   
   const handleGenerateReport = () => {
     if (!selectedCustomerId) {
@@ -179,14 +182,13 @@ export default function CustomerStatementPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="customer">العميل</Label>
-                            <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="اختر عميلاً" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {customers.map((c: Customer) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
+                            <Combobox
+                                options={customerOptions}
+                                value={selectedCustomerId}
+                                onValueChange={setSelectedCustomerId}
+                                placeholder="اختر عميلاً..."
+                                emptyMessage="لم يتم العثور على العميل."
+                            />
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="from-date">من تاريخ</Label>

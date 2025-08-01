@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import PageHeader from "@/components/page-header";
@@ -6,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { PlusCircle, Trash2, Loader2 } from "lucide-react";
@@ -67,6 +67,9 @@ export default function StockAdjustmentPage() {
     const availableItemsForCombobox = useMemo(() => {
         return availableItems.map(item => ({ value: item.id, label: item.name }));
     }, [availableItems]);
+    
+    const warehouseOptions = useMemo(() => warehouses.map(w => ({ value: w.id, label: w.name })), [warehouses]);
+
 
     const calculateSystemStock = useCallback((itemId: string, warehouseId: string) => {
         if (!itemId || !warehouseId) return 0;
@@ -191,14 +194,13 @@ export default function StockAdjustmentPage() {
                     <div className="grid md:grid-cols-2 gap-6">
                         <div className="space-y-2">
                             <Label htmlFor="warehouse">المخزن</Label>
-                            <Select value={selectedWarehouse} onValueChange={setSelectedWarehouse}>
-                                <SelectTrigger id="warehouse">
-                                    <SelectValue placeholder="اختر المخزن" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                   {warehouses.map(w => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
+                            <Combobox
+                                options={warehouseOptions}
+                                value={selectedWarehouse}
+                                onValueChange={setSelectedWarehouse}
+                                placeholder="اختر المخزن..."
+                                emptyMessage="لم يتم العثور على مخزن."
+                            />
                         </div>
                     </div>
                     

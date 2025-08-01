@@ -23,11 +23,11 @@ import {
 import { Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useData } from '@/contexts/data-provider';
+import { Combobox } from '@/components/ui/combobox';
 
 interface SaleInvoice {
   id: string; date: string; customerName: string; total: number; warehouseId: string; discount: number; invoiceNumber?: string;
@@ -167,7 +167,7 @@ interface GroupedJournalEntry {
 
 export default function JournalPage() {
     const [filters, setFilters] = useState({
-        warehouseId: "all",
+        warehouseId: "",
         fromDate: "",
         toDate: ""
     });
@@ -440,7 +440,7 @@ export default function JournalPage() {
 
         if (from && entryDate < from) return false;
         if (to && entryDate > to) return false;
-        if (filters.warehouseId !== 'all' && entry.warehouseId !== filters.warehouseId && entry.warehouseId !== undefined) return false;
+        if (filters.warehouseId && filters.warehouseId !== 'all' && entry.warehouseId !== filters.warehouseId && entry.warehouseId !== undefined) return false;
 
         return true;
     });
@@ -474,6 +474,12 @@ export default function JournalPage() {
      const handleFilterChange = (key: keyof typeof filters, value: string) => {
         setFilters(prev => ({...prev, [key]: value}));
     }
+    
+    const warehouseOptions = React.useMemo(() => [
+        { value: 'all', label: 'كل المخازن' },
+        ...warehouses.map((w:Warehouse) => ({ value: w.id, label: w.name }))
+    ], [warehouses]);
+
 
     const getReceiptTooltip = (receiptNumber?: string): string => {
         if (!receiptNumber) return "رقم مرجعي";
@@ -515,15 +521,13 @@ export default function JournalPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                      <div className="space-y-2">
                         <Label>المخزن</Label>
-                        <Select value={filters.warehouseId} onValueChange={(v) => handleFilterChange("warehouseId", v)}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="اختر المخزن" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">كل المخازن</SelectItem>
-                                {warehouses.map((w:Warehouse) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
+                        <Combobox
+                            options={warehouseOptions}
+                            value={filters.warehouseId}
+                            onValueChange={(v) => handleFilterChange("warehouseId", v)}
+                            placeholder="اختر المخزن"
+                            emptyMessage="لم يتم العثور على مخزن."
+                        />
                     </div>
                      <div className="space-y-2">
                         <Label>من تاريخ</Label>

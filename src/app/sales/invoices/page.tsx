@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import PageHeader from "@/components/page-header";
@@ -6,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { PlusCircle, Trash2, Printer, Save, Loader2, Info } from "lucide-react";
@@ -361,6 +361,9 @@ export default function SalesInvoicePage() {
     const customersForCombobox = useMemo(() => {
         return customers.map((c: any) => ({ value: c.id, label: c.name }));
     }, [customers]);
+    
+    const warehouseOptions = useMemo(() => warehouses.map((w: any) => ({ value: w.id, label: w.name })), [warehouses]);
+    const cashAccountOptions = useMemo(() => cashAccounts.map((c: any) => ({ value: c.id, label: c.name })), [cashAccounts]);
 
 
   return (
@@ -410,14 +413,14 @@ export default function SalesInvoicePage() {
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="warehouse">من مخزن</Label>
-                            <Select value={warehouseId} onValueChange={setWarehouseId} disabled={isRep}>
-                                <SelectTrigger id="warehouse">
-                                    <SelectValue placeholder="اختر مخزنًا" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {warehouses.map((w:any) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
+                             <Combobox
+                                options={warehouseOptions}
+                                value={warehouseId}
+                                onValueChange={setWarehouseId}
+                                placeholder="اختر مخزنًا..."
+                                emptyMessage="لم يتم العثور على المخزن."
+                                disabled={isRep}
+                            />
                         </div>
                     </div>
                     
@@ -535,14 +538,14 @@ export default function SalesInvoicePage() {
                                 </div>
                                 {paidAmount > 0 && <div className="space-y-2">
                                     <Label htmlFor="paidToAccount">استلام في</Label>
-                                    <Select value={paidToAccountId} onValueChange={setPaidToAccountId} disabled={isRep}>
-                                        <SelectTrigger id="paidToAccount">
-                                            <SelectValue placeholder="اختر حساب الاستلام" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                        {cashAccounts.map((acc:any) => <SelectItem key={acc.id} value={acc.id} disabled={isRep ? !acc.salesRepId : !!acc.salesRepId}>{acc.name}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
+                                     <Combobox
+                                        options={cashAccountOptions}
+                                        value={paidToAccountId}
+                                        onValueChange={setPaidToAccountId}
+                                        placeholder="اختر حساب الاستلام..."
+                                        emptyMessage="لم يتم العثور على حساب."
+                                        disabled={isRep}
+                                    />
                                 </div>}
                                 <div className="flex justify-between font-bold text-base text-destructive">
                                     <span>المبلغ المتبقي</span>

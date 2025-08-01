@@ -47,6 +47,7 @@ import { auth } from "@/lib/firebase";
 import { createUserWithEmailAndPassword, signInWithCredential, EmailAuthProvider } from "firebase/auth";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
+import { Combobox } from "@/components/ui/combobox";
 
 
 interface User {
@@ -86,6 +87,9 @@ const UserForm = ({ user, onSave, onClose, warehouses, roles }: { user?: User, o
     basicSalary: user?.basicSalary || 0,
     hireDate: user?.hireDate || new Date().toISOString().split('T')[0],
   });
+  
+  const roleOptions = React.useMemo(() => roles.map(r => ({ value: r, label: r })), [roles]);
+  const warehouseOptions = React.useMemo(() => [{ value: 'all', label: 'كل المخازن' }, ...warehouses.map(w => ({ value: w.id, label: w.name }))], [warehouses]);
 
 
   const handleSubmit = () => {
@@ -129,22 +133,23 @@ const UserForm = ({ user, onSave, onClose, warehouses, roles }: { user?: User, o
         <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
                 <Label htmlFor="user-role">الوظيفة</Label>
-                <Select value={formData.role} onValueChange={(value) => setFormData({...formData, role: value})}>
-                    <SelectTrigger><SelectValue placeholder="اختر وظيفة" /></SelectTrigger>
-                    <SelectContent>
-                        {roles.map(role => (<SelectItem key={role} value={role}>{role}</SelectItem>))}
-                    </SelectContent>
-                </Select>
+                <Combobox
+                    options={roleOptions}
+                    value={formData.role}
+                    onValueChange={(value) => setFormData({...formData, role: value})}
+                    placeholder="اختر وظيفة..."
+                    emptyMessage="لم يتم العثور على وظيفة."
+                />
             </div>
             <div className="space-y-2">
                 <Label htmlFor="user-warehouse">المخزن المرتبط</Label>
-                <Select value={formData.warehouse} onValueChange={(value) => setFormData({...formData, warehouse: value})}>
-                    <SelectTrigger><SelectValue placeholder="اختر مخزنًا" /></SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">كل المخازن</SelectItem>
-                        {warehouses.map((w) => (<SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>))}
-                    </SelectContent>
-                </Select>
+                <Combobox
+                    options={warehouseOptions}
+                    value={formData.warehouse}
+                    onValueChange={(value) => setFormData({...formData, warehouse: value})}
+                    placeholder="اختر مخزنًا..."
+                    emptyMessage="لم يتم العثور على مخزن."
+                />
             </div>
         </div>
         

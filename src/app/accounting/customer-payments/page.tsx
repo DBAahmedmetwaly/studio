@@ -19,11 +19,11 @@ import { PlusCircle, Loader2, MoreHorizontal, Edit, Trash2, Info } from "lucide-
 import { useToast } from '@/hooks/use-toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem } from '@/components/ui/dropdown-menu';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/auth-context';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useData } from '@/contexts/data-provider';
+import { Combobox } from '@/components/ui/combobox';
 
 
 interface CustomerPayment {
@@ -52,6 +52,10 @@ const PaymentForm = ({ payment, onSave, onClose, customers, cashAccounts }: { pa
     const [formData, setFormData] = useState(
         payment || { date: new Date().toISOString().split('T')[0], amount: 0, customerId: "", paidToAccountId: "", notes: "" }
     );
+    
+    const customerOptions = React.useMemo(() => customers.map(c => ({ value: c.id, label: c.name })), [customers]);
+    const cashAccountOptions = React.useMemo(() => cashAccounts.map(c => ({ value: c.id, label: c.name })), [cashAccounts]);
+
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -71,25 +75,23 @@ const PaymentForm = ({ payment, onSave, onClose, customers, cashAccounts }: { pa
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="payment-customer">العميل</Label>
-                    <Select value={formData.customerId} onValueChange={v => setFormData({...formData, customerId: v})} required>
-                        <SelectTrigger id="payment-customer">
-                            <SelectValue placeholder="اختر عميلاً" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
+                    <Combobox
+                        options={customerOptions}
+                        value={formData.customerId}
+                        onValueChange={v => setFormData({...formData, customerId: v})}
+                        placeholder="اختر عميلاً..."
+                        emptyMessage="لم يتم العثور على عميل."
+                    />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="paid-to">مستلم في</Label>
-                    <Select value={formData.paidToAccountId} onValueChange={v => setFormData({...formData, paidToAccountId: v})} required>
-                        <SelectTrigger id="paid-to">
-                            <SelectValue placeholder="اختر حساب الاستلام" />
-                        </SelectTrigger>
-                        <SelectContent>
-                           {cashAccounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
+                    <Combobox
+                        options={cashAccountOptions}
+                        value={formData.paidToAccountId}
+                        onValueChange={v => setFormData({...formData, paidToAccountId: v})}
+                        placeholder="اختر حساب الاستلام..."
+                        emptyMessage="لم يتم العثور على حساب."
+                    />
                 </div>
                  <div className="space-y-2">
                     <Label htmlFor="payment-amount">المبلغ</Label>

@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -29,11 +30,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { useData } from '@/contexts/data-provider';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { InvoiceTemplate } from '@/components/invoice-template';
+import { Combobox } from '@/components/ui/combobox';
+
 
 interface SaleInvoice {
   id: string;
@@ -76,6 +78,10 @@ export default function SalesInvoicesListPage() {
     });
     return dates;
   }, [warehouses, inventoryClosings]);
+  
+  const customerOptions = useMemo(() => ([{value: 'all', label: 'كل العملاء'}, ...customers.map((c:any) => ({ value: c.id, label: c.name }))]), [customers]);
+  const warehouseOptions = useMemo(() => ([{value: 'all', label: 'كل المخازن'}, ...warehouses.map((w:any) => ({ value: w.id, label: w.name }))]), [warehouses]);
+
 
   const filteredInvoices = useMemo(() => {
     return invoices
@@ -101,16 +107,8 @@ export default function SalesInvoicesListPage() {
   const companySettings = useMemo(() => settings.find((s:any) => s.id === 'main')?.general, [settings]);
 
   const handlePrint = () => {
-    const printContents = document.querySelector('.printable-area')?.innerHTML;
-    const originalContents = document.body.innerHTML;
-    if (printContents) {
-        document.body.innerHTML = printContents;
-        window.print();
-        document.body.innerHTML = originalContents;
-        window.location.reload(); // To re-attach event listeners
-    }
+    setTimeout(() => window.print(), 100);
   };
-
 
   return (
     <>
@@ -129,27 +127,11 @@ export default function SalesInvoicesListPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                      <div className="space-y-2">
                         <Label>العميل</Label>
-                        <Select value={filters.customerId} onValueChange={(v) => handleFilterChange("customerId", v)}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="اختر العميل" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">كل العملاء</SelectItem>
-                                {customers.map((c:any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
+                        <Combobox options={customerOptions} value={filters.customerId} onValueChange={(v) => handleFilterChange("customerId", v)} placeholder="اختر عميلاً..." emptyMessage="لم يتم العثور على العميل."/>
                     </div>
                      <div className="space-y-2">
                         <Label>المخزن</Label>
-                        <Select value={filters.warehouseId} onValueChange={(v) => handleFilterChange("warehouseId", v)}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="اختر المخزن" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">كل المخازن</SelectItem>
-                                {warehouses.map((w:any) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
+                        <Combobox options={warehouseOptions} value={filters.warehouseId} onValueChange={(v) => handleFilterChange("warehouseId", v)} placeholder="اختر مخزنًا..." emptyMessage="لم يتم العثور على المخزن."/>
                     </div>
                      <div className="space-y-2">
                         <Label>من تاريخ</Label>
@@ -225,11 +207,11 @@ export default function SalesInvoicesListPage() {
                                 </DropdownMenu>
                             </TableCell>
                             </TableRow>
-                             <DialogContent className="p-0 sm:max-w-xs">
-                                <div className="p-4">
+                             <DialogContent className="max-w-4xl p-0">
+                                <div className="p-4 bg-white text-black printable-area">
                                     <InvoiceTemplate invoice={invoice} company={companySettings} customer={customer} />
                                 </div>
-                                <div className="p-4 border-t flex justify-end bg-muted/50">
+                                <div className="p-4 border-t flex justify-end no-print">
                                     <Button onClick={handlePrint}><Printer className="ml-2 h-4 w-4" />طباعة</Button>
                                 </div>
                             </DialogContent>

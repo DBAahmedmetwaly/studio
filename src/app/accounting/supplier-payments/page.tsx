@@ -19,11 +19,11 @@ import { PlusCircle, Loader2, MoreHorizontal, Edit, Trash2, Info } from "lucide-
 import { useToast } from '@/hooks/use-toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem } from '@/components/ui/dropdown-menu';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/auth-context';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useData } from '@/contexts/data-provider';
+import { Combobox } from '@/components/ui/combobox';
 
 
 interface SupplierPayment {
@@ -67,6 +67,10 @@ const PaymentForm = ({ onSave, suppliers, cashAccounts, purchaseInvoices }: { on
         notes: "",
         invoiceId: "" 
     });
+    
+    const supplierOptions = React.useMemo(() => suppliers.map(s => ({ value: s.id, label: s.name })), [suppliers]);
+    const cashAccountOptions = React.useMemo(() => cashAccounts.map(c => ({ value: c.id, label: c.name })), [cashAccounts]);
+
 
     const supplierInvoicesWithBalance = useMemo(() => {
         if (!formData.supplierId) return [];
@@ -81,6 +85,13 @@ const PaymentForm = ({ onSave, suppliers, cashAccounts, purchaseInvoices }: { on
         if (!formData.invoiceId) return null;
         return supplierInvoicesWithBalance.find(inv => inv.id === formData.invoiceId);
     }, [formData.invoiceId, supplierInvoicesWithBalance]);
+    
+    const invoiceOptions = React.useMemo(() => {
+        return supplierInvoicesWithBalance.map(inv => ({
+            value: inv.id,
+            label: `${inv.invoiceNumber} (المتبقي: ${(inv.total - (inv.paidAmount || 0)).toLocaleString()})`
+        }));
+    }, [supplierInvoicesWithBalance]);
 
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -105,29 +116,24 @@ const PaymentForm = ({ onSave, suppliers, cashAccounts, purchaseInvoices }: { on
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="payment-supplier">المورد</Label>
-                    <Select value={formData.supplierId} onValueChange={v => setFormData({...formData, supplierId: v, invoiceId: ""})} required>
-                        <SelectTrigger id="payment-supplier">
-                            <SelectValue placeholder="اختر موردًا" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {suppliers.map(w => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
+                    <Combobox
+                        options={supplierOptions}
+                        value={formData.supplierId}
+                        onValueChange={v => setFormData({...formData, supplierId: v, invoiceId: ""})}
+                        placeholder="اختر موردًا..."
+                        emptyMessage="لم يتم العثور على مورد."
+                    />
                 </div>
                  <div className="space-y-2">
                     <Label htmlFor="payment-invoice">ربط بفاتورة</Label>
-                    <Select value={formData.invoiceId} onValueChange={v => setFormData({...formData, invoiceId: v})} disabled={!formData.supplierId || supplierInvoicesWithBalance.length === 0}>
-                        <SelectTrigger id="payment-invoice">
-                            <SelectValue placeholder={!formData.supplierId ? "اختر موردًا أولاً" : "اختياري: اختر فاتورة"} />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {supplierInvoicesWithBalance.map(inv => (
-                                <SelectItem key={inv.id} value={inv.id}>
-                                    {inv.invoiceNumber} (المتبقي: {(inv.total - (inv.paidAmount || 0)).toLocaleString()})
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                    <Combobox
+                        options={invoiceOptions}
+                        value={formData.invoiceId || ''}
+                        onValueChange={v => setFormData({...formData, invoiceId: v})}
+                        disabled={!formData.supplierId || supplierInvoicesWithBalance.length === 0}
+                        placeholder={!formData.supplierId ? "اختر موردًا أولاً" : "اختياري: اختر فاتورة"}
+                        emptyMessage="لا توجد فواتير مستحقة لهذا المورد."
+                    />
                 </div>
                 {selectedInvoiceDetails && (
                      <div className="-mt-2">
@@ -140,14 +146,13 @@ const PaymentForm = ({ onSave, suppliers, cashAccounts, purchaseInvoices }: { on
                 )}
                 <div className="space-y-2">
                     <Label htmlFor="paid-from">مدفوع من</Label>
-                    <Select value={formData.paidFromAccountId} onValueChange={v => setFormData({...formData, paidFromAccountId: v})} required>
-                        <SelectTrigger id="paid-from">
-                            <SelectValue placeholder="اختر حساب الدفع" />
-                        </SelectTrigger>
-                        <SelectContent>
-                           {cashAccounts.map(acc => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
+                    <Combobox
+                        options={cashAccountOptions}
+                        value={formData.paidFromAccountId}
+                        onValueChange={v => setFormData({...formData, paidFromAccountId: v})}
+                        placeholder="اختر حساب الدفع..."
+                        emptyMessage="لم يتم العثور على حساب."
+                    />
                 </div>
                  <div className="space-y-2">
                     <Label htmlFor="payment-amount">المبلغ</Label>
