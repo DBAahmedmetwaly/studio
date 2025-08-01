@@ -31,6 +31,7 @@ import { useData } from '@/contexts/data-provider';
 interface Item { id: string; name: string; unit: string; price: number; cost?: number; reorderPoint?: number; }
 interface Warehouse { id: string; name: string; autoStockUpdate?: boolean; }
 interface SaleInvoice { id: string; warehouseId: string; items: { id: string; qty: number; }[]; status?: 'approved' | 'pending'; date: string; }
+interface PosSale { id: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
 interface PurchaseInvoice { id: string; warehouseId: string; items: { id: string; qty: number; cost?: number }[]; date: string; }
 interface StockInRecord { id: string; warehouseId: string; reason: string; items: { id: string; qty: number; cost?: number }[]; date: string; }
 interface StockOutRecord { id: string; sourceId: string; items: { id: string; qty: number; }[]; date: string; }
@@ -53,6 +54,7 @@ export default function StockStatusPage() {
         stockInRecords, stockOutRecords, stockTransferRecords, 
         stockAdjustmentRecords, salesReturns, purchaseReturns, 
         stockIssuesToReps, stockReturnsFromReps,
+        posSales,
         inventoryClosings, loading 
     } = useData();
 
@@ -92,6 +94,7 @@ export default function StockStatusPage() {
 
                 // Decreases since last closing
                 salesInvoices.filter(s => s.warehouseId === warehouse.id && s.status === 'approved' && filterTransactions(s)).forEach(s => s.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
+                posSales.filter(s => s.warehouseId === warehouse.id && filterTransactions(s)).forEach(s => s.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
                 stockOutRecords.filter(so => so.sourceId === warehouse.id && filterTransactions(so)).forEach(so => so.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
                 stockTransferRecords.filter(t => t.fromSourceId === warehouse.id && filterTransactions(t)).forEach(t => t.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
                 stockAdjustmentRecords.filter(adj => adj.warehouseId === warehouse.id && filterTransactions(adj)).forEach(adj => adj.items.filter(i => i.itemId === item.id && i.difference < 0).forEach(i => stock += i.difference));
@@ -141,7 +144,7 @@ export default function StockStatusPage() {
             return matchesName && item.currentStock !== 0;
         });
 
-    }, [filters, allItems, warehouses, salesInvoices, purchaseInvoices, stockInRecords, stockOutRecords, stockTransferRecords, stockAdjustmentRecords, salesReturns, purchaseReturns, stockIssuesToReps, stockReturnsFromReps, inventoryClosings]);
+    }, [filters, allItems, warehouses, salesInvoices, purchaseInvoices, stockInRecords, stockOutRecords, stockTransferRecords, stockAdjustmentRecords, salesReturns, purchaseReturns, stockIssuesToReps, stockReturnsFromReps, inventoryClosings, posSales]);
     
     const getUnitLabel = (unit: string) => {
         const units = { piece: "قطعة", weight: "لتر ", meter: "متر", kilo: "كيلو", gram: "جرام" };

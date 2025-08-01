@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
@@ -197,31 +198,11 @@ export default function PosPage() {
             change,
             cashierId: user?.id,
             cashierName: user?.name,
+            warehouseId: user?.warehouse, // Link the sale to the cashier's warehouse
         };
 
         try {
             await dbAction('posSales', 'add', saleData);
-            
-            // This is a simplified sale invoice for accounting purposes.
-            await dbAction('salesInvoices', 'add', {
-                invoiceNumber: currentInvoiceNumber,
-                date: new Date().toISOString(),
-                customerId: 'cash-customer', // Generic cash customer
-                customerName: 'عميل نقاط بيع',
-                warehouseId: user?.warehouse, // Assumes cashier is tied to a warehouse
-                status: 'approved', // POS sales are always approved
-                items: cart.map(item => ({ 
-                    id: item.id.split('-')[0], 
-                    qty: item.qty, 
-                    price: item.price, 
-                    cost: item.cost 
-                })),
-                subtotal,
-                discount,
-                tax: 0, // No tax for POS for now
-                total,
-                paidAmount: total, // POS sales are fully paid
-            });
 
             toast({ title: 'تمت العملية بنجاح', description: `تم حفظ الفاتورة ${currentInvoiceNumber}`});
             handlePrintReceipt(saleData);

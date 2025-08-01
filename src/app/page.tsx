@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
@@ -52,6 +53,7 @@ interface SaleInvoice {
   items: { id: string; qty: number; }[];
   status?: 'pending' | 'approved';
 }
+interface PosSale { id: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
 interface CustomerPayment {
     id: string;
     amount: number;
@@ -94,6 +96,8 @@ export default function Dashboard() {
     salesReturns, purchaseReturns, stockIssuesToReps,
     stockReturnsFromReps,
     inventoryClosings,
+    posSales,
+    settings,
     loading 
   } = useData();
   
@@ -172,6 +176,7 @@ export default function Dashboard() {
 
         // Decreases
         salesInvoices.filter(s => s.warehouseId === selectedWarehouseId && s.status === 'approved' && filterTransactions(s)).forEach(s => s.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
+        posSales.filter(s => s.warehouseId === selectedWarehouseId && filterTransactions(s)).forEach(s => s.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
         stockOutRecords.filter(so => so.sourceId === selectedWarehouseId && filterTransactions(so)).forEach(so => so.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
         stockTransferRecords.filter(t => t.fromSourceId === selectedWarehouseId && filterTransactions(t)).forEach(t => t.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
         stockAdjustmentRecords.filter(adj => adj.warehouseId === selectedWarehouseId && filterTransactions(adj)).forEach(adj => adj.items.filter(i => i.itemId === item.id && i.difference < 0).forEach(i => stock += i.difference));
@@ -216,7 +221,7 @@ export default function Dashboard() {
     const recentTransactions = filteredSales.slice(-5).reverse();
 
     return { totalReceipts, totalSalesCount, totalCustomers, inventoryValue, lowStockItems, recentTransactions };
-  }, [selectedWarehouseId, dateRange, salesInvoices, customers, items, warehouses, cashAccounts, customerPayments, exceptionalIncomes, purchaseInvoices, stockInRecords, stockOutRecords, stockTransferRecords, stockAdjustmentRecords, salesReturns, purchaseReturns, stockIssuesToReps, stockReturnsFromReps, inventoryClosings]);
+  }, [selectedWarehouseId, dateRange, salesInvoices, customers, items, warehouses, cashAccounts, customerPayments, exceptionalIncomes, purchaseInvoices, stockInRecords, stockOutRecords, stockTransferRecords, stockAdjustmentRecords, salesReturns, purchaseReturns, stockIssuesToReps, stockReturnsFromReps, inventoryClosings, posSales]);
 
 
   if (loading && !warehouses.length) {
