@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -35,6 +34,8 @@ import { Input } from '@/components/ui/input';
 import { usePermissions } from '@/contexts/permissions-context';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+
 
 interface SaleInvoice {
   id: string;
@@ -123,13 +124,11 @@ export default function RepInvoicesPage() {
       toast({ variant: 'destructive', title: 'غير مصرح به' });
       return;
     }
-    if (confirm('هل أنت متأكد من حذف هذه الفاتورة المعلقة؟')) {
-       try {
-        await remove(invoiceId);
-        toast({ title: 'تم الحذف بنجاح' });
-      } catch (error) {
-        toast({ variant: 'destructive', title: 'خطأ', description: 'فشل حذف الفاتورة.' });
-      }
+    try {
+      await remove(invoiceId);
+      toast({ title: 'تم الحذف بنجاح' });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'خطأ', description: 'فشل حذف الفاتورة.' });
     }
   }
 
@@ -208,29 +207,45 @@ export default function RepInvoicesPage() {
                           </TableCell>
                           <TableCell className="text-center">{invoice.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
                           <TableCell className="text-center">
-                             <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button aria-haspopup="true" size="icon" variant="ghost">
-                                        <MoreHorizontal className="h-4 w-4" />
-                                        <span className="sr-only">قائمة</span>
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                    <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                                    {can('approve', 'sales_repInvoices') && (
-                                        <DropdownMenuItem onClick={() => handleApprove(invoice)}>
-                                            <CheckCircle className="ml-2 h-4 w-4 text-green-500" />
-                                            اعتماد الفاتورة
-                                        </DropdownMenuItem>
-                                    )}
-                                     {can('delete', 'sales_repInvoices') && (
-                                        <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(invoice.id)}>
-                                            <Trash2 className="ml-2 h-4 w-4" />
-                                            حذف
-                                        </DropdownMenuItem>
-                                     )}
-                                </DropdownMenuContent>
-                            </DropdownMenu>
+                             <AlertDialog>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button aria-haspopup="true" size="icon" variant="ghost">
+                                            <MoreHorizontal className="h-4 w-4" />
+                                            <span className="sr-only">قائمة</span>
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+                                        {can('approve', 'sales_repInvoices') && (
+                                            <DropdownMenuItem onClick={() => handleApprove(invoice)}>
+                                                <CheckCircle className="ml-2 h-4 w-4 text-green-500" />
+                                                اعتماد الفاتورة
+                                            </DropdownMenuItem>
+                                        )}
+                                         {can('delete', 'sales_repInvoices') && (
+                                            <AlertDialogTrigger asChild>
+                                                <DropdownMenuItem className="text-destructive" onSelect={(e) => e.preventDefault()}>
+                                                    <Trash2 className="ml-2 h-4 w-4" />
+                                                    حذف
+                                                </DropdownMenuItem>
+                                            </AlertDialogTrigger>
+                                         )}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>هل أنت متأكد من الحذف؟</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            سيتم حذف هذه الفاتورة المعلقة بشكل دائم. لا يمكن التراجع عن هذا الإجراء.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleDelete(invoice.id)}>نعم، قم بالحذف</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                             </AlertDialog>
                           </TableCell>
                         </TableRow>
                       ))
