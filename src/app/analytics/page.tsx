@@ -32,6 +32,8 @@ interface Warehouse { id: string; name: string; }
 interface Customer { id: string; openingBalance: number; }
 interface Expense { id: string; date: string; amount: number; expenseType: string; warehouseId?: string; }
 interface User { id: string; name: string; isSalesRep?: boolean; }
+interface PosSale { id: string; date: string; total: number; items: { id: string; qty: number; price: number; cost?: number; }[]; }
+
 
 const chartConfig = {
   profit: {
@@ -63,7 +65,7 @@ const chartConfig = {
 const COLORS = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
 
 export default function AnalyticsPage() {
-    const { items, salesInvoices, purchaseInvoices, suppliers, warehouses, customers, expenses, users, loading } = useData();
+    const { items, salesInvoices, purchaseInvoices, suppliers, warehouses, customers, expenses, users, posSales, loading } = useData();
 
     const [dateRange, setDateRange] = useState({
       from: '',
@@ -94,6 +96,19 @@ export default function AnalyticsPage() {
             return true;
         });
     }, [salesInvoices, dateRange, selectedWarehouse]);
+    
+    const filteredPosSales = useMemo(() => {
+         return posSales.filter((sale: PosSale) => {
+            const saleDate = new Date(sale.date);
+            const from = dateRange.from ? new Date(dateRange.from) : null;
+            const to = dateRange.to ? new Date(dateRange.to) : null;
+            if (from && saleDate < from) return false;
+            if (to && saleDate > to) return false;
+            // POS sales are not warehouse specific in this analytics view for now
+            return true;
+        });
+    }, [posSales, dateRange]);
+
 
     const filteredPurchases = useMemo(() => {
         return purchaseInvoices.filter(purchase => {
@@ -122,25 +137,37 @@ export default function AnalyticsPage() {
 
 
     const itemProfitData = useMemo(() => {
-        return items.map(item => {
-            let totalRevenue = 0;
-            let totalCost = 0;
-            filteredSales.forEach(sale => {
-                sale.items.forEach(saleItem => {
-                    if (saleItem.id === item.id) {
-                        totalRevenue += saleItem.qty * saleItem.price;
-                        totalCost += saleItem.qty * (saleItem.cost || item.cost || saleItem.price * 0.8); // Fallback cost
-                    }
-                });
+        const profitMap = new Map<string, { totalRevenue: number, totalCost: number }>();
+        
+        const processSaleItems = (saleItems: any[], itemMasterList: any[]) => {
+            saleItems.forEach(saleItem => {
+                const itemMaster = itemMasterList.find(i => i.id === saleItem.id);
+                if (!itemMaster) return;
+
+                const revenue = (saleItem.qty || 0) * (saleItem.price || 0);
+                const cost = (saleItem.qty || 0) * (saleItem.cost || itemMaster.cost || 0);
+
+                const current = profitMap.get(itemMaster.id) || { totalRevenue: 0, totalCost: 0 };
+                current.totalRevenue += revenue;
+                current.totalCost += cost;
+                profitMap.set(itemMaster.id, current);
             });
-            const profit = totalRevenue - totalCost;
+        };
+
+        filteredSales.forEach(sale => processSaleItems(sale.items, items));
+        filteredPosSales.forEach(sale => processSaleItems(sale.items, items));
+
+        return Array.from(profitMap.entries()).map(([itemId, data]) => {
+            const itemMaster = items.find(i => i.id === itemId);
+            const profit = data.totalRevenue - data.totalCost;
             return {
-                name: item.name,
+                name: itemMaster?.name || 'صنف غير معروف',
                 profit: profit >= 0 ? profit : 0,
                 loss: profit < 0 ? -profit : 0
             };
         }).filter(d => d.profit > 0 || d.loss > 0).sort((a,b) => b.profit - a.profit).slice(0, 5);
-    }, [items, filteredSales]);
+
+    }, [items, filteredSales, filteredPosSales]);
 
     const supplierActivityData = useMemo(() => {
         const activity: { [key: string]: number } = {};

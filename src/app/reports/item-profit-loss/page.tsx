@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFoo
 import { Loader2, Printer } from "lucide-react";
 import React, { useState, useMemo, useEffect } from "react";
 import useFirebase from "@/hooks/use-firebase";
+import { useData } from "@/contexts/data-provider";
 
 interface Item {
     id: string;
@@ -27,6 +28,13 @@ interface SaleInvoice {
     status?: 'pending' | 'approved';
 }
 
+interface PosSale {
+  id: string;
+  date: string;
+  items: { id: string; qty: number; price: number; cost?: number; }[];
+}
+
+
 interface Warehouse {
     id: string;
     name: string;
@@ -40,12 +48,8 @@ export default function ItemProfitLossPage() {
     });
     const [reportData, setReportData] = useState<any[] | null>(null);
 
-    const { data: items, loading: loadingItems } = useFirebase<Item>('items');
-    const { data: sales, loading: loadingSales } = useFirebase<SaleInvoice>('salesInvoices');
-    const { data: warehouses, loading: loadingWarehouses } = useFirebase<Warehouse>('warehouses');
-
-    const loading = loadingItems || loadingSales || loadingWarehouses;
-
+    const { items, salesInvoices: sales, posSales, warehouses, loading } = useData();
+    
     useEffect(() => {
         // Set default date range for the last 30 days
         const toDate = new Date();
@@ -64,9 +68,7 @@ export default function ItemProfitLossPage() {
     
     const handleGenerateReport = () => {
         
-        const filteredSales = sales.filter(sale => {
-            if (sale.status !== 'approved') return false; // Only consider approved sales
-            
+        const filterByDate = (sale: { date: string }) => {
             const saleDate = new Date(sale.date);
             const fromDate = filters.fromDate ? new Date(filters.fromDate) : null;
             const toDate = filters.toDate ? new Date(filters.toDate) : null;
@@ -76,16 +78,23 @@ export default function ItemProfitLossPage() {
 
             if (fromDate && saleDate < fromDate) return false;
             if (toDate && saleDate > toDate) return false;
+            return true;
+        }
+
+        const filteredSales = sales.filter(sale => {
+            if (sale.status !== 'approved') return false;
+            if (!filterByDate(sale)) return false;
             if (filters.warehouseId !== 'all' && sale.warehouseId !== filters.warehouseId) return false;
-            
             return true;
         });
+
+        const filteredPosSales = posSales.filter(filterByDate);
         
         const resultsMap = new Map();
 
-        filteredSales.forEach(sale => {
-            if (!sale.items) return;
-            sale.items.forEach(saleItem => {
+        const processSaleItems = (saleItems: any[]) => {
+             if (!saleItems) return;
+             saleItems.forEach(saleItem => {
                 const itemMaster = items.find(i => i.id === saleItem.id);
                 if (!itemMaster) return;
 
@@ -107,8 +116,11 @@ export default function ItemProfitLossPage() {
                     });
                 }
             });
-        });
+        }
         
+        filteredSales.forEach(sale => processSaleItems(sale.items));
+        filteredPosSales.forEach(sale => processSaleItems(sale.items));
+
         const results = Array.from(resultsMap.values()).map(data => {
             const profit = data.totalRevenue - data.totalCost;
             const margin = data.totalRevenue > 0 ? (profit / data.totalRevenue) * 100 : 0;
@@ -139,11 +151,11 @@ export default function ItemProfitLossPage() {
                     <div className="space-y-2">
                         <Label htmlFor="warehouse">المخزن</Label>
                         <Select value={filters.warehouseId} onValueChange={v => handleFilterChange('warehouseId', v)}>
-                            <SelectTrigger disabled={loadingWarehouses}>
+                            <SelectTrigger disabled={loading}>
                                 <SelectValue placeholder="كل المخازن" />
                             </SelectTrigger>
                             <SelectContent>
-                               <SelectItem value="all">كل المخازن</SelectItem>
+                               <SelectItem value="all">كل المخازن (للفواتير العادية)</SelectItem>
                                {warehouses.map(w => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
                             </SelectContent>
                         </Select>

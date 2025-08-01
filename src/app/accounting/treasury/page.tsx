@@ -30,6 +30,7 @@ interface CashAccount {
     type: 'cash' | 'bank';
     openingBalance: number;
     salesRepId?: string;
+    userId?: string;
 }
 
 interface TreasuryTransaction {
@@ -42,12 +43,14 @@ interface TreasuryTransaction {
     receiptNumber?: string;
     createdById?: string;
     createdByName?: string;
+    linkedTransaction?: boolean;
 }
 
 interface Expense { id: string; amount: number; paidFromAccountId: string; }
 interface SupplierPayment { id: string; amount: number; paidFromAccountId: string; }
 interface EmployeeAdvance { id: string; amount: number; paidFromAccountId: string; }
 interface CustomerPayment { id: string; amount: number; paidToAccountId: string; }
+interface SaleInvoice { id: string; paidAmount?: number; paidToAccountId?: string; status?: 'approved'|'pending' }
 
 
 const TransactionForm = ({ onSave, cashAccounts, onClose }: { onSave: (data: Omit<TreasuryTransaction, 'id' | 'receiptNumber'>) => void, cashAccounts: CashAccount[], onClose: () => void }) => {
@@ -74,7 +77,7 @@ const TransactionForm = ({ onSave, cashAccounts, onClose }: { onSave: (data: Omi
     };
     
     // Filter out rep accounts for direct transactions
-    const filteredAccounts = cashAccounts.filter(acc => !acc.salesRepId);
+    const filteredAccounts = cashAccounts.filter(acc => !acc.salesRepId && !acc.userId);
 
 
     return (
@@ -128,7 +131,9 @@ export default function TreasuryPage() {
         expenses, 
         supplierPayments, 
         employeeAdvances, 
-        customerPayments, 
+        customerPayments,
+        salesInvoices, 
+        exceptionalIncomes,
         dbAction, 
         getNextId,
         loading 
@@ -141,7 +146,7 @@ export default function TreasuryPage() {
     const getAccountTypeIcon = (accountId: string) => {
         const account = cashAccounts.find(acc => acc.id === accountId);
         if (!account) return null;
-        if (account.salesRepId) return <User className="h-4 w-4 text-muted-foreground" />;
+        if (account.salesRepId || account.userId) return <User className="h-4 w-4 text-muted-foreground" />;
         if (account.type === 'bank') return <Landmark className="h-4 w-4 text-muted-foreground" />;
         return <Wallet className="h-4 w-4 text-muted-foreground" />;
     };
@@ -167,9 +172,11 @@ export default function TreasuryPage() {
         return cashAccounts.map(account => {
             const openingBalance = account.openingBalance || 0;
 
-            const totalDeposits = customerPayments
-                .filter(p => p.paidToAccountId === account.id)
-                .reduce((sum, p) => sum + p.amount, 0);
+            const totalDeposits = [
+                ...customerPayments.filter((p:CustomerPayment) => p.paidToAccountId === account.id),
+                ...salesInvoices.filter((s:SaleInvoice) => s.status === 'approved' && s.paidToAccountId === account.id),
+                ...exceptionalIncomes.filter((i:any) => i.paidToAccountId === account.id),
+            ].reduce((sum, item) => sum + (item.amount || item.paidAmount || 0), 0);
 
             const totalWithdrawals = [
                 ...expenses.filter(ex => ex.paidFromAccountId === account.id),
@@ -188,7 +195,7 @@ export default function TreasuryPage() {
                 currentBalance
             };
         });
-    }, [cashAccounts, transactions, expenses, supplierPayments, employeeAdvances, customerPayments]);
+    }, [cashAccounts, transactions, expenses, supplierPayments, employeeAdvances, customerPayments, salesInvoices, exceptionalIncomes]);
     
     const sortedTransactions = useMemo(() => {
         return [...transactions].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -213,7 +220,7 @@ export default function TreasuryPage() {
                 ) : (
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                         {accountBalances.map(acc => (
-                             <Card key={acc.id} className={acc.salesRepId ? 'bg-muted/50' : ''}>
+                             <Card key={acc.id} className={(acc.salesRepId || acc.userId) ? 'bg-muted/50' : ''}>
                                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                      <CardTitle className="text-sm font-medium">{acc.name}</CardTitle>
                                      {getAccountTypeIcon(acc.id)}
@@ -272,7 +279,7 @@ export default function TreasuryPage() {
                                                     {getAccountTypeIcon(tx.accountId)}
                                                     <span>{getAccountName(tx.accountId)}</span>
                                                 </div>
-                                                <div className="text-xs text-muted-foreground">{tx.description}</div>
+                                                <div className="text-xs text-muted-foreground">{new Date(tx.date).toLocaleDateString('ar-EG')}</div>
                                             </TableCell>
                                             <TableCell>{tx.description}</TableCell>
                                             <TableCell className="text-center">
