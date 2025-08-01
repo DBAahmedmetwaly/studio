@@ -41,7 +41,7 @@ interface ItemGroup {
 }
 
 export default function PosPage() {
-    const { items: allItems, dbAction, itemGroups, posSessions, settings } = useData();
+    const { items: allItems, dbAction, itemGroups, posSessions, settings, warehouses } = useData();
     const { user } = useAuth();
     const { toast } = useToast();
     const { generateInvoiceNumber, currentInvoiceNumber, loading: loadingCounter } = usePosInvoiceCounter();
@@ -68,6 +68,12 @@ export default function PosPage() {
     const companySettings = useMemo(() => settings?.main?.general || {}, [settings]);
     const receiptDesign = useMemo(() => settings?.posReceipt || {}, [settings]);
 
+    const warehouseForCashier = useMemo(() => {
+        if (!user || !user.warehouse) return null;
+        return warehouses.find((w: any) => w.id === user.warehouse);
+    }, [user, warehouses]);
+    
+    const allowNegativeStock = useMemo(() => settings?.main?.financial?.allowNegativeStock || false, [settings]);
 
     const resetSale = useCallback(async () => {
         if (cart.length > 0) {
@@ -112,8 +118,17 @@ export default function PosPage() {
     }, [paidAmount, total]);
 
     const addItemToCart = useCallback((itemToAdd: any) => {
-        if (!itemToAdd) return;
+        if (!itemToAdd || !warehouseForCashier) return;
         const existingItemIndex = cart.findIndex(item => item.id === itemToAdd.id);
+
+        if (!allowNegativeStock) {
+            const currentStock = itemToAdd.stock || 0;
+            const cartQty = existingItemIndex > -1 ? cart[existingItemIndex].qty : 0;
+            if (currentStock <= cartQty) {
+                toast({ variant: 'destructive', title: 'كمية غير كافية', description: `لا يوجد رصيد كافٍ من صنف "${itemToAdd.name}".`});
+                return;
+            }
+        }
 
         if (existingItemIndex > -1) {
             const newCart = [...cart];
@@ -132,7 +147,7 @@ export default function PosPage() {
                 uniqueId: `${itemToAdd.id}-${Date.now()}`
             }]);
         }
-    }, [cart]);
+    }, [cart, warehouseForCashier, allowNegativeStock, toast]);
 
 
     const handleBarcodeSubmit = (e: React.FormEvent) => {
@@ -140,7 +155,7 @@ export default function PosPage() {
         const code = barcodeInputRef.current?.value;
         if (!code) return;
 
-        const itemToAdd = allItems.find((item: any) => item.code === code);
+        const itemToAdd = itemsToShow.find((item: any) => item.code === code);
         if (!itemToAdd) {
             toast({ variant: 'destructive', title: 'خطأ', description: `الصنف بالكود ${code} غير موجود.` });
             if(barcodeInputRef.current) barcodeInputRef.current.value = "";
@@ -155,6 +170,14 @@ export default function PosPage() {
     };
     
     const updateQty = (uniqueId: string, newQty: number) => {
+        const itemInCart = cart.find(item => item.uniqueId === uniqueId);
+        const itemMaster = itemsToShow.find(i => i.id === itemInCart?.id);
+
+        if(!allowNegativeStock && itemMaster && newQty > itemMaster.stock) {
+            toast({ variant: 'destructive', title: 'كمية غير كافية', description: `الرصيد المتاح هو ${itemMaster.stock} فقط.` });
+            return;
+        }
+
         if (newQty <= 0) {
             setCart(cart.filter(item => item.uniqueId !== uniqueId));
             return;
@@ -214,12 +237,16 @@ export default function PosPage() {
     };
     
     const itemsToShow = useMemo(() => {
-        let filteredItems = allItems;
+        if (!warehouseForCashier) return [];
+
+        let itemsWithStock = allItems.map((item: any) => ({...item, stock: 0})); // Add stock calculation here
+
+        let filteredItems = itemsWithStock;
         if (activeGroupId !== 'all') {
              const group = itemGroups.find((g: ItemGroup) => g.id === activeGroupId);
              if (group) {
                  const itemIdsInGroup = new Set(group.itemIds);
-                 filteredItems = allItems.filter((item: any) => itemIdsInGroup.has(item.id));
+                 filteredItems = itemsWithStock.filter((item: any) => itemIdsInGroup.has(item.id));
              }
         }
         
@@ -231,7 +258,7 @@ export default function PosPage() {
         }
 
         return filteredItems;
-    }, [activeGroupId, itemGroups, allItems, searchTerm]);
+    }, [activeGroupId, itemGroups, allItems, searchTerm, warehouseForCashier]);
     
     // Permission check
     if (!user?.isCashier) {

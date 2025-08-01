@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import PageHeader from "@/components/page-header";
@@ -38,6 +37,7 @@ interface Item {
     price?: number;
     cost?: number;
     openingStock?: number;
+    stock?: number;
 }
 
 interface Customer {
@@ -48,6 +48,7 @@ interface Customer {
 interface Warehouse {
     id: string;
     name: string;
+    autoStockUpdate?: boolean;
 }
 
 interface CashAccount {
@@ -81,6 +82,9 @@ interface StockTransferRecord { id: string; fromSourceId: string; toSourceId: st
 interface StockAdjustmentRecord { id: string; warehouseId: string; items: { itemId: string; difference: number; }[]; }
 interface SalesReturn { id: string; warehouseId: string; items: { id: string; name: string; qty: number; }[]; }
 interface PurchaseReturn { id: string; warehouseId: string; items: { id: string; name: string; qty: number; }[]; }
+interface PosSale { id: string; warehouseId: string; items: { id: string; qty: number; }[]; }
+interface InventoryClosing { id: string; warehouseId: string; closingDate: string; balances: { itemId: string, balance: number }[] }
+
 
 export default function SalesInvoicePage() {
     const { toast } = useToast();
@@ -121,6 +125,8 @@ export default function SalesInvoicePage() {
         settings, 
         stockIssuesToReps: issuesToReps, 
         stockReturnsFromReps: returnsFromReps,
+        posSales,
+        inventoryClosings,
         dbAction,
         getNextId,
         loading 
@@ -184,27 +190,41 @@ export default function SalesInvoicePage() {
             return [];
         }
         
+        const warehouse = warehouses.find((w: Warehouse) => w.id === warehouseId);
+        const autoStockUpdate = warehouse?.autoStockUpdate;
         const mainSettings = settings?.main;
-
+        
         return allItems.map((item:any) => {
-            let stock = item.openingStock || 0;
+            const closingsForWarehouse = inventoryClosings.filter((c: InventoryClosing) => c.warehouseId === warehouseId);
+            const lastClosing = closingsForWarehouse.length > 0 ? closingsForWarehouse.reduce((latest:any, current:any) => new Date(latest.closingDate) > new Date(current.closingDate) ? latest : current) : null;
+            const lastClosingDate = lastClosing ? new Date(lastClosing.closingDate) : new Date(0);
             
-            purchases.filter((p:any) => p.warehouseId === warehouseId).forEach((p:any) => p.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
-            stockIns.filter((si:any) => si.warehouseId === warehouseId).forEach((si:any) => si.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
-            transfers.filter((t:any) => t.toSourceId === warehouseId).forEach((t:any) => t.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
-            adjustments.filter((adj:any) => adj.warehouseId === warehouseId).forEach((adj:any) => adj.items.filter((i:any) => i.itemId === item.id && i.difference > 0).forEach((i:any) => stock += i.difference));
-            salesReturns.filter((sr:any) => sr.warehouseId === warehouseId).forEach((sr:any) => sr.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
+            let stock = lastClosing?.balances.find((b:any) => b.itemId === item.id)?.balance || 0;
+            const filterTransactions = (t: any) => new Date(t.date) > lastClosingDate;
+            
+            // Increases
+            if (autoStockUpdate) {
+                purchases.filter(p => p.warehouseId === warehouseId && filterTransactions(p)).forEach(p => p.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
+            }
+            stockIns.filter(si => si.warehouseId === warehouseId && filterTransactions(si)).forEach(si => si.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
+            transfers.filter(t => t.toSourceId === warehouseId && filterTransactions(t)).forEach(t => t.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
+            adjustments.filter(adj => adj.warehouseId === warehouseId && filterTransactions(adj)).forEach(adj => adj.items.filter(i => i.itemId === item.id && i.difference > 0).forEach(i => stock += i.difference));
+            salesReturns.filter(sr => sr.warehouseId === warehouseId && filterTransactions(sr)).forEach(sr => sr.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
+            returnsFromReps.filter(rfr => rfr.warehouseId === warehouseId && filterTransactions(rfr)).forEach(rfr => rfr.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
 
-            sales.filter((s:any) => s.warehouseId === warehouseId).forEach((s:any) => s.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
-            stockOuts.filter((so:any) => so.sourceId === warehouseId).forEach((so:any) => so.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
-            transfers.filter((t:any) => t.fromSourceId === warehouseId).forEach((t:any) => t.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
-            adjustments.filter((adj:any) => adj.warehouseId === warehouseId).forEach((adj:any) => adj.items.filter((i:any) => i.itemId === item.id && i.difference < 0).forEach((i:any) => stock += i.difference));
-            purchaseReturns.filter((pr:any) => pr.warehouseId === warehouseId).forEach((pr:any) => pr.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
+            // Decreases
+            sales.filter(s => s.warehouseId === warehouseId && s.status === 'approved' && filterTransactions(s)).forEach(s => s.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
+            posSales.filter(s => s.warehouseId === warehouseId && filterTransactions(s)).forEach(s => s.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
+            stockOuts.filter(so => so.sourceId === warehouseId && filterTransactions(so)).forEach(so => so.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
+            transfers.filter(t => t.fromSourceId === warehouseId && filterTransactions(t)).forEach(t => t.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
+            adjustments.filter(adj => adj.warehouseId === warehouseId && filterTransactions(adj)).forEach(adj => adj.items.filter(i => i.itemId === item.id && i.difference < 0).forEach(i => stock += i.difference));
+            purchaseReturns.filter(pr => pr.warehouseId === warehouseId && filterTransactions(pr)).forEach(pr => pr.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
+            issuesToReps.filter(itr => itr.warehouseId === warehouseId && filterTransactions(itr)).forEach(itr => itr.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
 
             return { ...item, stock };
         }).filter((item:any) => item.stock > 0 || (mainSettings?.financial?.allowNegativeStock));
 
-    }, [isRep, warehouseId, allItems, purchases, sales, stockIns, stockOuts, transfers, adjustments, salesReturns, purchaseReturns, settings, itemsInRepCustody]);
+    }, [isRep, warehouseId, allItems, purchases, sales, stockIns, stockOuts, transfers, adjustments, salesReturns, purchaseReturns, settings, itemsInRepCustody, warehouses, inventoryClosings, posSales, returnsFromReps, issuesToReps]);
 
 
     useEffect(() => {
