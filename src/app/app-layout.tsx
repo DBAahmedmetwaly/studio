@@ -223,7 +223,7 @@ const AppLayoutContent = ({ children }: { children: React.ReactNode }) => {
                 <NavSubLink href="/purchases/invoices/list" module="purchases_invoices">فواتير الشراء</NavSubLink>
                 <NavSubLink href="/purchases/returns/new" module="purchases_returns">مرتجعات الشراء</NavSubLink>
                 <NavSubLink href="/accounting/supplier-payments" module="accounting_supplierPayments">مدفوعات الموردين</NavSubLink>
-                <NavSubLink href="/reports/supplier-statement" module="reports_supplierStatement">كشف حساب الموردين</NavSubLink>
+                <NavSubLink href="/reports/supplierStatement" module="reports_supplierStatement">كشف حساب الموردين</NavSubLink>
             </NavCollapsible>
             
             <NavCollapsible title="المحاسبة والمالية" icon={<BookUser />} modules={['accounting_journal', 'accounting_expenses', 'accounting_exceptionalIncome', 'accounting_treasury', 'accounting_profitDistribution', 'reports_financialStatements']}>
@@ -287,11 +287,11 @@ const AppLayoutContent = ({ children }: { children: React.ReactNode }) => {
             <SidebarTrigger className={cn(
                 "rounded-full w-14 h-14 shadow-lg bg-primary text-primary-foreground hover:bg-primary/90",
                 {
-                    'bottom-4 right-4': fabPosition === 'bottom-right',
                     'top-4 right-4': fabPosition === 'top-right',
-                    'bottom-4 left-4': fabPosition === 'bottom-left',
-                    'top-4 left-4': fabPosition === 'top-left',
+                    'bottom-4 right-4': fabPosition === 'bottom-right',
                     'top-1/2 right-4 -translate-y-1/2': fabPosition === 'middle-right',
+                    'top-4 left-4': fabPosition === 'top-left',
+                    'bottom-4 left-4': fabPosition === 'bottom-left',
                     'top-1/2 left-4 -translate-y-1/2': fabPosition === 'middle-left',
                 }
             )} />
