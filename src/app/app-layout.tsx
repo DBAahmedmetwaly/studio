@@ -77,12 +77,17 @@ import { useData } from "@/contexts/data-provider";
 import { cn } from "@/lib/utils";
 
 
-const Logo = () => (
-    <div className="flex items-center gap-2" >
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-7 w-7 text-primary"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
-        <h1 className="text-lg font-bold text-primary">المحاسب الذكي</h1>
-    </div>
-);
+const Logo = () => {
+    const { settings } = useData();
+    const companyName = settings?.main?.general?.companyName || "المحاسب الذكي";
+
+    return (
+        <div className="flex items-center gap-2" >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-7 w-7 text-primary"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
+            <h1 className="text-lg font-bold text-primary">{companyName}</h1>
+        </div>
+    );
+};
 
 
 const NavLink = ({ href, children, icon, module }: { href: string; children: React.ReactNode; icon: React.ReactNode, module: string }) => {
