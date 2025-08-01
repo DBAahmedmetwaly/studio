@@ -104,7 +104,7 @@ export default function SalesInvoicesListPage() {
       }).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [invoices, filters, lastClosingDates]);
 
-  const companySettings = useMemo(() => settings.find((s:any) => s.id === 'main')?.general, [settings]);
+  const companySettings = useMemo(() => settings?.main?.general || {}, [settings]);
 
   const handlePrint = () => {
     setTimeout(() => window.print(), 100);

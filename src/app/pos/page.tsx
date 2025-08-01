@@ -64,7 +64,7 @@ export default function PosPage() {
         return cashierSession && !cashierSession.isClosed;
     }, [openWorkDay, user]);
 
-    const companySettings = useMemo(() => settings.find((s:any) => s.id === 'main')?.general || {}, [settings]);
+    const companySettings = useMemo(() => settings?.main?.general || {}, [settings]);
 
 
     const resetSale = useCallback(async () => {

@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import PageHeader from "@/components/page-header";
@@ -183,7 +184,7 @@ export default function SalesInvoicePage() {
             return [];
         }
         
-        const mainSettings = settings.find((s:any) => s.id === 'main');
+        const mainSettings = settings?.main;
 
         return allItems.map((item:any) => {
             let stock = item.openingStock || 0;
@@ -226,7 +227,7 @@ export default function SalesInvoicePage() {
         const selectedItem = availableItemsForWarehouse.find((i:any) => i.id === newItem.id);
         if (!selectedItem) return;
         
-        const mainSettings = settings.find((s:any) => s.id === 'main');
+        const mainSettings = settings?.main;
         if(newItem.qty > selectedItem.stock && (!mainSettings?.financial?.allowNegativeStock || isRep)) {
             toast({
                 variant: 'destructive',
