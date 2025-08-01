@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -32,9 +31,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { useData } from '@/contexts/data-provider';
+import { Combobox } from '@/components/ui/combobox';
 
 interface PurchaseInvoice {
   id: string;
@@ -65,6 +64,9 @@ export default function PurchaseInvoicesListPage() {
   const handleFilterChange = (key: keyof typeof filters, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
+  
+  const supplierOptions = useMemo(() => ([{value: 'all', label: 'كل الموردين'}, ...suppliers.map((s:any) => ({ value: s.id, label: s.name }))]), [suppliers]);
+  const warehouseOptions = useMemo(() => ([{value: 'all', label: 'كل المخازن'}, ...warehouses.map((w:any) => ({ value: w.id, label: w.name }))]), [warehouses]);
 
   const lastClosingDates = useMemo(() => {
     const dates = new Map<string, Date>();
@@ -116,27 +118,23 @@ export default function PurchaseInvoicesListPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                      <div className="space-y-2">
                         <Label>المورد</Label>
-                        <Select value={filters.supplierId} onValueChange={(v) => handleFilterChange("supplierId", v)}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="اختر المورد" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">كل الموردين</SelectItem>
-                                {suppliers.map((s:any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
+                        <Combobox
+                          options={supplierOptions}
+                          value={filters.supplierId}
+                          onValueChange={(v) => handleFilterChange("supplierId", v)}
+                          placeholder="اختر المورد..."
+                          emptyMessage="لم يتم العثور على مورد."
+                        />
                     </div>
                      <div className="space-y-2">
                         <Label>المخزن</Label>
-                        <Select value={filters.warehouseId} onValueChange={(v) => handleFilterChange("warehouseId", v)}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="اختر المخزن" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">كل المخازن</SelectItem>
-                                {warehouses.map((w:any) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
+                        <Combobox
+                          options={warehouseOptions}
+                          value={filters.warehouseId}
+                          onValueChange={(v) => handleFilterChange("warehouseId", v)}
+                          placeholder="اختر المخزن..."
+                          emptyMessage="لم يتم العثور على مخزن."
+                        />
                     </div>
                      <div className="space-y-2">
                         <Label>من تاريخ</Label>
