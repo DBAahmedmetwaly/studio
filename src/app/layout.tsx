@@ -21,9 +21,10 @@ const notoKufi = Noto_Kufi_Arabic({
 });
 
 export const metadata: Metadata = {
+  manifest: "/manifest.json",
   title: "المحاسب الذكي",
   description: "نظام المخازن والمحاسبة",
-  viewport: "width=device-width, initial-scale=1",
+  viewport: "width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no",
 };
 
 export default function RootLayout({
