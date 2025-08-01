@@ -74,7 +74,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const { data: itemGroups, loading: l_itemGroups, add: add_itemGroup, update: update_itemGroup, remove: remove_itemGroup } = useFirebase('itemGroups');
     const { data: barcodeDesigns, loading: l_barcodeDesigns, add: add_barcodeDesign, update: update_barcodeDesign, remove: remove_barcodeDesign } = useFirebase('barcodeDesigns');
     const { data: roles, loading: l_roles, setData: set_roles } = useFirebase('roles'); // Special handling for roles
-    const { data: settings, loading: l_settings } = useFirebase('settings');
+    const { data: settings, loading: l_settings, update: update_settings } = useFirebase('settings');
     const { data: allData, loading: l_allData, remove: remove_allData } = useFirebase('/');
 
 
@@ -156,6 +156,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             'employeeAdvances': { add: add_employeeAdvance, remove: remove_employeeAdvance },
             'employeeAdjustments': { add: add_employeeAdjustment, remove: remove_employeeAdjustment },
             'repRemittances': { add: add_repRemittance, remove: remove_repRemittance },
+            'settings/printers': { update: update_settings },
+            'settings/posReceipt': { update: update_settings },
             'counters': { remove: remove_counters },
             // Add other paths here
         };

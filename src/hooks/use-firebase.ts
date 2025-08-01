@@ -25,8 +25,8 @@ const useFirebase = <T extends object>(path: string) => {
     const unsubscribe = onValue(dbRef, (snapshot) => {
         if (snapshot.exists()) {
             const snapshotData = snapshot.val();
-            // Certain paths like 'roles' or 'settings' are single objects, not lists.
-            if (path === 'roles' || path === 'settings' || path === '/') {
+            // Certain paths like 'roles' or 'settings/*' are single objects, not lists.
+            if (path === 'roles' || path.startsWith('settings')) {
                 setData(snapshotData);
             } else {
                  // All other paths are converted to arrays of objects with IDs.
@@ -65,7 +65,9 @@ const useFirebase = <T extends object>(path: string) => {
 
   const update = useCallback(async (id: string, updatedData: Partial<T>) => {
     try {
-      const itemRef = ref(database, `${path}/${id}`);
+      // If id is empty, it means we're updating the root of the path directly.
+      const itemPath = id ? `${path}/${id}` : path;
+      const itemRef = ref(database, itemPath);
       // remove id from object before updating
       const dataToUpdate = { ...updatedData };
       delete (dataToUpdate as any).id;

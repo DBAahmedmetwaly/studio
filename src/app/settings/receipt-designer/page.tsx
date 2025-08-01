@@ -29,6 +29,8 @@ interface ReceiptSettings {
     showTax: boolean;
     showDiscount: boolean;
     showBarcode: boolean;
+    showItemPrice: boolean;
+    showInvoiceNumber: boolean;
     fontSizes: {
         companyName: number;
         header: number;
@@ -47,6 +49,8 @@ const DEFAULT_SETTINGS: ReceiptSettings = {
     showCashier: true,
     showTax: true,
     showDiscount: true,
+    showItemPrice: true,
+    showInvoiceNumber: true,
     showBarcode: true,
     fontSizes: {
         companyName: 16,
@@ -73,12 +77,37 @@ const SAMPLE_INVOICE = {
     change: 8.80
 }
 
+const ElementControl = ({ label, posY, onPosYChange }: {
+    label: string;
+    posY: number;
+    onPosYChange: (value: number) => void;
+}) => (
+    <div className="space-y-3 border p-3 rounded-md">
+        <Label className="font-semibold">{label}</Label>
+        <div className="space-y-4">
+            <div className='text-xs space-y-2'>
+                <div className="flex justify-between"><span>موضع (فوق/تحت)</span><span>{posY}%</span></div>
+                <Input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value={posY}
+                    onChange={(e) => onPosYChange(Number(e.target.value))}
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+                />
+            </div>
+        </div>
+    </div>
+);
+
 const SettingsToggle = ({ id, label, checked, onCheckedChange }: { id: string, label: string, checked: boolean, onCheckedChange: (checked: boolean) => void }) => (
     <div className="flex items-center justify-between">
         <Label htmlFor={id} className="cursor-pointer">{label}</Label>
         <Switch id={id} checked={checked} onCheckedChange={onCheckedChange} />
     </div>
 );
+
 
 const FontSizeControl = ({ label, value, onChange }: { label: string, value: number, onChange: (value: number) => void }) => (
     <div className="flex items-center justify-between">
@@ -97,7 +126,7 @@ export default function ReceiptDesignerPage() {
     
     useEffect(() => {
         if(allSettings?.posReceipt) {
-            setSettings(prev => ({...prev, ...allSettings.posReceipt}));
+            setSettings(prev => ({...DEFAULT_SETTINGS, ...allSettings.posReceipt}));
         }
         setLoading(false);
     }, [allSettings]);
@@ -114,9 +143,12 @@ export default function ReceiptDesignerPage() {
     const handleSave = async () => {
         setLoading(true);
         try {
-            await dbAction('settings', 'update', {id: 'posReceipt', data: settings});
+            // The `settings` path in firebase is an object, not an array.
+            // We are updating a specific key ('posReceipt') within that object.
+            await dbAction('settings/posReceipt', 'update', { id: '', data: settings }); // Using empty ID because we're targeting a direct path
             toast({ title: 'تم الحفظ', description: 'تم تحديث تصميم الإيصال بنجاح.' });
         } catch (error) {
+            console.error(error);
             toast({ variant: 'destructive', title: 'خطأ', description: 'فشل حفظ التصميم.' });
         } finally {
             setLoading(false);
@@ -166,6 +198,8 @@ export default function ReceiptDesignerPage() {
                                     <SettingsToggle id="show-discount" label="إظهار الخصم" checked={settings.showDiscount} onCheckedChange={v => handleSettingChange('showDiscount', v)} />
                                     <SettingsToggle id="show-tax" label="إظهار الضريبة" checked={settings.showTax} onCheckedChange={v => handleSettingChange('showTax', v)} />
                                     <SettingsToggle id="show-barcode" label="إظهار الباركود" checked={settings.showBarcode} onCheckedChange={v => handleSettingChange('showBarcode', v)} />
+                                    <SettingsToggle id="show-invoice-number" label="إظهار رقم الفاتورة" checked={settings.showInvoiceNumber} onCheckedChange={v => handleSettingChange('showInvoiceNumber', v)} />
+                                    <SettingsToggle id="show-item-price" label="إظهار سعر الوحدة" checked={settings.showItemPrice} onCheckedChange={v => handleSettingChange('showItemPrice', v)} />
                                 </AccordionContent>
                             </AccordionItem>
                             <AccordionItem value="item-3">
@@ -181,7 +215,7 @@ export default function ReceiptDesignerPage() {
                     </CardContent>
                 </Card>
                  <div className="flex-1 flex bg-muted rounded-lg items-center justify-center p-4 overflow-hidden">
-                    <div className="transform scale-125 origin-center">
+                    <div className="transform scale-125 md:scale-100 lg:scale-125 origin-center">
                         <PosReceipt invoice={SAMPLE_INVOICE} company={companySettings} design={settings} />
                     </div>
                 </div>
