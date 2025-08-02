@@ -144,7 +144,7 @@ const StockStatusReport = ({ filters, data }: any) => {
                 stockReturnsFromReps.filter((rfr:any) => rfr.warehouseId === warehouse.id && filterTransactions(rfr)).forEach((rfr:any) => rfr.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
 
                 // Decreases
-                salesInvoices.filter((s:any) => s.warehouseId === warehouse.id && s.status === 'approved' && filterTransactions(s)).forEach((s:any) => s.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
+                salesInvoices.filter((s:any) => s.warehouseId === warehouse.id && (!s.salesRepId || s.status === 'approved') && filterTransactions(s)).forEach((s:any) => s.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
                 posSales.filter((s:any) => s.warehouseId === warehouse.id && filterTransactions(s)).forEach((s:any) => s.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
                 stockOutRecords.filter((so:any) => so.sourceId === warehouse.id && filterTransactions(so)).forEach((so:any) => so.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
                 stockTransferRecords.filter((t:any) => t.fromSourceId === warehouse.id && filterTransactions(t)).forEach((t:any) => t.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
@@ -223,7 +223,7 @@ const ItemLedgerReport = ({ filters, data }: any) => {
              salesReturns.filter((t:any) => t.warehouseId === warehouse.id && filterTxs(t)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => stock += i.qty));
              stockReturnsFromReps.filter((t:any) => t.warehouseId === warehouse.id && filterTxs(t)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => stock += i.qty));
              stockAdjustmentRecords.filter((t:any) => t.warehouseId === warehouse.id && filterTxs(t)).forEach((t:any) => t.items.filter((i:any)=>i.itemId === itemId).forEach((i:any) => stock += i.difference > 0 ? i.difference : 0));
-             salesInvoices.filter((t:any) => t.warehouseId === warehouse.id && filterTxs(t) && t.status==='approved').forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => stock -= i.qty));
+             salesInvoices.filter((t:any) => t.warehouseId === warehouse.id && (!t.salesRepId || t.status==='approved') && filterTxs(t)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => stock -= i.qty));
              posSales.filter((t:any) => t.warehouseId === warehouse.id && filterTxs(t)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => stock -= i.qty));
              stockOutRecords.filter((t:any) => t.sourceId === warehouse.id && filterTxs(t)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => stock -= i.qty));
              stockTransferRecords.filter((t:any) => t.fromSourceId === warehouse.id && filterTxs(t)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => stock -= i.qty));
@@ -243,7 +243,7 @@ const ItemLedgerReport = ({ filters, data }: any) => {
             ...stockReturnsFromReps.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'in', qty: i.qty, warehouseId: t.warehouseId, source: `مرتجع مندوب #${t.receiptNumber}`}))),
             ...stockTransferRecords.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'in', qty: i.qty, warehouseId: t.toSourceId, source: `تحويل مخزني #${t.receiptNumber}`}))),
             ...stockAdjustmentRecords.flatMap((t:any) => t.items.filter((i:any)=>i.itemId===itemId && i.difference > 0).map((i:any) => ({...t, type: 'in', qty: i.difference, warehouseId: t.warehouseId, source: `تسوية مخزون #${t.receiptNumber}`}))),
-            ...salesInvoices.filter((t:any) => t.status==='approved').flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'out', qty: i.qty, warehouseId: t.warehouseId, source: `فاتورة بيع #${t.invoiceNumber}`}))),
+            ...salesInvoices.filter((t:any) => !t.salesRepId || t.status==='approved').flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'out', qty: i.qty, warehouseId: t.warehouseId, source: `فاتورة بيع #${t.invoiceNumber}`}))),
             ...posSales.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'out', qty: i.qty, warehouseId: t.warehouseId, source: `فاتورة كاشير #${t.invoiceNumber}`}))),
             ...stockOutRecords.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'out', qty: i.qty, warehouseId: t.sourceId, source: `إذن صرف #${t.receiptNumber}`}))),
             ...purchaseReturns.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'out', qty: i.qty, warehouseId: t.warehouseId, source: `مرتجع شراء #${t.receiptNumber}`}))),
@@ -334,7 +334,7 @@ export default function InventoryReportsPage() {
                 
                 {activeFilters && (
                     <Tabs defaultValue="stock_status" className="w-full">
-                        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 flex-wrap h-auto md:h-10">
+                        <TabsList className="flex-wrap h-auto md:h-10 grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7">
                             <TabsTrigger value="stock_status">حالة المخزون</TabsTrigger>
                             <TabsTrigger value="item_ledger">كارت الصنف</TabsTrigger>
                             <TabsTrigger value="reorder_list">حد الطلب</TabsTrigger>
@@ -357,4 +357,3 @@ export default function InventoryReportsPage() {
         </>
     );
 }
-

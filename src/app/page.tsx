@@ -42,7 +42,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useData } from "@/contexts/data-provider";
 
-// Interfaces for Firebase data
+// Data Interfaces
 interface SaleInvoice {
   id: string;
   total: number;
@@ -52,6 +52,7 @@ interface SaleInvoice {
   warehouseId: string;
   items: { id: string; qty: number; }[];
   status?: 'pending' | 'approved';
+  salesRepId?: string;
 }
 interface PosSale { id: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
 interface CustomerPayment {
@@ -136,7 +137,7 @@ export default function Dashboard() {
         .filter((acc:any) => acc.warehouseId === selectedWarehouseId)
         .map((acc:any) => acc.id);
 
-    const approvedSales = salesInvoices.filter((s:any) => s.status === 'approved');
+    const approvedSales = salesInvoices.filter((s:any) => !s.salesRepId || s.status === 'approved');
     const filteredSales = filterByWarehouse(filterByDate(approvedSales), 'warehouseId');
 
     const receiptsFromInvoicePayments = filteredSales.reduce((acc:number, sale:any) => acc + (sale.paidAmount || 0), 0);
@@ -161,13 +162,7 @@ export default function Dashboard() {
         
         const filterTransactions = (t: any) => new Date(t.date) > lastClosingDate;
 
-        const warehouse = warehouses.find((w: WarehouseData) => w.id === selectedWarehouseId);
-        const autoStockUpdate = warehouse?.autoStockUpdate;
-
         // Increases
-        if (autoStockUpdate) {
-            purchaseInvoices.filter(p => p.warehouseId === selectedWarehouseId && filterTransactions(p)).forEach(p => p.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
-        }
         stockInRecords.filter(si => si.warehouseId === selectedWarehouseId && filterTransactions(si)).forEach(si => si.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
         stockTransferRecords.filter(t => t.toSourceId === selectedWarehouseId && filterTransactions(t)).forEach(t => t.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
         stockAdjustmentRecords.filter(adj => adj.warehouseId === selectedWarehouseId && filterTransactions(adj)).forEach(adj => adj.items.filter(i => i.itemId === item.id && i.difference > 0).forEach(i => stock += i.difference));
@@ -175,7 +170,7 @@ export default function Dashboard() {
         stockReturnsFromReps.filter(rfr => rfr.warehouseId === selectedWarehouseId && filterTransactions(rfr)).forEach(rfr => rfr.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
 
         // Decreases
-        salesInvoices.filter(s => s.warehouseId === selectedWarehouseId && s.status === 'approved' && filterTransactions(s)).forEach(s => s.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
+        salesInvoices.filter(s => s.warehouseId === selectedWarehouseId && (!s.salesRepId || s.status === 'approved') && filterTransactions(s)).forEach(s => s.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
         posSales.filter(s => s.warehouseId === selectedWarehouseId && filterTransactions(s)).forEach(s => s.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
         stockOutRecords.filter(so => so.sourceId === selectedWarehouseId && filterTransactions(so)).forEach(so => so.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
         stockTransferRecords.filter(t => t.fromSourceId === selectedWarehouseId && filterTransactions(t)).forEach(t => t.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));

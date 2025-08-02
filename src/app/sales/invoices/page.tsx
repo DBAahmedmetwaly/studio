@@ -209,7 +209,7 @@ export default function SalesInvoicePage() {
             returnsFromReps.filter(rfr => rfr.warehouseId === warehouseId && filterTransactions(rfr)).forEach(rfr => rfr.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
 
             // Decreases
-            sales.filter(s => s.warehouseId === warehouseId && s.status === 'approved' && filterTransactions(s)).forEach(s => s.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
+            sales.filter(s => s.warehouseId === warehouseId && (!s.salesRepId || s.status === 'approved') && filterTransactions(s)).forEach(s => s.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
             posSales.filter(s => s.warehouseId === warehouseId && filterTransactions(s)).forEach(s => s.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
             stockOuts.filter(so => so.sourceId === warehouseId && filterTransactions(so)).forEach(so => so.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
             transfers.filter(t => t.fromSourceId === warehouseId && filterTransactions(t)).forEach(t => t.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
