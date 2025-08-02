@@ -243,7 +243,7 @@ const ItemLedgerReport = ({ filters, data }: any) => {
             ...stockReturnsFromReps.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'in', qty: i.qty, warehouseId: t.warehouseId, source: `مرتجع مندوب #${t.receiptNumber}`}))),
             ...stockTransferRecords.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'in', qty: i.qty, warehouseId: t.toSourceId, source: `تحويل مخزني #${t.receiptNumber}`}))),
             ...stockAdjustmentRecords.flatMap((t:any) => t.items.filter((i:any)=>i.itemId===itemId && i.difference > 0).map((i:any) => ({...t, type: 'in', qty: i.difference, warehouseId: t.warehouseId, source: `تسوية مخزون #${t.receiptNumber}`}))),
-            ...salesInvoices.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId && t.status==='approved').map((i:any) => ({...t, type: 'out', qty: i.qty, warehouseId: t.warehouseId, source: `فاتورة بيع #${t.invoiceNumber}`}))),
+            ...salesInvoices.filter((t:any) => t.status==='approved').flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'out', qty: i.qty, warehouseId: t.warehouseId, source: `فاتورة بيع #${t.invoiceNumber}`}))),
             ...posSales.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'out', qty: i.qty, warehouseId: t.warehouseId, source: `فاتورة كاشير #${t.invoiceNumber}`}))),
             ...stockOutRecords.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'out', qty: i.qty, warehouseId: t.sourceId, source: `إذن صرف #${t.receiptNumber}`}))),
             ...purchaseReturns.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'out', qty: i.qty, warehouseId: t.warehouseId, source: `مرتجع شراء #${t.receiptNumber}`}))),
@@ -357,3 +357,4 @@ export default function InventoryReportsPage() {
         </>
     );
 }
+

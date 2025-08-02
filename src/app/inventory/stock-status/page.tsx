@@ -81,12 +81,17 @@ export default function StockStatusPage() {
 
                 const filterTransactions = (t: any) => new Date(t.date) > lastClosingDate;
 
+                const autoStockUpdate = warehouse?.autoStockUpdate;
+
                 // Increases since last closing
                 stockInRecords.filter((si:any) => si.warehouseId === warehouse.id && filterTransactions(si)).forEach((si:any) => si.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
                 stockTransferRecords.filter((t:any) => t.toSourceId === warehouse.id && filterTransactions(t)).forEach((t:any) => t.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
                 stockAdjustmentRecords.filter((adj:any) => adj.warehouseId === warehouse.id && filterTransactions(adj)).forEach((adj:any) => adj.items.filter((i:any) => i.itemId === item.id && i.difference > 0).forEach((i:any) => stock += i.difference));
                 salesReturns.filter((sr:any) => sr.warehouseId === warehouse.id && filterTransactions(sr)).forEach((sr:any) => sr.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
                 stockReturnsFromReps.filter((rfr:any) => rfr.warehouseId === warehouse.id && filterTransactions(rfr)).forEach((rfr:any) => rfr.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
+                if (autoStockUpdate) {
+                    purchaseInvoices.filter((p: any) => p.warehouseId === warehouse.id && filterTransactions(p)).forEach((p: any) => p.items.filter((i: any) => i.id === item.id).forEach((i: any) => stock += i.qty));
+                }
 
                 // Decreases since last closing
                 salesInvoices.filter((s:any) => s.warehouseId === warehouse.id && s.status === 'approved' && filterTransactions(s)).forEach((s:any) => s.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
@@ -232,3 +237,4 @@ export default function StockStatusPage() {
     </>
   );
 }
+
