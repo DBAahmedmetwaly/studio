@@ -10,7 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
 import { Loader2, Printer } from "lucide-react";
 import React, { useState, useMemo, useEffect } from "react";
-import useFirebase from "@/hooks/use-firebase";
 import { useData } from "@/contexts/data-provider";
 
 interface Item {
@@ -31,7 +30,21 @@ interface SaleInvoice {
 interface PosSale {
   id: string;
   date: string;
+  warehouseId?: string; // POS might not always have a warehouse
   items: { id: string; qty: number; price: number; cost?: number; }[];
+}
+
+interface SalesReturn {
+    id: string;
+    date: string;
+    warehouseId: string;
+    items: { id: string; qty: number; price: number; cost?: number; }[];
+}
+
+interface PosReturn {
+    id: string;
+    date: string;
+    items: { id: string; qty: number; price: number; cost?: number; }[];
 }
 
 
@@ -48,10 +61,9 @@ export default function ItemProfitLossPage() {
     });
     const [reportData, setReportData] = useState<any[] | null>(null);
 
-    const { items, salesInvoices: sales, posSales, warehouses, loading } = useData();
+    const { items, salesInvoices, posSales, salesReturns, posReturns, warehouses, loading } = useData();
     
     useEffect(() => {
-        // Set default date range for the last 30 days
         const toDate = new Date();
         const fromDate = new Date();
         fromDate.setDate(toDate.getDate() - 30);
@@ -68,69 +80,110 @@ export default function ItemProfitLossPage() {
     
     const handleGenerateReport = () => {
         
-        const filterByDate = (sale: { date: string }) => {
-            const saleDate = new Date(sale.date);
+        const filterByDate = (item: { date: string }) => {
+            const itemDate = new Date(item.date);
             const fromDate = filters.fromDate ? new Date(filters.fromDate) : null;
             const toDate = filters.toDate ? new Date(filters.toDate) : null;
 
             if(fromDate) fromDate.setHours(0,0,0,0);
             if(toDate) toDate.setHours(23,59,59,999);
 
-            if (fromDate && saleDate < fromDate) return false;
-            if (toDate && saleDate > toDate) return false;
+            if (fromDate && itemDate < fromDate) return false;
+            if (toDate && itemDate > toDate) return false;
             return true;
         }
 
-        const filteredSales = sales.filter(sale => {
+        const filteredSales = salesInvoices.filter(sale => {
             if (sale.status !== 'approved') return false;
             if (!filterByDate(sale)) return false;
             if (filters.warehouseId !== 'all' && sale.warehouseId !== filters.warehouseId) return false;
             return true;
         });
 
-        const filteredPosSales = posSales.filter(filterByDate);
+        const filteredPosSales = posSales.filter(sale => {
+            if (!filterByDate(sale)) return false;
+            // POS sales might not be warehouse-specific in this report view
+            return true;
+        });
+
+        const filteredSalesReturns = salesReturns.filter(ret => {
+             if (!filterByDate(ret)) return false;
+            if (filters.warehouseId !== 'all' && ret.warehouseId !== filters.warehouseId) return false;
+            return true;
+        });
+        
+        const filteredPosReturns = posReturns.filter(ret => filterByDate(ret));
         
         const resultsMap = new Map();
-
-        const processSaleItems = (saleItems: any[]) => {
-             if (!saleItems || !Array.isArray(saleItems)) return;
-             saleItems.forEach(saleItem => {
-                if (!saleItem.id) return;
-                const itemMaster = items.find(i => i.id === saleItem.id);
-                if (!itemMaster) return;
-
-                const revenue = saleItem.qty * saleItem.price;
-                const cost = saleItem.qty * (saleItem.cost || itemMaster.cost || 0);
-
-                if (resultsMap.has(saleItem.id)) {
-                    const existing = resultsMap.get(saleItem.id);
-                    existing.totalQty += saleItem.qty;
-                    existing.totalRevenue += revenue;
-                    existing.totalCost += cost;
-                } else {
-                    resultsMap.set(saleItem.id, {
-                        id: saleItem.id,
-                        name: itemMaster.name,
-                        totalQty: saleItem.qty,
-                        totalRevenue: revenue,
-                        totalCost: cost,
-                    });
-                }
-            });
-        }
         
-        filteredSales.forEach(sale => processSaleItems(sale.items));
-        filteredPosSales.forEach(sale => processSaleItems(sale.items));
+        const getItemMasterCost = (itemId: string) => items.find((i:Item) => i.id === itemId)?.cost || 0;
 
-        const results = Array.from(resultsMap.values()).map(data => {
-            const profit = data.totalRevenue - data.totalCost;
-            const margin = data.totalRevenue > 0 ? (profit / data.totalRevenue) * 100 : 0;
-            return {
-                ...data,
-                profit: profit,
-                margin: margin.toFixed(2) + '%'
-            };
+        // Initialize map with all items
+        items.forEach((item: Item) => {
+             resultsMap.set(item.id, {
+                id: item.id,
+                name: item.name,
+                totalSoldQty: 0,
+                totalSoldValue: 0,
+                totalSoldCount: 0,
+                totalReturnedQty: 0,
+                totalReturnedValue: 0,
+                totalCost: 0,
+            });
         });
+
+        // Process Sales
+        const processSales = (sales: any[]) => {
+            sales.forEach(sale => {
+                 if (!sale.items || !Array.isArray(sale.items)) return;
+                 sale.items.forEach((saleItem: any) => {
+                    if (!saleItem.id) return;
+                    if (resultsMap.has(saleItem.id)) {
+                        const existing = resultsMap.get(saleItem.id);
+                        existing.totalSoldQty += saleItem.qty;
+                        existing.totalSoldValue += saleItem.qty * saleItem.price;
+                        existing.totalSoldCount += 1;
+                        existing.totalCost += saleItem.qty * (saleItem.cost || getItemMasterCost(saleItem.id));
+                    }
+                });
+            });
+        };
+        processSales(filteredSales);
+        processSales(filteredPosSales);
+        
+        // Process Returns
+         const processReturns = (returns: any[]) => {
+            returns.forEach(ret => {
+                 if (!ret.items || !Array.isArray(ret.items)) return;
+                 ret.items.forEach((retItem: any) => {
+                    if (!retItem.id) return;
+                    if (resultsMap.has(retItem.id)) {
+                        const existing = resultsMap.get(retItem.id);
+                        existing.totalReturnedQty += retItem.qty;
+                        existing.totalReturnedValue += retItem.qty * retItem.price;
+                        // Adjust cost based on returned items
+                        existing.totalCost -= retItem.qty * (retItem.cost || getItemMasterCost(retItem.id));
+                    }
+                });
+            });
+        };
+        processReturns(filteredSalesReturns);
+        processReturns(filteredPosReturns);
+
+
+        const results = Array.from(resultsMap.values())
+            .filter(data => data.totalSoldQty > 0 || data.totalReturnedQty > 0) // Only show items that were sold or returned
+            .map(data => {
+                const netRevenue = data.totalSoldValue - data.totalReturnedValue;
+                const profit = netRevenue - data.totalCost;
+                const margin = netRevenue > 0 ? (profit / netRevenue) * 100 : 0;
+                return {
+                    ...data,
+                    netRevenue,
+                    profit,
+                    margin: margin.toFixed(2) + '%'
+                };
+            });
 
         setReportData(results);
     };
@@ -138,6 +191,16 @@ export default function ItemProfitLossPage() {
     const handlePrint = () => {
         window.print();
     };
+    
+    const grandTotals = useMemo(() => {
+        if (!reportData) return null;
+        return {
+            soldValue: reportData.reduce((acc, item) => acc + item.totalSoldValue, 0),
+            returnedValue: reportData.reduce((acc, item) => acc + item.totalReturnedValue, 0),
+            cost: reportData.reduce((acc, item) => acc + item.totalCost, 0),
+            profit: reportData.reduce((acc, item) => acc + item.profit, 0),
+        }
+    }, [reportData]);
 
     return (
     <>
@@ -198,9 +261,9 @@ export default function ItemProfitLossPage() {
                     <TableHeader>
                         <TableRow>
                             <TableHead>الصنف</TableHead>
-                            <TableHead className="text-center">الكمية المباعة</TableHead>
-                            <TableHead className="text-center">الإيرادات</TableHead>
-                            <TableHead className="text-center">التكلفة</TableHead>
+                            <TableHead className="text-center">إجمالي المبيعات</TableHead>
+                            <TableHead className="text-center">إجمالي المرتجعات</TableHead>
+                            <TableHead className="text-center">إجمالي التكلفة</TableHead>
                             <TableHead className="text-center">الربح / الخسارة</TableHead>
                             <TableHead className="text-center">هامش الربح</TableHead>
                         </TableRow>
@@ -212,11 +275,17 @@ export default function ItemProfitLossPage() {
                                     <div className="font-medium">{data.name}</div>
                                     <div className="text-sm text-muted-foreground">{data.id.slice(0, 6).toUpperCase()}</div>
                                 </TableCell>
-                                <TableCell className="text-center">{data.totalQty.toLocaleString()}</TableCell>
-                                <TableCell className="text-center">ج.م {data.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
-                                <TableCell className="text-center">ج.م {data.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                                <TableCell className="text-center">
+                                    <div>{data.totalSoldValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                                    <div className="text-xs text-muted-foreground">({data.totalSoldQty} وحدة)</div>
+                                </TableCell>
+                                 <TableCell className="text-center text-destructive">
+                                    <div>{data.totalReturnedValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                                    <div className="text-xs text-muted-foreground">({data.totalReturnedQty} وحدة)</div>
+                                </TableCell>
+                                <TableCell className="text-center">ج.م {data.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
                                 <TableCell className={`text-center font-bold ${data.profit >= 0 ? "text-green-500" : "text-destructive"}`}>
-                                    ج.م {data.profit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    ج.م {data.profit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                 </TableCell>
                                 <TableCell className={`text-center font-bold ${data.profit >= 0 ? "text-green-500" : "text-destructive"}`}>
                                     {data.margin}
@@ -230,14 +299,14 @@ export default function ItemProfitLossPage() {
                             </TableRow>
                         )}
                     </TableBody>
-                    {reportData.length > 0 && (
+                    {reportData.length > 0 && grandTotals && (
                         <TableFooter>
-                            <TableRow className="bg-muted/50">
-                                <TableCell className="font-bold">الإجمالي</TableCell>
-                                <TableCell className="text-center font-bold">{reportData.reduce((acc, item) => acc + item.totalQty, 0).toLocaleString()}</TableCell>
-                                <TableCell className="text-center font-bold">ج.م {reportData.reduce((acc, item) => acc + item.totalRevenue, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
-                                <TableCell className="text-center font-bold">ج.م {reportData.reduce((acc, item) => acc + item.totalCost, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
-                                <TableCell className="text-center font-bold">ج.م {reportData.reduce((acc, item) => acc + item.profit, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                            <TableRow className="bg-muted/50 font-bold">
+                                <TableCell>الإجمالي</TableCell>
+                                <TableCell className="text-center">ج.م {grandTotals.soldValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
+                                <TableCell className="text-center">ج.م {grandTotals.returnedValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
+                                <TableCell className="text-center">ج.م {grandTotals.cost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
+                                <TableCell className="text-center">ج.م {grandTotals.profit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
                                 <TableCell></TableCell>
                             </TableRow>
                         </TableFooter>
