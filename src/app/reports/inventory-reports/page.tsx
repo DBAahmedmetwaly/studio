@@ -37,6 +37,7 @@ interface PurchaseReturn { id: string; receiptNumber: string; warehouseId: strin
 interface IssueToRep { id: string; receiptNumber: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
 interface ReturnFromRep { id: string; receiptNumber: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
 interface InventoryClosing { id: string; warehouseId: string; closingDate: string; balances: { itemId: string, balance: number }[] }
+interface PosSale { id: string; invoiceNumber: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string;}
 
 
 const ReportFilters = ({ onGenerate, hideItemFilter = false }: { onGenerate: (filters: any) => void, hideItemFilter?: boolean }) => {
@@ -211,7 +212,7 @@ const ItemLedgerReport = ({ filters, data }: any) => {
             let stock = lastRelevantClosing?.balances.find((b:any) => b.itemId === itemId)?.balance || 0;
             const txStartDate = lastRelevantClosing ? new Date(lastRelevantClosing.closingDate) : new Date(0);
             
-            const filterTxs = (t:any) => {
+            const filterTxs = (t: any) => {
                 const txDate = new Date(t.date);
                 return txDate > txStartDate && txDate < new Date(fromDate || 0);
             }
@@ -333,7 +334,7 @@ export default function InventoryReportsPage() {
                 
                 {activeFilters && (
                     <Tabs defaultValue="stock_status" className="w-full">
-                        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7">
+                        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 flex-wrap h-auto md:h-10">
                             <TabsTrigger value="stock_status">حالة المخزون</TabsTrigger>
                             <TabsTrigger value="item_ledger">كارت الصنف</TabsTrigger>
                             <TabsTrigger value="reorder_list">حد الطلب</TabsTrigger>
