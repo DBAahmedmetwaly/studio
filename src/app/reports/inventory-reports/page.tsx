@@ -26,7 +26,7 @@ import { Badge } from "@/components/ui/badge";
 // Data Interfaces
 interface Item { id: string; name: string; unit: string; price: number; reorderPoint?: number; code?: string; cost?: number; }
 interface Warehouse { id: string; name: string; autoStockUpdate?: boolean; }
-interface SaleInvoice { id: string; invoiceNumber: string; warehouseId: string; items: { id: string; qty: number; }[]; status?: 'approved' | 'pending'; date: string;}
+interface SaleInvoice { id: string; invoiceNumber: string; warehouseId: string; items: { id: string; qty: number; }[]; status?: 'approved' | 'pending'; date: string; salesRepId?: string; }
 interface PurchaseInvoice { id: string; invoiceNumber: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
 interface StockInRecord { id: string; receiptNumber: string; warehouseId: string; reason: string; items: { id: string; qty: number; }[]; date: string; }
 interface StockOutRecord { id: string; receiptNumber: string; sourceId: string; items: { id: string; qty: number; }[]; date: string; }

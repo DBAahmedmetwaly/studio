@@ -30,7 +30,7 @@ import { useData } from '@/contexts/data-provider';
 // Data Interfaces
 interface Item { id: string; name: string; unit: string; price: number; cost?: number; reorderPoint?: number; }
 interface Warehouse { id: string; name: string; autoStockUpdate?: boolean; }
-interface SaleInvoice { id: string; warehouseId: string; items: { id: string; qty: number; }[]; status?: 'approved' | 'pending'; date: string; }
+interface SaleInvoice { id: string; warehouseId: string; items: { id: string; qty: number; }[]; status?: 'approved' | 'pending'; date: string; salesRepId?: string;}
 interface PosSale { id: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
 interface PurchaseInvoice { id: string; warehouseId: string; items: { id: string; qty: number; cost?: number }[]; date: string; }
 interface StockInRecord { id: string; warehouseId: string; reason: string; items: { id: string; qty: number; cost?: number }[]; date: string; }
@@ -89,7 +89,7 @@ export default function StockStatusPage() {
                 stockReturnsFromReps.filter((rfr:any) => rfr.warehouseId === warehouse.id && filterTransactions(rfr)).forEach((rfr:any) => rfr.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
                 
                 // Decreases since last closing
-                salesInvoices.filter((s:any) => s.warehouseId === warehouse.id && !s.salesRepId && filterTransactions(s)).forEach((s:any) => s.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
+                salesInvoices.filter((s:any) => s.warehouseId === warehouse.id && (!s.salesRepId || s.status === 'approved') && filterTransactions(s)).forEach((s:any) => s.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
                 posSales.filter((s:any) => s.warehouseId === warehouse.id && filterTransactions(s)).forEach((s:any) => s.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
                 stockOutRecords.filter((so:any) => so.sourceId === warehouse.id && filterTransactions(so)).forEach((so:any) => so.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
                 stockTransferRecords.filter((t:any) => t.fromSourceId === warehouse.id && filterTransactions(t)).forEach((t:any) => t.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));

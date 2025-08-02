@@ -34,6 +34,7 @@ interface SaleInvoice {
   items: { id: string; qty: number; cost?: number; price: number }[];
   status?: 'pending' | 'approved';
   paidAmount?: number;
+  salesRepId?: string;
 }
 interface PurchaseInvoice { id: string; date: string; supplierName: string; total: number; warehouseId: string; discount: number; invoiceNumber?: string; paidAmount?: number; items: { id: string, name: string; qty: number, cost?:number }[];}
 interface Expense { id: string; date: string; description: string; amount: number; warehouseId?: string; expenseType: string; paidFromAccountId: string; receiptNumber?: string;}
@@ -195,6 +196,7 @@ export default function JournalPage() {
         profitDistributions,
         partners,
         stockInRecords,
+        stockIssuesToReps,
         loading
     } = useData();
 
@@ -231,8 +233,16 @@ export default function JournalPage() {
                  entries.push({ id: `sale-discount-${sale.id}`, date: sale.date, warehouseId: sale.warehouseId, number: number, description: `خصم مسموح به على فاتورة بيع`, debit: sale.discount, credit: 0, account: 'خصم مسموح به' });
             }
             
-            // Create credit
+            // Create credit for revenue
             entries.push({ id: `sale-rev-${sale.id}`, date: sale.date, warehouseId: sale.warehouseId, number: number, description: `إيرادات من فاتورة بيع`, debit: 0, credit: totalBeforeDiscount, account: 'إيرادات المبيعات' });
+            
+            // Create COGS entry
+            const cogs = sale.items.reduce((acc, i) => acc + (i.qty * (i.cost || 0)), 0);
+            const inventoryAccount = sale.salesRepId ? 'مخزون بعهدة المندوب' : `مخزون - ${getWarehouse(sale.warehouseId)?.name}`;
+            if (cogs > 0) {
+                 entries.push({ id: `sale-cogs-${sale.id}`, date: sale.date, warehouseId: sale.warehouseId, number: number, description: `تكلفة بضاعة مباعة`, debit: cogs, credit: 0, account: 'تكلفة البضاعة المباعة' });
+                 entries.push({ id: `sale-inv-credit-${sale.id}`, date: sale.date, warehouseId: sale.warehouseId, number: number, description: `صرف من المخزون`, debit: 0, credit: cogs, account: inventoryAccount });
+            }
         });
 
         // Purchase Invoices
@@ -296,6 +306,16 @@ export default function JournalPage() {
              entries.push({ id: `pur-ret-credit-${pr.id}`, date: pr.date, warehouseId: pr.warehouseId, number: number, description: `مرتجع مشتريات إلى ${getSupplierName(pr.supplierId)}`, debit: 0, credit: pr.total, account: `مخزون - ${warehouse?.name}` });
         });
 
+        // Stock Issues to Reps
+        stockIssuesToReps.forEach((itr: any) => {
+            const number = itr.receiptNumber || `ص-م-${itr.id.slice(-4)}`;
+            const issueCost = itr.items.reduce((acc: number, item: any) => acc + (item.qty * (item.cost || 0)), 0);
+            if (issueCost > 0) {
+                 entries.push({ id: `itr-debit-${itr.id}`, date: itr.date, number: number, description: `صرف بضاعة لعهدة المندوب`, debit: issueCost, credit: 0, account: 'مخزون بعهدة المندوب' });
+                 entries.push({ id: `itr-credit-${itr.id}`, date: itr.date, number: number, description: `صرف من المخزن الرئيسي`, debit: 0, credit: issueCost, account: `مخزون - ${getWarehouse(itr.warehouseId)?.name}` });
+            }
+        });
+
 
         // Expenses
         expenses.forEach((e:Expense) => {
@@ -335,8 +355,8 @@ export default function JournalPage() {
             entries.push({ id: `trn-credit-${t.id}`, date: t.date, warehouseId: t.fromSourceId, number: number, description: `تحويل إلى ${toWarehouseName}`, debit: 0, credit: transferCost, account: `مخزون - ${fromWarehouseName}` });
         });
         
-         // Stock Outs (Manual & Sales)
-        stockOuts.forEach((so:StockOutRecord) => {
+         // Stock Outs (Manual) - Sales stock outs are handled in sales invoice logic
+        stockOuts.filter(so => so.reason !== 'sales_invoice').forEach((so:StockOutRecord) => {
             const number = so.receiptNumber || `إذ-خ-${so.id.slice(-4)}`;
             const warehouse = getWarehouse(so.sourceId);
             const costOfGoods = so.items.reduce((acc, stockOutItem) => {
@@ -346,14 +366,9 @@ export default function JournalPage() {
             }, 0);
 
             if (costOfGoods > 0 && warehouse) {
-                if (so.reason === 'sales_invoice') {
-                     entries.push({ id: `so-sale-debit-${so.id}`, date: so.date, warehouseId: so.sourceId, number, description: `تكلفة بضاعة مباعة لفاتورة ${so.saleInvoiceNumber || ''}`, debit: costOfGoods, credit: 0, account: `تكلفة البضاعة المباعة` });
-                     entries.push({ id: `so-sale-credit-${so.id}`, date: so.date, warehouseId: so.sourceId, number, description: `صرف من مخزن ${warehouse.name}`, debit: 0, credit: costOfGoods, account: `مخزون - ${warehouse.name}` });
-                } else {
-                     const reasonLabel = so.reason === 'damaged' ? 'بضاعة تالفة' : `مصروف ${so.reason}`;
-                     entries.push({ id: `so-debit-${so.id}`, date: so.date, warehouseId: so.sourceId, number: number, description: `${reasonLabel} من مخزن ${warehouse.name}`, debit: costOfGoods, credit: 0, account: `مصروف ${reasonLabel}` });
-                     entries.push({ id: `so-credit-${so.id}`, date: so.date, warehouseId: so.sourceId, number: number, description: `تخفيض مخزون`, debit: 0, credit: costOfGoods, account: `مخزون - ${warehouse.name}` });
-                }
+                 const reasonLabel = so.reason === 'damaged' ? 'بضاعة تالفة' : `مصروف ${so.reason}`;
+                 entries.push({ id: `so-debit-${so.id}`, date: so.date, warehouseId: so.sourceId, number: number, description: `${reasonLabel} من مخزن ${warehouse.name}`, debit: costOfGoods, credit: 0, account: `مصروف ${reasonLabel}` });
+                 entries.push({ id: `so-credit-${so.id}`, date: so.date, warehouseId: so.sourceId, number: number, description: `تخفيض مخزون`, debit: 0, credit: costOfGoods, account: `مخزون - ${warehouse.name}` });
             }
         });
         
@@ -428,7 +443,7 @@ export default function JournalPage() {
 
 
         return entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [salesInvoices, purchaseInvoices, expenses, exceptionalIncomes, transfers, warehouses, itemsMap, cashAccounts, treasuryTxs, employeeAdvances, employees, employeeAdjustments, salesReturns, purchaseReturns, customers, suppliers, supplierPayments, customerPayments, stockOuts, profitDistributions, partners, stockInRecords]);
+    }, [salesInvoices, purchaseInvoices, expenses, exceptionalIncomes, transfers, warehouses, itemsMap, cashAccounts, treasuryTxs, employeeAdvances, employees, employeeAdjustments, salesReturns, purchaseReturns, customers, suppliers, supplierPayments, customerPayments, stockOuts, profitDistributions, partners, stockInRecords, stockIssuesToReps]);
 
     const filteredEntries = journalEntries.filter(entry => {
         const entryDate = new Date(entry.date);
@@ -492,6 +507,7 @@ export default function JournalPage() {
             'إذ-خ-': "إذن صرف مخزني",
             'إذ-ت-': "إذن تحويل مخزني",
             'ت-م-': "تسوية مخزون / تسوية موظف",
+            'ص-م-': "صرف بضاعة لمندوب",
             'ت-أ-': "توزيع أرباح",
             'م-': "مصروف",
             'إ-س-': "إيراد استثنائي",

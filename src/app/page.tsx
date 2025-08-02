@@ -137,7 +137,7 @@ export default function Dashboard() {
         .filter((acc:any) => acc.warehouseId === selectedWarehouseId)
         .map((acc:any) => acc.id);
 
-    const approvedSales = salesInvoices.filter((s:any) => !s.salesRepId || s.status === 'approved');
+    const approvedSales = salesInvoices.filter((s:any) => s.status === 'approved');
     const filteredSales = filterByWarehouse(filterByDate(approvedSales), 'warehouseId');
 
     const receiptsFromInvoicePayments = filteredSales.reduce((acc:number, sale:any) => acc + (sale.paidAmount || 0), 0);
