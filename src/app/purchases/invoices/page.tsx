@@ -50,6 +50,7 @@ interface Warehouse {
 interface CashAccount {
     id: string;
     name: string;
+    openingBalance: number;
 }
 
 export default function PurchaseInvoicePage() {
@@ -81,7 +82,16 @@ export default function PurchaseInvoicePage() {
     cashAccounts, 
     dbAction, 
     getNextId, 
-    loading 
+    loading,
+    // For balance calculation
+    customerPayments,
+    salesInvoices,
+    exceptionalIncomes,
+    treasuryTransactions,
+    expenses,
+    supplierPayments,
+    employeeAdvances,
+    profitDistributions,
   } = useData();
 
   const itemsForCombobox = React.useMemo(() => {
@@ -91,6 +101,42 @@ export default function PurchaseInvoicePage() {
   const suppliersForCombobox = React.useMemo(() => {
     return suppliers.map((s: Supplier) => ({ value: s.id, label: s.name }));
   }, [suppliers]);
+  
+   const accountBalances = useMemo(() => {
+        const balances = new Map<string, number>();
+        cashAccounts.forEach((account:any) => {
+            let balance = account.openingBalance || 0;
+            // Add other transactions to calculate current balance
+             customerPayments.filter((p: any) => p.paidToAccountId === account.id).forEach((p:any) => balance += p.amount);
+             salesInvoices.filter((s: any) => s.status === 'approved' && s.paidToAccountId === account.id).forEach((s:any) => balance += (s.paidAmount || 0));
+             exceptionalIncomes.filter((i: any) => i.paidToAccountId === account.id).forEach((i:any) => balance += i.amount);
+             treasuryTransactions.filter((tx:any) => tx.accountId === account.id && tx.type === 'deposit').forEach((tx:any) => balance += tx.amount);
+
+             expenses.filter((ex: any) => ex.paidFromAccountId === account.id).forEach((ex:any) => balance -= ex.amount);
+             supplierPayments.filter((sp: any) => sp.paidFromAccountId === account.id).forEach((sp:any) => balance -= sp.amount);
+             employeeAdvances.filter((ea: any) => ea.paidFromAccountId === account.id).forEach((ea:any) => balance -= ea.amount);
+             profitDistributions.filter((pd: any) => pd.paidFromAccountId === account.id).forEach((pd:any) => balance -= pd.amount);
+             treasuryTransactions.filter((tx:any) => tx.accountId === account.id && tx.type === 'withdrawal').forEach((tx:any) => balance -= tx.amount);
+
+            balances.set(account.id, balance);
+        });
+        return balances;
+    }, [cashAccounts, customerPayments, salesInvoices, exceptionalIncomes, treasuryTransactions, expenses, supplierPayments, employeeAdvances, profitDistributions]);
+    
+    const cashAccountOptions = React.useMemo(() => {
+        return cashAccounts.map((acc: CashAccount) => ({
+            value: acc.id,
+            label: `${acc.name} (الرصيد: ${(accountBalances.get(acc.id) || 0).toLocaleString()})`
+        }))
+    }, [cashAccounts, accountBalances]);
+    
+    const isBalanceSufficient = useMemo(() => {
+        if (paidAmount <= 0) return true;
+        if (!paidFromAccountId) return false;
+        const balance = accountBalances.get(paidFromAccountId) || 0;
+        return balance >= paidAmount;
+    }, [paidAmount, paidFromAccountId, accountBalances]);
+
 
   useEffect(() => {
     const newSubtotal = items.reduce((acc, item) => acc + item.total, 0);
@@ -161,6 +207,11 @@ export default function PurchaseInvoicePage() {
             toast({ variant: "destructive", title: "بيانات غير مكتملة", description: "يرجى تحديد الحساب الذي تم الدفع منه." });
             return;
         }
+        if (!isBalanceSufficient) {
+             toast({ variant: "destructive", title: "رصيد غير كافٍ", description: "رصيد الخزينة المحدد لا يكفي لتغطية المبلغ المدفوع." });
+            return;
+        }
+
         setIsSaving(true);
         try {
             const invoiceNumber = `ف-ش-${await getNextId('purchaseInvoice')}`;
@@ -384,14 +435,14 @@ export default function PurchaseInvoicePage() {
                             </div>
                              {paidAmount > 0 && <div className="space-y-2">
                                 <Label htmlFor="paidFromAccount">الدفع من</Label>
-                                <Select value={paidFromAccountId} onValueChange={setPaidFromAccountId}>
-                                    <SelectTrigger id="paidFromAccount">
-                                        <SelectValue placeholder="اختر حساب الدفع" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                    {cashAccounts.map((acc: CashAccount) => <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
+                                <Combobox
+                                    options={cashAccountOptions}
+                                    value={paidFromAccountId}
+                                    onValueChange={setPaidFromAccountId}
+                                    placeholder="اختر حساب الدفع..."
+                                    emptyMessage="لم يتم العثور على حساب."
+                                />
+                                {!isBalanceSufficient && paidFromAccountId && <p className="text-xs text-destructive">رصيد هذا الحساب غير كافٍ.</p>}
                             </div>}
                             <div className="flex justify-between font-bold text-base text-destructive">
                                 <span>المبلغ المتبقي</span>
@@ -409,7 +460,7 @@ export default function PurchaseInvoicePage() {
             )}
           </CardContent>
           <CardFooter className="flex justify-end no-print">
-            <Button size="lg" disabled={loading || isSaving} onClick={handleSaveInvoice}>
+            <Button size="lg" disabled={loading || isSaving || !isBalanceSufficient} onClick={handleSaveInvoice}>
                  {isSaving ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <Save className="ml-2 h-4 w-4" />}
                 {isSaving ? 'جارٍ الحفظ...' : 'تسجيل الفاتورة'}
             </Button>
