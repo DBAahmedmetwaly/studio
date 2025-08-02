@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { createContext, useContext, ReactNode } from 'react';
@@ -156,8 +157,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             'employeeAdvances': { add: add_employeeAdvance, remove: remove_employeeAdvance },
             'employeeAdjustments': { add: add_employeeAdjustment, remove: remove_employeeAdjustment },
             'repRemittances': { add: add_repRemittance, remove: remove_repRemittance },
-            'settings/printers': { update: update_settings },
-            'settings/posReceipt': { update: update_settings },
+            'settings': { update: update_settings },
             'counters': { remove: remove_counters },
             // Add other paths here
         };

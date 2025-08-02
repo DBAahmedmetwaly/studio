@@ -70,7 +70,7 @@ export default function PosPage() {
     }, [activeCashierSession]);
 
     const companySettings = useMemo(() => settings?.main?.general || {}, [settings]);
-    const receiptDesign = useMemo(() => settings?.posReceipt || {}, [settings]);
+    const receiptDesign = useMemo(() => settings?.main?.posReceipt || {}, [settings]);
 
     const warehouseForCashier = useMemo(() => {
         if (!user) return null;

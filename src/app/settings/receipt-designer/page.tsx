@@ -12,7 +12,6 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Separator } from '@/components/ui/separator';
-import useFirebase from "@/hooks/use-firebase";
 import { PosReceipt } from '@/components/pos-receipt';
 import { useData } from '@/contexts/data-provider';
 
@@ -118,18 +117,18 @@ const FontSizeControl = ({ label, value, onChange }: { label: string, value: num
 
 
 export default function ReceiptDesignerPage() {
-    const { settings: allSettings, dbAction } = useData();
+    const { settings: allData, dbAction, loading: dataLoading } = useData();
     const { toast } = useToast();
     
     const [settings, setSettings] = useState<ReceiptSettings>(DEFAULT_SETTINGS);
     const [loading, setLoading] = useState(true);
     
     useEffect(() => {
-        if(allSettings?.posReceipt) {
-            setSettings(prev => ({...DEFAULT_SETTINGS, ...allSettings.posReceipt}));
+        if(allData?.posReceipt) {
+            setSettings(prev => ({...DEFAULT_SETTINGS, ...allData.posReceipt}));
         }
         setLoading(false);
-    }, [allSettings]);
+    }, [allData]);
 
 
     const handleSettingChange = (key: keyof ReceiptSettings, value: any) => {
@@ -143,9 +142,7 @@ export default function ReceiptDesignerPage() {
     const handleSave = async () => {
         setLoading(true);
         try {
-            // The `settings` path in firebase is an object, not an array.
-            // We are updating a specific key ('posReceipt') within that object.
-            await dbAction('settings/posReceipt', 'update', { id: '', data: settings }); // Using empty ID because we're targeting a direct path
+            await dbAction('settings', 'update', { id: 'main', data: { posReceipt: settings } });
             toast({ title: 'تم الحفظ', description: 'تم تحديث تصميم الإيصال بنجاح.' });
         } catch (error) {
             console.error(error);
@@ -155,9 +152,9 @@ export default function ReceiptDesignerPage() {
         }
     };
     
-    const companySettings = allSettings?.main?.general || {};
+    const companySettings = allData?.main?.general || {};
 
-    if (loading) {
+    if (loading || dataLoading) {
         return <div className="flex flex-1 justify-center items-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
     }
 
