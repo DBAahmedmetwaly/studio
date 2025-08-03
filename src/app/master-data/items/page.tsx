@@ -38,6 +38,7 @@ import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/contexts/permissions-context";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { BarcodePrintDialog } from "@/components/barcode-print-dialog";
+import { Combobox } from "@/components/ui/combobox";
 
 
 interface Item {
@@ -141,8 +142,19 @@ export default function ItemsPage() {
     const moduleName = 'inventory_items';
     const [searchTerm, setSearchTerm] = useState('');
 
+    const itemOptions = useMemo(() => {
+        return items.map((item: Item) => ({
+            value: item.id!,
+            label: `${item.name} (${item.code || ''})`
+        }));
+    }, [items]);
+
     const filteredItems = useMemo(() => {
         if (!searchTerm) return items;
+        // If a search term is a selected ID, show only that item
+        const selectedItem = items.find((item:Item) => item.id === searchTerm);
+        if (selectedItem) return [selectedItem];
+        // Otherwise, it might be a text search from the combobox input
         return items.filter((item: Item) => 
             (item.name && item.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
             (item.code && item.code.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -218,11 +230,12 @@ export default function ItemsPage() {
           </CardHeader>
           <CardContent>
             <div className="mb-4">
-                <Input 
-                    type="text" 
-                    placeholder="ابحث بالاسم أو الكود..." 
+                 <Combobox
+                    options={itemOptions}
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onValueChange={setSearchTerm}
+                    placeholder="ابحث واختر صنفًا..."
+                    emptyMessage="لم يتم العثور على صنف."
                     className="max-w-sm"
                 />
             </div>
