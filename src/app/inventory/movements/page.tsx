@@ -22,6 +22,7 @@ interface ItemDetails {
     name: string;
     qty: number;
     cost?: number;
+    price?: number;
 }
 
 interface StockInRecord {
@@ -29,7 +30,7 @@ interface StockInRecord {
   receiptNumber: string;
   date: string;
   warehouseId: string;
-  items: { itemId: string; name: string; qty: number; cost?: number }[];
+  items: { itemId: string; name: string; qty: number; cost?: number, price?: number }[];
   createdByName?: string;
 }
 
@@ -38,7 +39,7 @@ interface StockOutRecord {
   receiptNumber: string;
   date: string;
   sourceId: string;
-  items: { id: string; name: string; qty: number; cost?: number }[];
+  items: { id: string; name: string; qty: number; cost?: number, price?: number }[];
   createdByName?: string;
 }
 
@@ -48,7 +49,7 @@ interface StockTransferRecord {
   date: string;
   fromSourceId: string;
   toSourceId: string;
-  items: { id: string; name: string; qty: number; cost?: number }[];
+  items: { id: string; name: string; qty: number; cost?: number, price?: number }[];
   createdByName?: string;
 }
 
@@ -68,6 +69,7 @@ const ItemsDetailsDialog = ({ items }: { items: ItemDetails[] }) => (
                     <TableHead>الصنف</TableHead>
                     <TableHead className="text-center">الكمية</TableHead>
                     <TableHead className="text-center">التكلفة</TableHead>
+                    <TableHead className="text-center">سعر البيع</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -76,6 +78,7 @@ const ItemsDetailsDialog = ({ items }: { items: ItemDetails[] }) => (
                         <TableCell>{item.name}</TableCell>
                         <TableCell className="text-center">{item.qty}</TableCell>
                         <TableCell className="text-center">{item.cost?.toLocaleString() || '-'}</TableCell>
+                        <TableCell className="text-center">{item.price?.toLocaleString() || '-'}</TableCell>
                     </TableRow>
                 ))}
             </TableBody>
@@ -285,4 +288,5 @@ export default function InventoryMovementsPage() {
     </TooltipProvider>
   );
 }
+
 
