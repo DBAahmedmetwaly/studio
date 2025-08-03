@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import PageHeader from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, MoreHorizontal, Edit, Trash2, Loader2, QrCode } from "lucide-react";
@@ -139,6 +139,16 @@ export default function ItemsPage() {
     const { toast } = useToast();
     const { can } = usePermissions();
     const moduleName = 'inventory_items';
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const filteredItems = useMemo(() => {
+        if (!searchTerm) return items;
+        return items.filter((item: Item) => 
+            (item.name && item.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (item.code && item.code.toLowerCase().includes(searchTerm.toLowerCase()))
+        );
+    }, [items, searchTerm]);
+
 
     const handleSave = async (item: Omit<Item, 'id' | 'code'> & { id?: string, code?: string }) => {
         try {
@@ -207,6 +217,15 @@ export default function ItemsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            <div className="mb-4">
+                <Input 
+                    type="text" 
+                    placeholder="ابحث بالاسم أو الكود..." 
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="max-w-sm"
+                />
+            </div>
             {loading ? (
                  <div className="flex justify-center items-center py-10">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -225,7 +244,7 @@ export default function ItemsPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {items.map((item: Item) => (
+                            {filteredItems.map((item: Item) => (
                                 <TableRow key={item.id}>
                                     <TableCell className="font-mono">{item.code}</TableCell>
                                     <TableCell className="font-medium">{item.name}</TableCell>
@@ -300,7 +319,7 @@ export default function ItemsPage() {
                             ))}
                         </TableBody>
                     </Table>
-                 </div>
+                </div>
             )}
           </CardContent>
         </Card>
