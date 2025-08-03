@@ -7,7 +7,7 @@ import useFirebase from '@/hooks/use-firebase';
 import PageHeader from '@/components/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Loader2, Printer } from 'lucide-react';
 
 interface StockInRecord {
@@ -17,7 +17,7 @@ interface StockInRecord {
   warehouseId: string;
   reason: string;
   notes?: string;
-  items: { id: string; name: string; qty: number; }[];
+  items: { id: string; name: string; qty: number; cost?: number; }[];
 }
 
 interface Warehouse {
@@ -56,6 +56,8 @@ export default function StockInDetailsPage({ params }: { params: { id: string } 
   if (!record) {
     return <div className="flex flex-1 justify-center items-center"><p>لم يتم العثور على الإيصال.</p></div>;
   }
+  
+  const totalValue = record.items.reduce((sum, item) => sum + (item.qty * (item.cost || 0)), 0);
 
   return (
     <>
@@ -85,16 +87,26 @@ export default function StockInDetailsPage({ params }: { params: { id: string } 
                       <TableRow>
                           <TableHead>الصنف</TableHead>
                           <TableHead className="text-center">الكمية المستلمة</TableHead>
+                          <TableHead className="text-center">التكلفة</TableHead>
+                          <TableHead className="text-center">الإجمالي</TableHead>
                       </TableRow>
                   </TableHeader>
                   <TableBody>
-                      {record.items.map(item => (
-                          <TableRow key={item.id}>
+                      {record.items.map((item, index) => (
+                          <TableRow key={index}>
                               <TableCell>{item.name}</TableCell>
                               <TableCell className="text-center">{item.qty}</TableCell>
+                              <TableCell className="text-center">{item.cost?.toLocaleString() || '-'}</TableCell>
+                              <TableCell className="text-center">{((item.cost || 0) * item.qty).toLocaleString()}</TableCell>
                           </TableRow>
                       ))}
                   </TableBody>
+                  <TableFooter>
+                    <TableRow>
+                        <TableCell colSpan={3} className="font-bold text-base">إجمالي قيمة البضاعة المستلمة</TableCell>
+                        <TableCell className="text-center font-bold text-base">{totalValue.toLocaleString()}</TableCell>
+                    </TableRow>
+                  </TableFooter>
               </Table>
             </div>
             {record.notes && (
