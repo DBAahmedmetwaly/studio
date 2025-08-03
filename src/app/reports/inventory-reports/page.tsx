@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
@@ -133,7 +132,7 @@ const StockStatusReport = ({ filters, data }: any) => {
             const lastClosingDate = lastClosing ? new Date(lastClosing.closingDate) : new Date(0);
             
             allItems.forEach((item: Item) => {
-                let stock = lastClosing?.balances.find((b:any) => b.itemId === item.id)?.balance || 0;
+                let stock = lastClosing?.balances?.find((b:any) => b.itemId === item.id)?.balance || 0;
                 const filterTransactions = (t: any) => new Date(t.date) > lastClosingDate;
                 
                 // Increases
@@ -209,7 +208,7 @@ const ItemLedgerReport = ({ filters, data }: any) => {
             const closingsForWh = inventoryClosings.filter((c: InventoryClosing) => c.warehouseId === warehouse.id);
             const lastRelevantClosing = closingsForWh.length > 0 ? closingsForWh.filter((c:any) => new Date(c.closingDate) < new Date(fromDate || 0)).reduce((l:any,c:any) => new Date(l.closingDate) > new Date(c.closingDate) ? l : c, null) : null;
             
-            let stock = lastRelevantClosing?.balances.find((b:any) => b.itemId === itemId)?.balance || 0;
+            let stock = lastRelevantClosing?.balances?.find((b:any) => b.itemId === itemId)?.balance || 0;
             const txStartDate = lastRelevantClosing ? new Date(lastRelevantClosing.closingDate) : new Date(0);
             
             const filterTxs = (t: any) => {
