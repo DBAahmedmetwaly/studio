@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useMemo, useState } from 'react';
@@ -50,12 +49,13 @@ export default function StockStatusPage() {
     });
 
     const { 
-        items: allItems, warehouses, salesInvoices, purchaseInvoices, 
+        items: allItems, warehouses, salesInvoices,
         stockInRecords, stockOutRecords, stockTransferRecords, 
         stockAdjustmentRecords, salesReturns, purchaseReturns, 
         stockIssuesToReps, stockReturnsFromReps,
         posSales,
-        inventoryClosings, loading 
+        inventoryClosings, loading,
+        purchaseInvoices 
     } = useData();
 
     const handleFilterChange = (key: keyof typeof filters, value: string) => {
@@ -70,13 +70,14 @@ export default function StockStatusPage() {
             : warehouses.filter((w:any) => w.id === filters.warehouseId);
 
         targetWarehouses.forEach((warehouse: Warehouse) => {
-            const closingsForWarehouse = inventoryClosings.filter((c: InventoryClosing) => c.warehouseId === warehouse.id);
-            const lastClosing = closingsForWarehouse.length > 0
-                ? closingsForWarehouse.reduce((latest: any, current: any) => new Date(latest.closingDate) > new Date(current.closingDate) ? latest : current)
-                : null;
-            const lastClosingDate = lastClosing ? new Date(lastClosing.closingDate) : new Date(0);
-
+             const closingsForWarehouse = inventoryClosings.filter((c: InventoryClosing) => c.warehouseId === warehouse.id);
+             
             allItems.forEach((item: Item) => {
+                const lastClosing = closingsForWarehouse.length > 0
+                    ? closingsForWarehouse.reduce((latest: any, current: any) => new Date(latest.closingDate) > new Date(current.closingDate) ? latest : current)
+                    : null;
+                const lastClosingDate = lastClosing ? new Date(lastClosing.closingDate) : new Date(0);
+
                 let stock = lastClosing?.balances.find((b:any) => b.itemId === item.id)?.balance || 0;
 
                 const filterTransactions = (t: any) => new Date(t.date) > lastClosingDate;
@@ -168,7 +169,7 @@ export default function StockStatusPage() {
           <CardHeader>
             <CardTitle>الأرصدة الحالية</CardTitle>
             <CardDescription>
-              عرض تفصيلي للأرصدة الحالية لكل صنف في المخازن بناءً على آخر فترة مقفلة.
+              عرض تفصيلي للأرصدة الحالية لكل صنف في المخازن.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -232,3 +233,5 @@ export default function StockStatusPage() {
     </>
   );
 }
+
+    
