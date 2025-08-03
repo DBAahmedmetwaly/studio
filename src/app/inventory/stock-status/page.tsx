@@ -119,7 +119,7 @@ export default function StockStatusPage() {
         });
         
         return results.filter(item => {
-            const matchesName = item.itemName.toLowerCase().includes(filters.itemName.toLowerCase());
+            const matchesName = item.itemName && item.itemName.toLowerCase().includes(filters.itemName.toLowerCase());
             return matchesName && item.currentStock !== 0;
         });
 
