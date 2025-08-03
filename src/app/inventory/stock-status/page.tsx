@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import PageHeader from "@/components/page-header";
 import {
   Card,
@@ -9,6 +9,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
 import {
   Table,
@@ -19,12 +20,13 @@ import {
   TableRow,
   TableFooter,
 } from "@/components/ui/table";
-import { Loader2 } from "lucide-react";
+import { Loader2, Printer } from "lucide-react";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useData } from '@/contexts/data-provider';
+import { Button } from '@/components/ui/button';
 
 // Data Interfaces
 interface Item { id: string; name: string; unit: string; price: number; cost?: number; reorderPoint?: number; }
@@ -47,6 +49,7 @@ export default function StockStatusPage() {
         warehouseId: "all",
         itemName: ""
     });
+    const [reportData, setReportData] = useState<any[] | null>(null);
 
     const { 
         items: allItems, warehouses, salesInvoices,
@@ -62,7 +65,7 @@ export default function StockStatusPage() {
         setFilters(prev => ({...prev, [key]: value}));
     };
 
-    const stockData = useMemo(() => {
+    const handleGenerateReport = () => {
         let results: any[] = [];
         
         const targetWarehouses = filters.warehouseId === 'all'
@@ -70,7 +73,7 @@ export default function StockStatusPage() {
             : warehouses.filter((w:any) => w.id === filters.warehouseId);
 
         targetWarehouses.forEach((warehouse: Warehouse) => {
-             const closingsForWarehouse = inventoryClosings.filter((c: InventoryClosing) => c.warehouseId === warehouse.id);
+            const closingsForWarehouse = inventoryClosings.filter((c: InventoryClosing) => c.warehouseId === warehouse.id);
              
             allItems.forEach((item: Item) => {
                 const lastClosing = closingsForWarehouse.length > 0
@@ -119,12 +122,13 @@ export default function StockStatusPage() {
             });
         });
         
-        return results.filter(item => {
-            const matchesName = !item.itemName || item.itemName.toLowerCase().includes(filters.itemName.toLowerCase());
+        const filteredResults = results.filter(item => {
+            const matchesName = !filters.itemName || (item.itemName && item.itemName.toLowerCase().includes(filters.itemName.toLowerCase()));
             return matchesName && item.currentStock !== 0;
         });
 
-    }, [filters, allItems, warehouses, salesInvoices, purchaseInvoices, stockInRecords, stockOutRecords, stockTransferRecords, stockAdjustmentRecords, salesReturns, purchaseReturns, stockIssuesToReps, stockReturnsFromReps, inventoryClosings, posSales]);
+        setReportData(filteredResults);
+    };
     
     const getUnitLabel = (unit: string) => {
         const units = { piece: "قطعة", weight: "لتر ", meter: "متر", kilo: "كيلو", gram: "جرام" };
@@ -132,14 +136,19 @@ export default function StockStatusPage() {
     }
     
     const totalValue = useMemo(() => {
-        return stockData.reduce((sum, item) => sum + (item.currentStock * item.cost), 0);
-    }, [stockData]);
+        if (!reportData) return 0;
+        return reportData.reduce((sum, item) => sum + (item.currentStock * item.cost), 0);
+    }, [reportData]);
+
+    const handlePrint = () => {
+      window.print();
+    }
 
   return (
     <>
       <PageHeader title="تقرير أرصدة المخزون" />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
-        <Card>
+        <Card className="no-print">
             <CardHeader>
                 <CardTitle>فلاتر البحث</CardTitle>
             </CardHeader>
@@ -163,14 +172,26 @@ export default function StockStatusPage() {
                     </div>
                 </div>
             </CardContent>
+            <CardFooter>
+                 <Button onClick={handleGenerateReport} disabled={loading}>
+                    {loading ? <Loader2 className="animate-spin ml-2" /> : null}
+                    عرض التقرير
+                </Button>
+            </CardFooter>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>الأرصدة الحالية</CardTitle>
-            <CardDescription>
-              عرض تفصيلي للأرصدة الحالية لكل صنف في المخازن.
-            </CardDescription>
+        {reportData && (
+        <Card className="printable-area">
+          <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>الأرصدة الحالية</CardTitle>
+                <CardDescription>
+                  عرض تفصيلي للأرصدة الحالية لكل صنف في المخازن بناءً على الفلاتر.
+                </CardDescription>
+              </div>
+              <Button variant="outline" size="icon" onClick={handlePrint} className="no-print">
+                <Printer className="h-4 w-4" />
+              </Button>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -191,7 +212,7 @@ export default function StockStatusPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {stockData.length > 0 ? stockData.map((item) => (
+                            {reportData.length > 0 ? reportData.map((item) => (
                             <TableRow key={item.id}>
                                 <TableCell>{item.warehouseName}</TableCell>
                                 <TableCell className="font-medium">{item.itemName}</TableCell>
@@ -214,7 +235,7 @@ export default function StockStatusPage() {
                                 </TableRow>
                             )}
                         </TableBody>
-                        {stockData.length > 0 && (
+                        {reportData.length > 0 && (
                             <TableFooter>
                                 <TableRow>
                                     <TableCell colSpan={5} className="font-bold text-base">إجمالي قيمة المخزون</TableCell>
@@ -229,9 +250,9 @@ export default function StockStatusPage() {
             )}
           </CardContent>
         </Card>
+        )}
       </main>
     </>
   );
 }
 
-    

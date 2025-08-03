@@ -214,7 +214,9 @@ const ItemLedgerReport = ({ filters, data }: any) => {
             
             const filterTxs = (t: any) => {
                 const txDate = new Date(t.date);
-                return txDate > txStartDate && txDate < new Date(fromDate || 0);
+                const start = fromDate ? new Date(fromDate) : null;
+                if(start) start.setHours(0,0,0,0);
+                return txDate > txStartDate && (!start || txDate < start);
             }
             
             // Apply transactions between last closing and fromDate to get opening balance
@@ -222,7 +224,7 @@ const ItemLedgerReport = ({ filters, data }: any) => {
              stockTransferRecords.filter((t:any) => t.toSourceId === warehouse.id && filterTxs(t)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => stock += i.qty));
              salesReturns.filter((t:any) => t.warehouseId === warehouse.id && filterTxs(t)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => stock += i.qty));
              stockReturnsFromReps.filter((t:any) => t.warehouseId === warehouse.id && filterTxs(t)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => stock += i.qty));
-             stockAdjustmentRecords.filter((t:any) => t.warehouseId === warehouse.id && filterTxs(t)).forEach((t:any) => t.items.filter((i:any)=>i.itemId === itemId).forEach((i:any) => stock += i.difference > 0 ? i.difference : 0));
+             stockAdjustmentRecords.filter((t:any) => t.warehouseId === warehouse.id && filterTxs(t)).forEach((t:any) => t.items.filter((i:any)=>i.itemId === itemId && i.difference > 0).forEach((i:any) => stock += i.difference));
              salesInvoices.filter((t:any) => t.warehouseId === warehouse.id && (!t.salesRepId || t.status==='approved') && filterTxs(t)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => stock -= i.qty));
              posSales.filter((t:any) => t.warehouseId === warehouse.id && filterTxs(t)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => stock -= i.qty));
              stockOutRecords.filter((t:any) => t.sourceId === warehouse.id && filterTxs(t)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => stock -= i.qty));
