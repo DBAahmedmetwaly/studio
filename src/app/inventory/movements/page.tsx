@@ -18,12 +18,18 @@ import { getLinkForReceipt } from "@/lib/utils";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
+interface ItemDetails {
+    name: string;
+    qty: number;
+    cost?: number;
+}
+
 interface StockInRecord {
   id: string;
   receiptNumber: string;
   date: string;
   warehouseId: string;
-  items: { name: string; qty: number; cost?: number }[];
+  items: { itemId: string; name: string; qty: number; cost?: number }[];
   createdByName?: string;
 }
 
@@ -32,7 +38,7 @@ interface StockOutRecord {
   receiptNumber: string;
   date: string;
   sourceId: string;
-  items: { name: string; qty: number; cost?: number }[];
+  items: { id: string; name: string; qty: number; cost?: number }[];
   createdByName?: string;
 }
 
@@ -42,7 +48,7 @@ interface StockTransferRecord {
   date: string;
   fromSourceId: string;
   toSourceId: string;
-  items: { name: string; qty: number; cost?: number }[];
+  items: { id: string; name: string; qty: number; cost?: number }[];
   createdByName?: string;
 }
 
@@ -51,7 +57,7 @@ interface Warehouse {
     name: string;
 }
 
-const ItemsDetailsDialog = ({ items }: { items: any[] }) => (
+const ItemsDetailsDialog = ({ items }: { items: ItemDetails[] }) => (
     <DialogContent>
         <DialogHeader>
             <DialogTitle>تفاصيل الأصناف</DialogTitle>
@@ -65,7 +71,7 @@ const ItemsDetailsDialog = ({ items }: { items: any[] }) => (
                 </TableRow>
             </TableHeader>
             <TableBody>
-                {items.map((item, idx) => (
+                {items && items.map((item, idx) => (
                     <TableRow key={idx}>
                         <TableCell>{item.name}</TableCell>
                         <TableCell className="text-center">{item.qty}</TableCell>
@@ -85,6 +91,8 @@ export default function InventoryMovementsPage() {
     fromDate: "",
     toDate: ""
   });
+  
+  const [selectedItems, setSelectedItems] = useState<ItemDetails[]>([]);
 
   const { stockInRecords, stockOutRecords, stockTransferRecords, warehouses, loading } = useData();
 
@@ -95,9 +103,9 @@ export default function InventoryMovementsPage() {
 
   const filteredMovements = useMemo(() => {
     const allMovements = [
-      ...stockInRecords.map((r: any) => ({ ...r, type: 'in', typeLabel: 'استلام' })),
-      ...stockOutRecords.map((r: any) => ({ ...r, type: 'out', typeLabel: 'صرف' })),
-      ...stockTransferRecords.map((r: any) => ({ ...r, type: 'transfer', typeLabel: 'تحويل' })),
+      ...stockInRecords.map((r: StockInRecord) => ({ ...r, type: 'in', typeLabel: 'استلام' })),
+      ...stockOutRecords.map((r: StockOutRecord) => ({ ...r, type: 'out', typeLabel: 'صرف' })),
+      ...stockTransferRecords.map((r: StockTransferRecord) => ({ ...r, type: 'transfer', typeLabel: 'تحويل' })),
     ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     return allMovements.filter(move => {
@@ -250,12 +258,11 @@ export default function InventoryMovementsPage() {
                                 </TableCell>
                                 <TableCell className="text-center">
                                     <DialogTrigger asChild>
-                                        <Button variant="ghost" size="sm">
+                                        <Button variant="ghost" size="sm" onClick={() => setSelectedItems(move.items)}>
                                             <FileText className="ml-2 h-4 w-4"/>
                                             {move.items.length}
                                         </Button>
                                     </DialogTrigger>
-                                     <ItemsDetailsDialog items={move.items} />
                                 </TableCell>
                             </TableRow>
                             )) : (
@@ -267,6 +274,7 @@ export default function InventoryMovementsPage() {
                             )}
                         </TableBody>
                     </Table>
+                    <ItemsDetailsDialog items={selectedItems} />
                     </Dialog>
                 </div>
             )}
@@ -277,3 +285,4 @@ export default function InventoryMovementsPage() {
     </TooltipProvider>
   );
 }
+

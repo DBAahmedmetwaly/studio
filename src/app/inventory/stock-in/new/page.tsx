@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import PageHeader from "@/components/page-header";
@@ -170,7 +171,7 @@ export default function NewStockInPage() {
         const record: any = {
             warehouseId: selectedWarehouse,
             date: new Date(date).toISOString(),
-            items: items.map(({itemId, itemName, qty, cost}) => ({itemId, name: itemName, qty, cost})), // Use 'name' for backward compatibility in some views if needed
+            items: items.map(({itemId, itemName, qty, cost}) => ({itemId, name: itemName, qty, cost})),
             reason,
             notes,
             receiptNumber: `إذ-د-${nextId}`,
