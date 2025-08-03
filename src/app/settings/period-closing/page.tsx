@@ -273,7 +273,7 @@ export default function PeriodClosingPage() {
                                         <TableRow key={closing.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedClosingDetails(closing)}>
                                             <TableCell>{new Date(closing.closingDate).toLocaleDateString('ar-EG')}</TableCell>
                                             <TableCell>{closing.closedByName}</TableCell>
-                                            <TableCell className="text-center">{closing.balances.length}</TableCell>
+                                            <TableCell className="text-center">{closing.balances?.length || 0}</TableCell>
                                             <TableCell className="text-center">
                                                 {index === 0 && ( // Only allow deleting the most recent closing
                                                     <AlertDialog>
