@@ -24,7 +24,8 @@ interface InvoiceItem {
   id: string;
   name: string;
   qty: number;
-  price: number;
+  price: number; // Cost price
+  sellingPrice: number; // Selling price
   total: number;
   unit: string;
 }
@@ -57,7 +58,7 @@ export default function PurchaseInvoicePage() {
   const router = useRouter();
   const { toast } = useToast();
   const [items, setItems] = useState<InvoiceItem[]>([]);
-  const [newItem, setNewItem] = useState({ id: "", name: "", qty: 1, price: 0, unit: "" });
+  const [newItem, setNewItem] = useState({ id: "", name: "", qty: 1, price: 0, sellingPrice: 0, unit: "" });
   const [subtotal, setSubtotal] = useState(0);
   const [discount, setDiscount] = useState(0);
   const [tax, setTax] = useState(0);
@@ -83,7 +84,6 @@ export default function PurchaseInvoicePage() {
     dbAction, 
     getNextId, 
     loading,
-    // For balance calculation
     customerPayments,
     salesInvoices,
     exceptionalIncomes,
@@ -171,7 +171,7 @@ export default function PurchaseInvoicePage() {
         unit: selectedItem.unit,
       },
     ]);
-    setNewItem({ id: "", name: "", qty: 1, price: 0, unit: "" });
+    setNewItem({ id: "", name: "", qty: 1, price: 0, sellingPrice: 0, unit: "" });
   };
 
   const handleRemoveItem = (id: string) => {
@@ -188,7 +188,8 @@ export default function PurchaseInvoicePage() {
         setNewItem({
             ...newItem,
             id: itemId,
-            price: selectedItem.cost || selectedItem.price || 0,
+            price: selectedItem.cost || 0,
+            sellingPrice: selectedItem.price || 0,
             unit: selectedItem.unit,
         });
     }
@@ -230,7 +231,7 @@ export default function PurchaseInvoicePage() {
                         id: originalItemId,
                         name: item.name,
                         qty: item.qty,
-                        cost: item.price, // In purchase invoice, price is the cost
+                        cost: item.price,
                         price: item.price,
                         total: item.total,
                     }
@@ -248,9 +249,21 @@ export default function PurchaseInvoicePage() {
 
             await dbAction('purchaseInvoices', 'add', invoiceData);
             
+            // Update item master data with new cost and selling price
+            for (const item of items) {
+                const originalItemId = item.id.split('-')[0];
+                await dbAction('items', 'update', {
+                    id: originalItemId,
+                    data: {
+                        cost: item.price, // Cost for the item is the purchase price
+                        price: item.sellingPrice, // The new selling price
+                    }
+                });
+            }
+            
             toast({
                 title: 'تم الحفظ بنجاح',
-                description: `تم حفظ فاتورة الشراء رقم ${invoiceNumber}`
+                description: `تم حفظ فاتورة الشراء رقم ${invoiceNumber} وتحديث أسعار الأصناف.`
             });
             router.push('/purchases/invoices/list');
         } catch (error) {
@@ -331,10 +344,10 @@ export default function PurchaseInvoicePage() {
                     <Table>
                         <TableHeader>
                         <TableRow>
-                            <TableHead className="w-[40%]">الصنف</TableHead>
-                            <TableHead className="text-center">الوحدة</TableHead>
-                            <TableHead className="text-center">الكمية</TableHead>
+                            <TableHead className="w-[30%]">الصنف</TableHead>
+                            <TableHead className="text-center">كمية</TableHead>
                             <TableHead className="text-center">سعر الشراء (التكلفة)</TableHead>
+                            <TableHead className="text-center">سعر البيع المقترح</TableHead>
                             <TableHead className="text-center">الإجمالي</TableHead>
                             <TableHead className="text-center w-[100px] no-print">الإجراء</TableHead>
                         </TableRow>
@@ -342,16 +355,27 @@ export default function PurchaseInvoicePage() {
                         <TableBody>
                         {items.map((item, index) => (
                             <TableRow key={item.id}>
-                            <TableCell>{item.name}</TableCell>
-                            <TableCell className="text-center">{item.unit}</TableCell>
-                            <TableCell className="text-center">{item.qty}</TableCell>
-                            <TableCell className="text-center">ج.م {item.price.toFixed(2)}</TableCell>
-                            <TableCell className="text-center">ج.م {item.total.toFixed(2)}</TableCell>
-                            <TableCell className="text-center no-print">
-                                <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)}>
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                                </Button>
-                            </TableCell>
+                                <TableCell>{item.name}</TableCell>
+                                <TableCell className="text-center">{item.qty}</TableCell>
+                                <TableCell className="text-center">ج.م {item.price.toFixed(2)}</TableCell>
+                                <TableCell className="text-center bg-green-50 dark:bg-green-900/20">
+                                     <Input 
+                                        type="number" 
+                                        value={item.sellingPrice} 
+                                        onChange={e => {
+                                            const newItems = [...items];
+                                            newItems[index].sellingPrice = parseFloat(e.target.value) || 0;
+                                            setItems(newItems);
+                                        }} 
+                                        className="text-center"
+                                     />
+                                </TableCell>
+                                <TableCell className="text-center">ج.م {item.total.toFixed(2)}</TableCell>
+                                <TableCell className="text-center no-print">
+                                    <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)}>
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                </TableCell>
                             </TableRow>
                         ))}
                         <TableRow className="no-print bg-muted/20">
@@ -364,12 +388,14 @@ export default function PurchaseInvoicePage() {
                                     emptyMessage="لا توجد أصناف."
                                 />
                             </TableCell>
-                            <TableCell className="text-center text-muted-foreground p-2">{newItem.unit}</TableCell>
                             <TableCell className="p-2">
                                 <Input type="number" placeholder="الكمية" value={newItem.qty} onChange={e => setNewItem({...newItem, qty: parseInt(e.target.value) || 1})} className="text-center" />
                             </TableCell>
                             <TableCell className="p-2">
-                                <Input type="number" placeholder="السعر" value={newItem.price} onChange={e => setNewItem({...newItem, price: parseFloat(e.target.value) || 0})} className="text-center" />
+                                <Input type="number" placeholder="التكلفة" value={newItem.price} onChange={e => setNewItem({...newItem, price: parseFloat(e.target.value) || 0})} className="text-center" />
+                            </TableCell>
+                             <TableCell className="p-2 bg-green-50 dark:bg-green-900/20">
+                                <Input type="number" placeholder="البيع" value={newItem.sellingPrice} onChange={e => setNewItem({...newItem, sellingPrice: parseFloat(e.target.value) || 0})} className="text-center" />
                             </TableCell>
                             <TableCell></TableCell>
                             <TableCell className="text-center p-2">
