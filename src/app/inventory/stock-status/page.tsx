@@ -33,7 +33,7 @@ interface Warehouse { id: string; name: string; autoStockUpdate?: boolean; }
 interface SaleInvoice { id: string; warehouseId: string; items: { id: string; qty: number; }[]; status?: 'approved' | 'pending'; date: string; salesRepId?: string;}
 interface PosSale { id: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
 interface PurchaseInvoice { id: string; warehouseId: string; items: { id: string; qty: number; cost?: number }[]; date: string; }
-interface StockInRecord { id: string; warehouseId: string; reason: string; items: { id: string; qty: number; cost?: number }[]; date: string; }
+interface StockInRecord { id: string; warehouseId: string; items: { itemId: string; qty: number; cost?: number }[]; date: string; }
 interface StockOutRecord { id: string; sourceId: string; items: { id: string; qty: number; }[]; date: string; }
 interface StockTransferRecord { id: string; fromSourceId: string; toSourceId: string; items: { id: string; qty: number; }[]; date: string; }
 interface StockAdjustmentRecord { id: string; warehouseId: string; items: { itemId: string; difference: number; }[]; date: string; }
@@ -82,7 +82,7 @@ export default function StockStatusPage() {
                 const filterTransactions = (t: any) => new Date(t.date) > lastClosingDate;
 
                 // Increases since last closing
-                stockInRecords.filter((si:any) => si.warehouseId === warehouse.id && filterTransactions(si)).forEach((si:any) => si.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
+                stockInRecords.filter((si:any) => si.warehouseId === warehouse.id && filterTransactions(si)).forEach((si:any) => si.items.filter((i:any) => i.itemId === item.id).forEach((i:any) => stock += i.qty));
                 stockTransferRecords.filter((t:any) => t.toSourceId === warehouse.id && filterTransactions(t)).forEach((t:any) => t.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
                 stockAdjustmentRecords.filter((adj:any) => adj.warehouseId === warehouse.id && filterTransactions(adj)).forEach((adj:any) => adj.items.filter((i:any) => i.itemId === item.id && i.difference > 0).forEach((i:any) => stock += i.difference));
                 salesReturns.filter((sr:any) => sr.warehouseId === warehouse.id && filterTransactions(sr)).forEach((sr:any) => sr.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
@@ -100,7 +100,7 @@ export default function StockStatusPage() {
                 // Find latest cost
                 const allCostTransactions = [
                     ...purchaseInvoices.filter((p: PurchaseInvoice) => p.warehouseId === warehouse.id).flatMap((p: PurchaseInvoice) => p.items.filter(pi => pi.id === item.id && typeof pi.cost === 'number').map(pi => ({ date: p.date, cost: pi.cost! }))),
-                    ...stockInRecords.filter((si: StockInRecord) => si.warehouseId === warehouse.id).flatMap((si: StockInRecord) => si.items.filter(si_item => si_item.id === item.id && typeof si_item.cost === 'number').map(si_item => ({ date: si.date, cost: si_item.cost! })))
+                    ...stockInRecords.filter((si: StockInRecord) => si.warehouseId === warehouse.id).flatMap((si: StockInRecord) => si.items.filter(si_item => si_item.itemId === item.id && typeof si_item.cost === 'number').map(si_item => ({ date: si.date, cost: si_item.cost! })))
                 ].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
                 
                 const latestCost = allCostTransactions.length > 0 ? allCostTransactions[0].cost : (item.cost || 0);

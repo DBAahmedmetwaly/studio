@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import PageHeader from "@/components/page-header";
@@ -19,8 +18,8 @@ import { useAuth } from "@/contexts/auth-context";
 import { Input } from "@/components/ui/input";
 
 interface StockItem {
-  id: string; // The database ID of the item
-  name: string;
+  itemId: string; // The database ID of the item
+  itemName: string;
   qty: number;
   cost: number;
   unit: string;
@@ -60,7 +59,7 @@ export default function NewStockInPage() {
     const { toast } = useToast();
     const { user } = useAuth();
     const [items, setItems] = useState<StockItem[]>([]);
-    const [newItem, setNewItem] = useState({ id: "", qty: 1, cost: 0 });
+    const [newItem, setNewItem] = useState({ itemId: "", qty: 1, cost: 0 });
     const [selectedWarehouse, setSelectedWarehouse] = useState<string>("");
     const [notes, setNotes] = useState<string>("");
     const [reason, setReason] = useState<string>("");
@@ -104,8 +103,8 @@ export default function NewStockInPage() {
                 const invoiceItems: StockItem[] = invoice.items.map(item => {
                     const availableItem = availableItems.find((i: Item) => i.id === item.id);
                     return {
-                        id: item.id,
-                        name: item.name,
+                        itemId: item.id,
+                        itemName: item.name,
                         qty: item.qty,
                         cost: item.cost || availableItem?.cost || 0,
                         unit: availableItem?.unit || 'قطعة',
@@ -123,25 +122,25 @@ export default function NewStockInPage() {
     }, [reason, selectedPurchaseInvoice, purchaseInvoices, availableItems]);
     
     const handleAddItem = () => {
-        if (!newItem.id || newItem.qty <= 0) {
+        if (!newItem.itemId || newItem.qty <= 0) {
             toast({ variant: "destructive", title: "خطأ", description: "يرجى اختيار صنف وكمية صالحة."});
             return;
         }
-        const selectedItem = availableItems.find((i: Item) => i.id === newItem.id);
-        if (!selectedItem) return;
+        const selectedItemData = availableItems.find((i: Item) => i.id === newItem.itemId);
+        if (!selectedItemData) return;
 
         setItems([
         ...items,
         { 
-            id: selectedItem.id,
-            name: selectedItem.name,
+            itemId: selectedItemData.id,
+            itemName: selectedItemData.name,
             qty: newItem.qty,
             cost: newItem.cost,
-            unit: selectedItem.unit,
-            uniqueId: `${selectedItem.id}-${Date.now()}`
+            unit: selectedItemData.unit,
+            uniqueId: `${selectedItemData.id}-${Date.now()}`
         },
         ]);
-        setNewItem({ id: "", qty: 1, cost: 0 });
+        setNewItem({ itemId: "", qty: 1, cost: 0 });
     };
 
     const handleRemoveItem = (uniqueId: string) => {
@@ -171,7 +170,7 @@ export default function NewStockInPage() {
         const record: any = {
             warehouseId: selectedWarehouse,
             date: new Date(date).toISOString(),
-            items: items.map(({id, name, qty, cost}) => ({id, name, qty, cost})),
+            items: items.map(({itemId, itemName, qty, cost}) => ({itemId, name: itemName, qty, cost})), // Use 'name' for backward compatibility in some views if needed
             reason,
             notes,
             receiptNumber: `إذ-د-${nextId}`,
@@ -278,7 +277,7 @@ export default function NewStockInPage() {
                             <TableBody>
                             {items.map((item) => (
                                 <TableRow key={item.uniqueId}>
-                                <TableCell>{item.name}</TableCell>
+                                <TableCell>{item.itemName}</TableCell>
                                 <TableCell className="text-center">{item.unit}</TableCell>
                                 <TableCell className="text-center">{item.qty}</TableCell>
                                 <TableCell className="text-center">{item.cost}</TableCell>
@@ -296,8 +295,8 @@ export default function NewStockInPage() {
                                 <TableCell className="p-2">
                                      <Combobox
                                         options={itemsForCombobox}
-                                        value={newItem.id}
-                                        onValueChange={(value) => setNewItem({ ...newItem, id: value })}
+                                        value={newItem.itemId}
+                                        onValueChange={(value) => setNewItem({ ...newItem, itemId: value })}
                                         placeholder="ابحث عن صنف..."
                                         emptyMessage="لم يتم العثور على الصنف."
                                     />
@@ -310,7 +309,7 @@ export default function NewStockInPage() {
                                     <Input type="number" placeholder="التكلفة" value={newItem.cost} onChange={e => setNewItem({...newItem, cost: parseFloat(e.target.value) || 0})} className="text-center" />
                                 </TableCell>
                                 <TableCell className="text-center">
-                                    <Button onClick={handleAddItem} size="sm" disabled={!selectedWarehouse || !newItem.id}>
+                                    <Button onClick={handleAddItem} size="sm" disabled={!selectedWarehouse || !newItem.itemId}>
                                         <PlusCircle className="ml-2 h-4 w-4" />
                                         إضافة
                                     </Button>

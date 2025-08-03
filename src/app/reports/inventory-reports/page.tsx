@@ -28,7 +28,7 @@ interface Item { id: string; name: string; unit: string; price: number; reorderP
 interface Warehouse { id: string; name: string; autoStockUpdate?: boolean; }
 interface SaleInvoice { id: string; invoiceNumber: string; warehouseId: string; items: { id: string; qty: number; }[]; status?: 'approved' | 'pending'; date: string; salesRepId?: string; }
 interface PurchaseInvoice { id: string; invoiceNumber: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
-interface StockInRecord { id: string; receiptNumber: string; warehouseId: string; reason: string; items: { id: string; qty: number; }[]; date: string; }
+interface StockInRecord { id: string; receiptNumber: string; warehouseId: string; reason: string; items: { itemId: string; qty: number; }[]; date: string; }
 interface StockOutRecord { id: string; receiptNumber: string; sourceId: string; items: { id: string; qty: number; }[]; date: string; }
 interface StockTransferRecord { id: string; receiptNumber: string; fromSourceId: string; toSourceId: string; items: { id: string; qty: number; }[]; date: string; }
 interface StockAdjustmentRecord { id: string; receiptNumber: string; warehouseId: string; items: { itemId: string; difference: number; }[]; date: string; }
@@ -137,7 +137,7 @@ const StockStatusReport = ({ filters, data }: any) => {
                 const filterTransactions = (t: any) => new Date(t.date) > lastClosingDate;
                 
                 // Increases
-                stockInRecords.filter((si:any) => si.warehouseId === warehouse.id && filterTransactions(si)).forEach((si:any) => si.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
+                stockInRecords.filter((si:any) => si.warehouseId === warehouse.id && filterTransactions(si)).forEach((si:any) => si.items.filter((i:any) => i.itemId === item.id).forEach((i:any) => stock += i.qty));
                 stockTransferRecords.filter((t:any) => t.toSourceId === warehouse.id && filterTransactions(t)).forEach((t:any) => t.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
                 stockAdjustmentRecords.filter((adj:any) => adj.warehouseId === warehouse.id && filterTransactions(adj)).forEach((adj:any) => adj.items.filter((i:any) => i.itemId === item.id && i.difference > 0).forEach((i:any) => stock += i.difference));
                 salesReturns.filter((sr:any) => sr.warehouseId === warehouse.id && filterTransactions(sr)).forEach((sr:any) => sr.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
@@ -218,7 +218,7 @@ const ItemLedgerReport = ({ filters, data }: any) => {
             }
             
             // Apply transactions between last closing and fromDate to get opening balance
-             stockInRecords.filter((t:any) => t.warehouseId === warehouse.id && filterTxs(t)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => stock += i.qty));
+             stockInRecords.filter((t:any) => t.warehouseId === warehouse.id && filterTxs(t)).forEach((t:any) => t.items.filter((i:any)=>i.itemId === itemId).forEach((i:any) => stock += i.qty));
              stockTransferRecords.filter((t:any) => t.toSourceId === warehouse.id && filterTxs(t)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => stock += i.qty));
              salesReturns.filter((t:any) => t.warehouseId === warehouse.id && filterTxs(t)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => stock += i.qty));
              stockReturnsFromReps.filter((t:any) => t.warehouseId === warehouse.id && filterTxs(t)).forEach((t:any) => t.items.filter((i:any)=>i.id === itemId).forEach((i:any) => stock += i.qty));
@@ -238,7 +238,7 @@ const ItemLedgerReport = ({ filters, data }: any) => {
         let transactions: any[] = [{ date: fromDate || 'بداية', description: "رصيد أول المدة", incoming: 0, outgoing: 0, balance: openingBalance }];
         
         const withinPeriodTransactions = [
-            ...stockInRecords.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'in', qty: i.qty, warehouseId: t.warehouseId, source: `إذن استلام #${t.receiptNumber}`}))),
+            ...stockInRecords.flatMap((t:any) => t.items.filter((i:any)=>i.itemId===itemId).map((i:any) => ({...t, type: 'in', qty: i.qty, warehouseId: t.warehouseId, source: `إذن استلام #${t.receiptNumber}`}))),
             ...salesReturns.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'in', qty: i.qty, warehouseId: t.warehouseId, source: `مرتجع بيع #${t.receiptNumber}`}))),
             ...stockReturnsFromReps.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'in', qty: i.qty, warehouseId: t.warehouseId, source: `مرتجع مندوب #${t.receiptNumber}`}))),
             ...stockTransferRecords.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'in', qty: i.qty, warehouseId: t.toSourceId, source: `تحويل مخزني #${t.receiptNumber}`}))),
