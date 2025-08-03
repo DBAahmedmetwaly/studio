@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
@@ -86,7 +85,7 @@ interface PurchaseReturn { id: string; warehouseId: string; items: { id: string;
 interface CashAccount { id: string; name: string; warehouseId?: string }
 interface IssueToRep { id: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
 interface ReturnFromRep { id: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
-interface InventoryClosing { id: string; warehouseId: string; closingDate: string; balances: { itemId: string, balance: number }[] }
+interface InventoryClosing { id: string; warehouseId: string; closingDate: string; balances?: { itemId: string, balance: number }[] }
 
 export default function Dashboard() {
   const { 
@@ -158,7 +157,7 @@ export default function Dashboard() {
             : null;
         const lastClosingDate = lastClosing ? new Date(lastClosing.closingDate) : new Date(0);
         
-        let stock = lastClosing?.balances.find((b: any) => b.itemId === item.id)?.balance || 0;
+        let stock = lastClosing?.balances?.find((b: any) => b.itemId === item.id)?.balance || 0;
         
         const filterTransactions = (t: any) => new Date(t.date) > lastClosingDate;
 
@@ -405,3 +404,5 @@ export default function Dashboard() {
     </>
   );
 }
+
+    
