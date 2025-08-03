@@ -118,24 +118,22 @@ export default function StockStatusPage() {
                 
                 const latestCost = allCostTransactions.length > 0 ? allCostTransactions[0].cost : (item.cost || 0);
 
-                results.push({
-                    id: `${warehouse.id}-${item.id}`,
-                    warehouseName: warehouse.name,
-                    itemName: item.name,
-                    unit: item.unit,
-                    price: item.price,
-                    cost: latestCost,
-                    currentStock: stock,
-                    reorderPoint: item.reorderPoint || 0,
-                });
+                if (stock !== 0) { // Only add if there is stock
+                  results.push({
+                      id: `${warehouse.id}-${item.id}`,
+                      warehouseName: warehouse.name,
+                      itemName: item.name,
+                      unit: item.unit,
+                      price: item.price,
+                      cost: latestCost,
+                      currentStock: stock,
+                      reorderPoint: item.reorderPoint || 0,
+                  });
+                }
             });
         });
-        
-        const filteredResults = results.filter(item => {
-            return item.currentStock !== 0;
-        });
 
-        setReportData(filteredResults);
+        setReportData(results);
     };
     
     const getUnitLabel = (unit: string) => {

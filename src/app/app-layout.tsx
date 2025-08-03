@@ -211,7 +211,7 @@ const AppLayoutContent = ({ children }: { children: React.ReactNode }) => {
                 <NavSubLink href="/inventory/adjustment" module="inventory_adjustment">تسوية المخزون</NavSubLink>
                 <NavSubLink href="/inventory/goods-in-transit" module="inventory_goodsInTransit">بضاعة بالطريق</NavSubLink>
                 <NavSubLink href="/inventory/movements" module="inventory_movements">حركة المخزون</NavSubLink>
-                <NavSubLink href="/inventory/stock-status" module="inventory_stockStatus">أرصدة المخزون</NavSubLink>
+                <NavSubLink href="/inventory/stock-status" module="inventory_stockStatus">تقرير أرصدة المخزون</NavSubLink>
             </NavCollapsible>
             
             <NavCollapsible title="العملاء والمبيعات" icon={<UserSquare />} modules={['customers_data', 'sales_invoices', 'sales_returns', 'reports_customerStatement', 'accounting_customerPayments']}>
@@ -237,6 +237,7 @@ const AppLayoutContent = ({ children }: { children: React.ReactNode }) => {
                 <NavSubLink href="/accounting/treasury" module="accounting_treasury">حركة الخزينة</NavSubLink>
                 <NavSubLink href="/accounting/profit-distribution" module="accounting_profitDistribution">توزيعات الأرباح</NavSubLink>
                 <NavSubLink href="/reports/financial-statements" module="reports_financialStatements">القوائم المالية</NavSubLink>
+                 <NavSubLink href="/accounting/ai-analysis" module="accounting_aiAnalysis">تحليل مالي بالذكاء الاصطناعي</NavSubLink>
             </NavCollapsible>
             
             <NavCollapsible title="المناديب والشركاء" icon={<Users2 />} modules={['salesReps_data', 'partners_data', 'sales_issueToRep', 'sales_returnFromRep', 'sales_repInvoices', 'sales_repOperations', 'sales_remitFromRep', 'reports_partnerShares']}>
