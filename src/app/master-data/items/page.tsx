@@ -38,7 +38,6 @@ import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/contexts/permissions-context";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { BarcodePrintDialog } from "@/components/barcode-print-dialog";
-import { Combobox } from "@/components/ui/combobox";
 
 
 interface Item {
@@ -140,27 +139,6 @@ export default function ItemsPage() {
     const { toast } = useToast();
     const { can } = usePermissions();
     const moduleName = 'inventory_items';
-    const [searchTerm, setSearchTerm] = useState('');
-
-    const itemOptions = useMemo(() => {
-        return items.map((item: Item) => ({
-            value: item.id!,
-            label: `${item.name} (${item.code || ''})`
-        }));
-    }, [items]);
-
-    const filteredItems = useMemo(() => {
-        if (!searchTerm) return items;
-        // If a search term is a selected ID, show only that item
-        const selectedItem = items.find((item:Item) => item.id === searchTerm);
-        if (selectedItem) return [selectedItem];
-        // Otherwise, it might be a text search from the combobox input
-        return items.filter((item: Item) => 
-            (item.name && item.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (item.code && item.code.toLowerCase().includes(searchTerm.toLowerCase()))
-        );
-    }, [items, searchTerm]);
-
 
     const handleSave = async (item: Omit<Item, 'id' | 'code'> & { id?: string, code?: string }) => {
         try {
@@ -229,16 +207,6 @@ export default function ItemsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="mb-4">
-                 <Combobox
-                    options={itemOptions}
-                    value={searchTerm}
-                    onValueChange={setSearchTerm}
-                    placeholder="ابحث واختر صنفًا..."
-                    emptyMessage="لم يتم العثور على صنف."
-                    className="max-w-sm"
-                />
-            </div>
             {loading ? (
                  <div className="flex justify-center items-center py-10">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -257,7 +225,7 @@ export default function ItemsPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filteredItems.map((item: Item) => (
+                            {items.map((item: Item) => (
                                 <TableRow key={item.id}>
                                     <TableCell className="font-mono">{item.code}</TableCell>
                                     <TableCell className="font-medium">{item.name}</TableCell>
