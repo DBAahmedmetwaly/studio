@@ -206,8 +206,8 @@ const ItemLedgerReport = ({ filters, data }: any) => {
         
         let openingBalance = 0;
         targetWarehouses.forEach((warehouse: Warehouse) => {
-            const closingsForWh = inventoryClosings.filter((c: InventoryClosing) => c.warehouseId === warehouse.id && new Date(c.closingDate) < new Date(fromDate || 0));
-            const lastRelevantClosing = closingsForWh.length > 0 ? closingsForWh.reduce((l:any,c:any) => new Date(l.closingDate) > new Date(c.closingDate) ? l : c) : null;
+            const closingsForWh = inventoryClosings.filter((c: InventoryClosing) => c.warehouseId === warehouse.id);
+            const lastRelevantClosing = closingsForWh.length > 0 ? closingsForWh.filter((c:any) => new Date(c.closingDate) < new Date(fromDate || 0)).reduce((l:any,c:any) => new Date(l.closingDate) > new Date(c.closingDate) ? l : c, null) : null;
             
             let stock = lastRelevantClosing?.balances.find((b:any) => b.itemId === itemId)?.balance || 0;
             const txStartDate = lastRelevantClosing ? new Date(lastRelevantClosing.closingDate) : new Date(0);
@@ -243,7 +243,7 @@ const ItemLedgerReport = ({ filters, data }: any) => {
             ...stockReturnsFromReps.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'in', qty: i.qty, warehouseId: t.warehouseId, source: `مرتجع مندوب #${t.receiptNumber}`}))),
             ...stockTransferRecords.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'in', qty: i.qty, warehouseId: t.toSourceId, source: `تحويل مخزني #${t.receiptNumber}`}))),
             ...stockAdjustmentRecords.flatMap((t:any) => t.items.filter((i:any)=>i.itemId===itemId && i.difference > 0).map((i:any) => ({...t, type: 'in', qty: i.difference, warehouseId: t.warehouseId, source: `تسوية مخزون #${t.receiptNumber}`}))),
-            ...salesInvoices.filter((t:any) => !t.salesRepId || t.status==='approved').flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'out', qty: i.qty, warehouseId: t.warehouseId, source: `فاتورة بيع #${t.invoiceNumber}`}))),
+            ...salesInvoices.filter((t:any) => (!t.salesRepId || t.status==='approved')).flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'out', qty: i.qty, warehouseId: t.warehouseId, source: `فاتورة بيع #${t.invoiceNumber}`}))),
             ...posSales.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'out', qty: i.qty, warehouseId: t.warehouseId, source: `فاتورة كاشير #${t.invoiceNumber}`}))),
             ...stockOutRecords.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'out', qty: i.qty, warehouseId: t.sourceId, source: `إذن صرف #${t.receiptNumber}`}))),
             ...purchaseReturns.flatMap((t:any) => t.items.filter((i:any)=>i.id===itemId).map((i:any) => ({...t, type: 'out', qty: i.qty, warehouseId: t.warehouseId, source: `مرتجع شراء #${t.receiptNumber}`}))),
