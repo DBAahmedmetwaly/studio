@@ -27,6 +27,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { useData } from '@/contexts/data-provider';
 import { Button } from '@/components/ui/button';
+import { Combobox } from '@/components/ui/combobox';
 
 // Data Interfaces
 interface Item { id: string; name: string; unit: string; price: number; cost?: number; reorderPoint?: number; }
@@ -47,7 +48,7 @@ interface InventoryClosing { id: string; warehouseId: string; closingDate: strin
 export default function StockStatusPage() {
     const [filters, setFilters] = useState({
         warehouseId: "all",
-        itemName: ""
+        itemId: ""
     });
     const [reportData, setReportData] = useState<any[] | null>(null);
 
@@ -64,6 +65,10 @@ export default function StockStatusPage() {
     const handleFilterChange = (key: keyof typeof filters, value: string) => {
         setFilters(prev => ({...prev, [key]: value}));
     };
+    
+    const itemOptions = useMemo(() => {
+        return allItems.map((item: Item) => ({ value: item.id, label: item.name }));
+    }, [allItems]);
 
     const handleGenerateReport = () => {
         let results: any[] = [];
@@ -72,27 +77,31 @@ export default function StockStatusPage() {
             ? warehouses
             : warehouses.filter((w:any) => w.id === filters.warehouseId);
 
+        const targetItems = filters.itemId
+            ? allItems.filter((i:any) => i.id === filters.itemId)
+            : allItems;
+
+
         targetWarehouses.forEach((warehouse: Warehouse) => {
-            const closingsForWarehouse = inventoryClosings.filter((c: InventoryClosing) => c.warehouseId === warehouse.id);
-             
-            allItems.forEach((item: Item) => {
-                const lastClosing = closingsForWarehouse.length > 0
-                    ? closingsForWarehouse.reduce((latest: any, current: any) => new Date(latest.closingDate) > new Date(current.closingDate) ? latest : current)
-                    : null;
+            const closingsForWarehouse = inventoryClosings.filter((c: InventoryClosing) => c.warehouseId === warehouse.id)
+                .sort((a,b) => new Date(b.closingDate).getTime() - new Date(a.closingDate).getTime());
+            
+            targetItems.forEach((item: Item) => {
+                const lastClosing = closingsForWarehouse[0] ?? null;
                 const lastClosingDate = lastClosing ? new Date(lastClosing.closingDate) : new Date(0);
-
+                
                 let stock = lastClosing?.balances.find((b:any) => b.itemId === item.id)?.balance || 0;
-
+                
                 const filterTransactions = (t: any) => new Date(t.date) > lastClosingDate;
 
-                // Increases since last closing
+                // Increases
                 stockInRecords.filter((si:any) => si.warehouseId === warehouse.id && filterTransactions(si)).forEach((si:any) => si.items.filter((i:any) => i.itemId === item.id).forEach((i:any) => stock += i.qty));
                 stockTransferRecords.filter((t:any) => t.toSourceId === warehouse.id && filterTransactions(t)).forEach((t:any) => t.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
                 stockAdjustmentRecords.filter((adj:any) => adj.warehouseId === warehouse.id && filterTransactions(adj)).forEach((adj:any) => adj.items.filter((i:any) => i.itemId === item.id && i.difference > 0).forEach((i:any) => stock += i.difference));
                 salesReturns.filter((sr:any) => sr.warehouseId === warehouse.id && filterTransactions(sr)).forEach((sr:any) => sr.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
                 stockReturnsFromReps.filter((rfr:any) => rfr.warehouseId === warehouse.id && filterTransactions(rfr)).forEach((rfr:any) => rfr.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
                 
-                // Decreases since last closing
+                // Decreases
                 salesInvoices.filter((s:any) => s.warehouseId === warehouse.id && (!s.salesRepId || s.status === 'approved') && filterTransactions(s)).forEach((s:any) => s.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
                 posSales.filter((s:any) => s.warehouseId === warehouse.id && filterTransactions(s)).forEach((s:any) => s.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
                 stockOutRecords.filter((so:any) => so.sourceId === warehouse.id && filterTransactions(so)).forEach((so:any) => so.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock -= i.qty));
@@ -123,8 +132,7 @@ export default function StockStatusPage() {
         });
         
         const filteredResults = results.filter(item => {
-            const matchesName = !filters.itemName || (item.itemName && item.itemName.toLowerCase().includes(filters.itemName.toLowerCase()));
-            return matchesName && item.currentStock !== 0;
+            return item.currentStock !== 0;
         });
 
         setReportData(filteredResults);
@@ -167,8 +175,14 @@ export default function StockStatusPage() {
                         </Select>
                     </div>
                      <div className="space-y-2">
-                        <Label>اسم الصنف</Label>
-                        <Input type="text" placeholder="ابحث بالاسم..." value={filters.itemName} onChange={(e) => handleFilterChange("itemName", e.target.value)} />
+                        <Label>الصنف</Label>
+                        <Combobox
+                          options={itemOptions}
+                          value={filters.itemId}
+                          onValueChange={(v) => handleFilterChange("itemId", v)}
+                          placeholder="كل الأصناف..."
+                          emptyMessage="لم يتم العثور على الصنف."
+                        />
                     </div>
                 </div>
             </CardContent>
@@ -255,4 +269,3 @@ export default function StockStatusPage() {
     </>
   );
 }
-
