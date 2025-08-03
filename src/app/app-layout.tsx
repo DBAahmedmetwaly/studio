@@ -212,7 +212,6 @@ const AppLayoutContent = ({ children }: { children: React.ReactNode }) => {
                 <NavSubLink href="/inventory/goods-in-transit" module="inventory_goodsInTransit">بضاعة بالطريق</NavSubLink>
                 <NavSubLink href="/inventory/movements" module="inventory_movements">حركة المخزون</NavSubLink>
                 <NavSubLink href="/inventory/stock-status" module="inventory_stockStatus">أرصدة المخزون</NavSubLink>
-                 <NavSubLink href="/reports/inventory-reports" module="reports_inventory">تقارير المخزون الشاملة</NavSubLink>
             </NavCollapsible>
             
             <NavCollapsible title="العملاء والمبيعات" icon={<UserSquare />} modules={['customers_data', 'sales_invoices', 'sales_returns', 'reports_customerStatement', 'accounting_customerPayments']}>
