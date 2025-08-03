@@ -434,7 +434,7 @@ export default function PosPage() {
                         <div className="p-3 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-3">
                             {itemsToShow.map((item: any) => (
                                 <button key={item.id} onClick={() => handleGridItemClick(item)} className="aspect-square flex flex-col items-center justify-center gap-2 rounded-lg bg-card text-card-foreground shadow-sm hover:bg-accent focus:ring-2 ring-primary transition-all p-1">
-                                    <Image src={item.image || `https://placehold.co/100x100.png`} data-ai-hint="product item" alt={item.name} width={100} height={100} className="h-full max-h-[60%] w-auto object-contain rounded-md" />
+                                    <Image src={item.image || `https://placehold.co/100x100.png`} data-ai-hint="product item" alt={item.name || 'product image'} width={100} height={100} className="h-full max-h-[60%] w-auto object-contain rounded-md" />
                                     <p className="text-xs font-semibold text-center leading-tight px-1 flex-grow flex items-center">{item.name}</p>
                                 </button>
                             ))}
