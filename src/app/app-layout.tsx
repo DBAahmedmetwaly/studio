@@ -64,6 +64,7 @@ import {
   PowerOff,
   ClipboardList,
   PanelLeft,
+  FileText,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -203,7 +204,7 @@ const AppLayoutContent = ({ children }: { children: React.ReactNode }) => {
                 <NavSubLink href="/reports/item-profit-loss" module="reports_itemProfitLoss">تقرير أرباح الأصناف</NavSubLink>
             </NavCollapsible>
 
-            <NavCollapsible title="المخزون" icon={<Warehouse />} modules={['inventory_warehouses', 'inventory_stockIn', 'inventory_stockOut', 'inventory_transfer', 'inventory_adjustment', 'inventory_movements', 'inventory_stockStatus', 'reports_inventory', 'inventory_goodsInTransit']}>
+            <NavCollapsible title="المخزون" icon={<Warehouse />} modules={['inventory_warehouses', 'inventory_stockIn', 'inventory_stockOut', 'inventory_transfer', 'inventory_adjustment', 'inventory_movements', 'inventory_stockStatus', 'reports_inventory', 'inventory_goodsInTransit', 'reports_itemLedger']}>
                 <NavSubLink href="/master-data/warehouses" module="inventory_warehouses">المخازن</NavSubLink>
                 <NavSubLink href="/inventory/stock-in/new" module="inventory_stockIn">استلام مخزون</NavSubLink>
                 <NavSubLink href="/inventory/stock-out/new" module="inventory_stockOut">صرف مخزون</NavSubLink>
@@ -212,6 +213,7 @@ const AppLayoutContent = ({ children }: { children: React.ReactNode }) => {
                 <NavSubLink href="/inventory/goods-in-transit" module="inventory_goodsInTransit">بضاعة بالطريق</NavSubLink>
                 <NavSubLink href="/inventory/movements" module="inventory_movements">حركة المخزون</NavSubLink>
                 <NavSubLink href="/inventory/stock-status" module="inventory_stockStatus">تقرير أرصدة المخزون</NavSubLink>
+                <NavSubLink href="/reports/item-ledger" module="reports_itemLedger">كارت الصنف</NavSubLink>
             </NavCollapsible>
             
             <NavCollapsible title="العملاء والمبيعات" icon={<UserSquare />} modules={['customers_data', 'sales_invoices', 'sales_returns', 'reports_customerStatement', 'accounting_customerPayments']}>

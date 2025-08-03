@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { createContext, useContext, useMemo, useState, useEffect } from 'react';
@@ -39,6 +38,7 @@ export const permissionsConfig = {
     inventory_goodsInTransit: { label: "بضاعة بالطريق", group: "inventory", actions: ["view"] },
     inventory_movements: { label: "حركة المخزون", group: "inventory", actions: ["view"] },
     inventory_stockStatus: { label: "أرصدة المخزون", group: "inventory", actions: ["view"] },
+    reports_itemLedger: { label: "كارت الصنف", group: "inventory", actions: ["view"] },
     reports_itemProfitLoss: { label: "تقرير أرباح الأصناف", group: "inventory", actions: ["view", "generate", "print"] },
     reports_inventory: { label: "تقارير المخزون", group: "inventory", actions: ["view", "generate", "print"] },
     
