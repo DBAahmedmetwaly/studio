@@ -90,7 +90,7 @@ export default function StockStatusPage() {
                 const lastClosing = closingsForWarehouse[0] ?? null;
                 const lastClosingDate = lastClosing ? new Date(lastClosing.closingDate) : new Date(0);
                 
-                let stock = lastClosing?.balances.find((b:any) => b.itemId === item.id)?.balance || 0;
+                let stock = lastClosing?.balances?.find((b:any) => b.itemId === item.id)?.balance || 0;
                 
                 const filterTransactions = (t: any) => new Date(t.date) > lastClosingDate;
 
