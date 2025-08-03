@@ -183,7 +183,7 @@ export default function ItemGroupsPage() {
                       <div className={`h-6 w-6 rounded-full ${group.color}`} />
                     </CardHeader>
                     <CardContent className="flex-grow flex flex-col items-center justify-center gap-2">
-                        <Image src={group.image || "https://placehold.co/100x100.png"} alt={group.name} width={80} height={80} className="rounded-lg object-cover" />
+                        <Image src={group.image || "https://placehold.co/100x100.png"} alt={group.name} width={80} height={80} className="rounded-lg object-cover" data-ai-hint="product category" />
                         <p className="text-sm text-muted-foreground">
                             تحتوي على {group.itemIds?.length || 0} صنف.
                         </p>
