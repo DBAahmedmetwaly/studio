@@ -37,7 +37,7 @@ interface Warehouse { id: string; name: string; }
 // Define interfaces for all transaction types
 interface SaleInvoice { id: string; warehouseId: string; items: { id: string; qty: number; }[]; status?: 'approved' | 'pending'; date: string;}
 interface PurchaseInvoice { id: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
-interface StockInRecord { id: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
+interface StockInRecord { id: string; warehouseId: string; items: { itemId: string; qty: number; }[]; date: string; }
 interface StockOutRecord { id: string; sourceId: string; items: { id: string; qty: number; }[]; date: string; }
 interface StockTransferRecord { id: string; fromSourceId: string; toSourceId: string; items: { id: string; qty: number; }[]; date: string; }
 interface StockAdjustmentRecord { id: string; warehouseId: string; items: { itemId: string; difference: number; }[]; date: string; }
@@ -93,8 +93,7 @@ export default function PeriodClosingPage() {
             const filterTransactions = (t: any) => new Date(t.date) > startDate && new Date(t.date) <= closingDateObj;
             
             // Increases
-            purchaseInvoices.filter(p => p.warehouseId === warehouseId && filterTransactions(p)).forEach(p => p.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
-            stockInRecords.filter(si => si.warehouseId === warehouseId && filterTransactions(si)).forEach(si => si.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
+            stockInRecords.filter(si => si.warehouseId === warehouseId && filterTransactions(si)).forEach(si => si.items.filter(i => i.itemId === item.id).forEach(i => stock += i.qty));
             stockTransferRecords.filter(t => t.toSourceId === warehouseId && filterTransactions(t)).forEach(t => t.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
             stockAdjustmentRecords.filter(adj => adj.warehouseId === warehouseId && filterTransactions(adj)).forEach(adj => adj.items.filter(i => i.itemId === item.id && i.difference > 0).forEach(i => stock += i.difference));
             salesReturns.filter(sr => sr.warehouseId === warehouseId && filterTransactions(sr)).forEach(sr => sr.items.filter(i => i.id === item.id).forEach(i => stock += i.qty));
@@ -108,8 +107,8 @@ export default function PeriodClosingPage() {
             purchaseReturns.filter(pr => pr.warehouseId === warehouseId && filterTransactions(pr)).forEach(pr => pr.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
             stockIssuesToReps.filter(itr => itr.warehouseId === warehouseId && filterTransactions(itr)).forEach(itr => itr.items.filter(i => i.id === item.id).forEach(i => stock -= i.qty));
 
-            return { itemId: item.id, name: item.name, code: item.code, balance: stock };
-        }).filter(item => item.balance !== 0 || (openingBalanceRecord && openingBalanceRecord.balance !== 0));
+            return { itemId: item.id, name: item.name, code: item.code, balance: stock, openingBalance: openingBalanceRecord?.balance || 0 };
+        }).filter(item => item.balance !== 0 || item.openingBalance !== 0);
         
         setReviewData(balances);
         setIsLoading(false);
@@ -127,7 +126,7 @@ export default function PeriodClosingPage() {
                 closingDate: new Date(closingDate).toISOString(),
                 closedById: user?.id,
                 closedByName: user?.name,
-                balances: reviewData.map(({name, code, ...rest}) => rest), // Store only itemId and balance
+                balances: reviewData.map(({name, code, openingBalance, ...rest}) => rest), // Store only itemId and balance
             });
             toast({ title: "تم الإقفال بنجاح!", description: `تم تجميد الأرصدة للمخزن المحدد حتى تاريخ ${closingDate}.` });
             setReviewData(null);
@@ -277,7 +276,7 @@ export default function PeriodClosingPage() {
                                             <TableCell className="text-center">{closing.balances.length}</TableCell>
                                             <TableCell className="text-center">
                                                 {index === 0 && ( // Only allow deleting the most recent closing
-                                                    <AlertDialog onOpenChange={(e) => e.stopPropagation()}>
+                                                    <AlertDialog>
                                                         <AlertDialogTrigger asChild>
                                                             <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={(e) => e.stopPropagation()}>
                                                                 <Trash2 className="h-4 w-4"/>
