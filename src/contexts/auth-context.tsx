@@ -146,7 +146,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const email = `${loginName}@admin.com`;
             await signInWithEmailAndPassword(auth, email, pass);
         } catch (error: any) {
-            console.error("Login Error:", error.code);
             if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
                  setAuthError('اسم الدخول أو كلمة المرور غير صحيحة.');
             } else {
