@@ -92,53 +92,59 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [loading, setLoading] = useState(true);
     const [authError, setAuthError] = useState<string | null>(null);
 
+    const signOut = async () => {
+        try {
+            await firebaseSignOut(auth);
+            setUser(null);
+        } catch (error) {
+            console.error("Sign out error", error);
+        }
+    };
+
     useEffect(() => {
+        const fetchUserData = async (firebaseUser: FirebaseUser) => {
+            setLoading(true);
+            const usersRef = ref(database, 'users');
+            const q = query(usersRef, orderByChild('uid'), equalTo(firebaseUser.uid));
+
+            try {
+                const snapshot = await get(q);
+                if (snapshot.exists()) {
+                    const userData = snapshot.val();
+                    const userKey = Object.keys(userData)[0];
+                    setUser({ ...(userData[userKey] as User), id: userKey });
+                } else {
+                    console.error("No user data found in Realtime Database for this auth user. Signing out.");
+                    await signOut();
+                }
+            } catch (error) {
+                console.error("Error fetching user data:", error);
+                setAuthError("Failed to fetch user data.");
+            } finally {
+                setLoading(false);
+            }
+        };
+
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
             if (firebaseUser) {
-                // To prevent race conditions, only fetch data if the user is different
                 if (firebaseUser.uid !== user?.uid) {
                     await fetchUserData(firebaseUser);
                 }
             } else {
                 setUser(null);
             }
-            setLoading(false);
+            if(loading) setLoading(false);
         });
 
         return () => unsubscribe();
-    }, [user]);
-
-    const fetchUserData = async (firebaseUser: FirebaseUser) => {
-        setLoading(true);
-        const usersRef = ref(database, 'users');
-        const q = query(usersRef, orderByChild('uid'), equalTo(firebaseUser.uid));
-
-        try {
-            const snapshot = await get(q);
-            if (snapshot.exists()) {
-                const userData = snapshot.val();
-                const userKey = Object.keys(userData)[0];
-                setUser({ ...(userData[userKey] as User), id: userKey });
-            } else {
-                console.error("No user data found in Realtime Database for this auth user.");
-                setUser(null);
-            }
-        } catch (error) {
-            console.error("Error fetching user data:", error);
-            setAuthError("Failed to fetch user data.");
-        } finally {
-            setLoading(false);
-        }
-    };
+    }, [user?.uid]);
 
     const signIn = async (loginName: string, pass: string) => {
         setLoading(true);
         setAuthError(null);
         try {
-            // Firebase Auth requires an email format. We'll append a dummy domain.
             const email = `${loginName}@admin.com`;
             await signInWithEmailAndPassword(auth, email, pass);
-            // onAuthStateChanged will handle setting the user
         } catch (error: any) {
             console.error("Login Error:", error.code);
             if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
@@ -147,16 +153,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 setAuthError('حدث خطأ أثناء تسجيل الدخول.');
             }
             setLoading(false);
-            throw error; // Re-throw to be caught by the form
-        }
-    };
-
-    const signOut = async () => {
-        try {
-            await firebaseSignOut(auth);
-            setUser(null);
-        } catch (error) {
-            console.error("Sign out error", error);
+            throw error;
         }
     };
 
