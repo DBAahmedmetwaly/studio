@@ -114,7 +114,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     const userKey = Object.keys(userData)[0];
                     setUser({ ...(userData[userKey] as User), id: userKey });
                 } else {
-                    console.error("No user data found in Realtime Database for this auth user. Signing out.");
                     await signOut();
                 }
             } catch (error) {
