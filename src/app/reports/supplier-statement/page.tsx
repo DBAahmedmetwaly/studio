@@ -10,8 +10,9 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
 import { useData } from "@/contexts/data-provider";
 import { Loader2, Printer } from "lucide-react";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Combobox } from "@/components/ui/combobox";
+import { useSearchParams } from 'next/navigation';
 
 
 interface PurchaseInvoice {
@@ -46,6 +47,7 @@ interface Supplier {
 }
 
 export default function SupplierStatementPage() {
+  const searchParams = useSearchParams();
   const [selectedSupplierId, setSelectedSupplierId] = useState<string>("");
   const [fromDate, setFromDate] = useState<string>("");
   const [toDate, setToDate] = useState<string>("");
@@ -59,11 +61,36 @@ export default function SupplierStatementPage() {
     loading 
   } = useData();
   
-  const supplierOptions = React.useMemo(() => suppliers.map(s => ({ value: s.id, label: s.name })), [suppliers]);
+  const supplierOptions = React.useMemo(() => suppliers.map((s: Supplier) => ({ value: s.id, label: s.name })), [suppliers]);
+
+  // Effect to read query params on initial load
+  useEffect(() => {
+    const supplierIdFromQuery = searchParams.get('supplierId');
+    const toDateFromQuery = searchParams.get('toDate');
+
+    if (supplierIdFromQuery) {
+      setSelectedSupplierId(supplierIdFromQuery);
+    }
+    if (toDateFromQuery) {
+        // Set both from and to date for better initial filtering if only toDate is provided
+        const date = new Date(toDateFromQuery).toISOString().split('T')[0];
+        setToDate(date);
+    }
+  }, [searchParams]);
+
+  // Effect to generate report when relevant state changes
+  useEffect(() => {
+      if (selectedSupplierId) {
+          handleGenerateReport();
+      } else {
+          setReportData(null);
+      }
+  }, [selectedSupplierId, fromDate, toDate, suppliers, purchaseInvoices, supplierPayments, purchaseReturns]);
+
 
   const handleGenerateReport = () => {
     if (!selectedSupplierId) {
-      alert("يرجى اختيار مورد");
+      // This will be handled by the useEffect, but good to have a guard
       return;
     }
 
@@ -169,7 +196,7 @@ export default function SupplierStatementPage() {
                 {loading ? (
                     <Loader2 className="animate-spin" />
                 ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="supplier">المورد</Label>
                             <Combobox
@@ -187,9 +214,6 @@ export default function SupplierStatementPage() {
                         <div className="space-y-2">
                             <Label htmlFor="to-date">إلى تاريخ</Label>
                             <Input id="to-date" type="date" value={toDate} onChange={e => setToDate(e.target.value)} />
-                        </div>
-                        <div className="flex items-end">
-                            <Button className="w-full" onClick={handleGenerateReport} disabled={!selectedSupplierId}>عرض التقرير</Button>
                         </div>
                     </div>
                 )}

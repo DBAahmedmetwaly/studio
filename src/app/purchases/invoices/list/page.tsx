@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -19,7 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { PlusCircle, Loader2, MoreHorizontal, FileText, Undo2 } from "lucide-react";
+import { PlusCircle, Loader2, MoreHorizontal, FileText, Undo2, Printer, FileSearch } from "lucide-react";
 import useFirebase from "@/hooks/use-firebase";
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -34,6 +35,9 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useData } from '@/contexts/data-provider';
 import { Combobox } from '@/components/ui/combobox';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { InvoiceTemplate } from '@/components/invoice-template';
+
 
 interface PurchaseInvoice {
   id: string;
@@ -51,7 +55,7 @@ interface InventoryClosing { id: string; warehouseId: string; closingDate: strin
 
 
 export default function PurchaseInvoicesListPage() {
-  const { purchaseInvoices: invoices, suppliers, warehouses, inventoryClosings, loading } = useData();
+  const { purchaseInvoices: invoices, suppliers, warehouses, inventoryClosings, settings, loading } = useData();
   const router = useRouter();
 
   const [filters, setFilters] = useState({
@@ -99,6 +103,12 @@ export default function PurchaseInvoicesListPage() {
       return true;
     }).sort((a:any, b:any) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [invoices, filters, lastClosingDates]);
+
+  const companySettings = useMemo(() => settings?.main?.general || {}, [settings]);
+
+  const handlePrint = () => {
+    setTimeout(() => window.print(), 100);
+  };
 
 
   return (
@@ -175,43 +185,58 @@ export default function PurchaseInvoicesListPage() {
                   </TableHeader>
                   <TableBody>
                     {filteredInvoices && filteredInvoices.length > 0 ? (
-                      filteredInvoices.map((invoice:any) => (
-                        <TableRow key={invoice.id} className={invoice.isLocked ? 'bg-muted/30' : ''}>
-                          <TableCell className="font-mono">{invoice.invoiceNumber}</TableCell>
-                          <TableCell>{invoice.supplierName}</TableCell>
-                          <TableCell>{new Date(invoice.date).toLocaleDateString('ar-EG')}</TableCell>
-                          <TableCell>
-                            <span className="flex items-center gap-2 text-muted-foreground">
-                              <FileText className="h-4 w-4" />
-                              <span>{`تحتوي على ${invoice.items.length} أصناف`}</span>
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-center">{invoice.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
-                          <TableCell className="text-center">
-                             <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button aria-haspopup="true" size="icon" variant="ghost">
-                                        <MoreHorizontal className="h-4 w-4" />
-                                        <span className="sr-only">قائمة</span>
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                    <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                                    <DropdownMenuItem disabled={invoice.isLocked}>
-                                        عرض التفاصيل
-                                    </DropdownMenuItem>
-                                     <DropdownMenuItem disabled={invoice.isLocked}>
-                                        طباعة
-                                    </DropdownMenuItem>
-                                     <DropdownMenuItem onClick={() => router.push(`/purchases/returns/new?invoiceId=${invoice.id}`)} disabled={invoice.isLocked}>
-                                        <Undo2 className="ml-2 h-4 w-4" />
-                                        مرتجع
-                                    </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      ))
+                      filteredInvoices.map((invoice:any) => {
+                        const supplier = suppliers.find((s:any) => s.id === invoice.supplierId);
+                        return (
+                        <Dialog key={invoice.id}>
+                            <TableRow className={invoice.isLocked ? 'bg-muted/30' : ''}>
+                                <TableCell className="font-mono">{invoice.invoiceNumber}</TableCell>
+                                <TableCell>{invoice.supplierName}</TableCell>
+                                <TableCell>{new Date(invoice.date).toLocaleDateString('ar-EG')}</TableCell>
+                                <TableCell>
+                                    <span className="flex items-center gap-2 text-muted-foreground">
+                                    <FileText className="h-4 w-4" />
+                                    <span>{`تحتوي على ${invoice.items.length} أصناف`}</span>
+                                    </span>
+                                </TableCell>
+                                <TableCell className="text-center">{invoice.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
+                                <TableCell className="text-center">
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button aria-haspopup="true" size="icon" variant="ghost">
+                                                <MoreHorizontal className="h-4 w-4" />
+                                                <span className="sr-only">قائمة</span>
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+                                             <DialogTrigger asChild>
+                                                <DropdownMenuItem disabled={invoice.isLocked}>
+                                                    عرض / طباعة
+                                                </DropdownMenuItem>
+                                             </DialogTrigger>
+                                            <DropdownMenuItem onClick={() => router.push(`/reports/supplier-statement?supplierId=${invoice.supplierId}&toDate=${invoice.date}`)} disabled={invoice.isLocked}>
+                                                <FileSearch className="ml-2 h-4 w-4" />
+                                                كشف حساب المورد
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => router.push(`/purchases/returns/new?invoiceId=${invoice.id}`)} disabled={invoice.isLocked}>
+                                                <Undo2 className="ml-2 h-4 w-4" />
+                                                مرتجع
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </TableCell>
+                            </TableRow>
+                            <DialogContent className="max-w-4xl p-0">
+                                <div className="printable-area bg-white text-black">
+                                    <InvoiceTemplate invoice={invoice} company={companySettings} customer={supplier} isPurchase={true} />
+                                </div>
+                                <div className="p-4 border-t flex justify-end no-print">
+                                    <Button onClick={handlePrint}><Printer className="ml-2 h-4 w-4" />طباعة</Button>
+                                </div>
+                            </DialogContent>
+                        </Dialog>
+                      )})
                     ) : (
                       <TableRow>
                         <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
