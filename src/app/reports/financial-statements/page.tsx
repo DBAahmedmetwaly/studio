@@ -113,7 +113,7 @@ interface PurchaseReturn {
 interface StockInRecord { id: string; warehouseId: string; items: { id: string; name: string; qty: number; cost?: number; }[]; date: string;}
 interface StockOutRecord { id: string; sourceId: string; items: { id: string; name: string; qty: number; }[]; date: string;}
 interface StockTransferRecord { id: string; fromSourceId: string; toSourceId: string; items: { id: string; qty: number; }[]; date: string; }
-interface StockAdjustmentRecord { id: string; warehouseId: string; items: { itemId: string; difference: number; }[]; date: string;}
+interface StockAdjustmentRecord { id: string; warehouseId: string; items: { itemId: string; difference: number; }[]; date: string; }
 interface IssueToRep { id: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
 interface ReturnFromRep { id: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
 interface WarehouseData { id: string; name: string; autoStockUpdate?: boolean; }
@@ -158,9 +158,14 @@ const useIncomeStatementData = () => {
     
     const costOfGoodsSold = approvedSales.reduce((acc, sale) => {
         return acc + (sale.items?.reduce((itemAcc, saleItem) => {
+            // Prioritize cost from the invoice item itself (historical cost)
+            if (typeof saleItem.cost === 'number') {
+                return itemAcc + (saleItem.qty * saleItem.cost);
+            }
+            // Fallback to item master data if historical cost is not available
             const itemMaster = items.find((i:Item) => i.id === saleItem.id);
-            const itemCost = typeof saleItem.cost === 'number' ? saleItem.cost : (typeof itemMaster?.cost === 'number' ? itemMaster.cost : 0);
-            return itemAcc + (saleItem.qty * itemCost);
+            const masterCost = itemMaster?.cost || 0;
+            return itemAcc + (saleItem.qty * masterCost);
         }, 0) || 0);
     }, 0);
 
@@ -557,7 +562,15 @@ const useJournalData = (allData: any) => {
             entries.push({ account: 'إيرادات المبيعات', credit: totalBeforeDiscount, debit: 0 });
             entries.push({ account: 'حسابات العملاء', debit: sale.total, credit: 0 });
             
-            const cogs = sale.items.reduce((acc, i) => acc + (i.qty * (i.cost || 0)), 0);
+            const cogs = sale.items.reduce((acc, saleItem) => {
+                 if (typeof saleItem.cost === 'number') {
+                    return acc + (saleItem.qty * saleItem.cost);
+                }
+                const itemMaster = itemsMap.get(saleItem.id);
+                const masterCost = itemMaster?.cost || 0;
+                return acc + (saleItem.qty * masterCost);
+            }, 0);
+
             if(cogs > 0) {
                 entries.push({ account: 'تكلفة البضاعة المباعة', debit: cogs, credit: 0 });
                 entries.push({ account: `مخزون - ${getWarehouseName(sale.warehouseId)}`, credit: cogs, debit: 0 });
@@ -712,3 +725,4 @@ export default function FinancialStatementsPage() {
     </>
   );
 }
+
