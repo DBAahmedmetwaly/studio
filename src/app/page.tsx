@@ -9,6 +9,7 @@ import {
   Users,
   Loader2,
   Coins,
+  PlusSquare,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -40,6 +41,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useData } from "@/contexts/data-provider";
+import { useToast } from "@/hooks/use-toast";
 
 // Data Interfaces
 interface SaleInvoice {
@@ -98,17 +100,59 @@ export default function Dashboard() {
     inventoryClosings,
     posSales,
     settings,
+    dbAction,
+    getNextId,
     loading 
   } = useData();
   
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<string>('all');
   const [dateRange, setDateRange] = useState({ from: '', to: '' });
+  const [isSeeding, setIsSeeding] = useState(false);
+  const { toast } = useToast();
+  
+  const isDataEmpty = warehouses.length === 0 && items.length === 0;
 
   React.useEffect(() => {
     if (warehouses.length > 0 && selectedWarehouseId === 'all') {
       setSelectedWarehouseId(warehouses[0].id);
     }
   }, [warehouses, selectedWarehouseId]);
+  
+  const handleSeedData = async () => {
+    setIsSeeding(true);
+    toast({ title: 'لحظات من فضلك...', description: 'جارٍ إضافة البيانات التجريبية.' });
+    try {
+        await Promise.all([
+            dbAction('warehouses', 'add', { name: "المخزن الرئيسي", address: "العنوان الرئيسي" }),
+            dbAction('cashAccounts', 'add', { name: "الخزينة الرئيسية", type: 'cash', openingBalance: 10000 }),
+            dbAction('customers', 'add', { name: "عميل نقدي", openingBalance: 0, creditLimit: 0 }),
+            dbAction('suppliers', 'add', { name: "مورد نقدي", contact: '', openingBalance: 0 }),
+        ]);
+
+        for (let i = 1; i <= 3; i++) {
+            const nextId = await getNextId('item', 100000);
+            if(nextId) {
+                 await dbAction('items', 'add', {
+                    name: `صنف تجريبي ${i}`,
+                    code: String(nextId),
+                    unit: 'piece',
+                    price: 25 * i,
+                    cost: 15 * i,
+                    reorderPoint: 5
+                });
+            }
+        }
+        
+        toast({ title: 'تم بنجاح!', description: 'تمت إضافة البيانات التجريبية. يمكنك الآن بدء اختبار البرنامج.' });
+
+    } catch (error) {
+         toast({ variant: 'destructive', title: 'حدث خطأ', description: 'فشل إضافة البيانات التجريبية.' });
+         console.error(error);
+    } finally {
+        setIsSeeding(false);
+    }
+  }
+
 
   const dashboardData = useMemo(() => {
     
@@ -218,7 +262,7 @@ export default function Dashboard() {
   }, [selectedWarehouseId, dateRange, salesInvoices, customers, items, warehouses, cashAccounts, customerPayments, exceptionalIncomes, purchaseInvoices, stockInRecords, stockOutRecords, stockTransferRecords, stockAdjustmentRecords, salesReturns, purchaseReturns, stockIssuesToReps, stockReturnsFromReps, inventoryClosings, posSales]);
 
 
-  if (loading && !warehouses.length) {
+  if (loading && !warehouses.length && !isDataEmpty) {
     return (
         <div className="flex flex-1 justify-center items-center">
             <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
@@ -229,16 +273,24 @@ export default function Dashboard() {
   return (
     <>
       <PageHeader title="لوحة التحكم">
-        <div className="flex flex-col sm:flex-row items-center gap-2">
-            <Label htmlFor="warehouse-select" className="text-sm font-medium">المخزن:</Label>
-           <Select value={selectedWarehouseId} onValueChange={setSelectedWarehouseId}>
-            <SelectTrigger id="warehouse-select" className="w-[180px] bg-card" disabled={loading || warehouses.length === 0}>
-              <SelectValue placeholder="اختر مخزنًا" />
-            </SelectTrigger>
-            <SelectContent>
-                {warehouses.map((warehouse: any) => ( <SelectItem key={warehouse.id} value={warehouse.id}>{warehouse.name}</SelectItem> ))}
-            </SelectContent>
-          </Select>
+        <div className="flex items-center gap-2">
+            {isDataEmpty && (
+                <Button onClick={handleSeedData} disabled={isSeeding} variant="outline">
+                    {isSeeding ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <PlusSquare className="ml-2 h-4 w-4" />}
+                    {isSeeding ? 'جارٍ العمل...' : 'إضافة بيانات تجريبية'}
+                </Button>
+            )}
+            <div className="flex flex-col sm:flex-row items-center gap-2">
+                <Label htmlFor="warehouse-select" className="text-sm font-medium">المخزن:</Label>
+               <Select value={selectedWarehouseId} onValueChange={setSelectedWarehouseId}>
+                <SelectTrigger id="warehouse-select" className="w-[180px] bg-card" disabled={loading || warehouses.length === 0}>
+                  <SelectValue placeholder="اختر مخزنًا" />
+                </SelectTrigger>
+                <SelectContent>
+                    {warehouses.map((warehouse: any) => ( <SelectItem key={warehouse.id} value={warehouse.id}>{warehouse.name}</SelectItem> ))}
+                </SelectContent>
+              </Select>
+            </div>
         </div>
       </PageHeader>
       <main className="flex flex-1 flex-col gap-4 p-2 sm:p-4 md:gap-8 md:p-6">
@@ -404,5 +456,3 @@ export default function Dashboard() {
     </>
   );
 }
-
-    
