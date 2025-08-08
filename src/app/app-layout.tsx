@@ -229,7 +229,7 @@ const AppLayoutContent = ({ children }: { children: React.ReactNode }) => {
                 <NavSubLink href="/purchases/invoices/list" module="purchases_invoices">فواتير الشراء</NavSubLink>
                 <NavSubLink href="/purchases/returns/new" module="purchases_returns">مرتجعات الشراء</NavSubLink>
                 <NavSubLink href="/accounting/supplier-payments" module="accounting_supplierPayments">مدفوعات الموردين</NavSubLink>
-                <NavSubLink href="/reports/supplierStatement" module="reports_supplierStatement">كشف حساب الموردين</NavSubLink>
+                <NavSubLink href="/reports/supplier-statement" module="reports_supplierStatement">كشف حساب الموردين</NavSubLink>
             </NavCollapsible>
             
             <NavCollapsible title="المحاسبة والمالية" icon={<BookUser />} modules={['accounting_journal', 'accounting_expenses', 'accounting_exceptionalIncome', 'accounting_treasury', 'accounting_profitDistribution', 'reports_financialStatements']}>
