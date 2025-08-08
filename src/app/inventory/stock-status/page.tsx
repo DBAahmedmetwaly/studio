@@ -50,7 +50,6 @@ export default function StockStatusPage() {
         warehouseId: "all",
         itemId: ""
     });
-    const [reportData, setReportData] = useState<any[] | null>(null);
 
     const { 
         items: allItems, warehouses, salesInvoices,
@@ -70,7 +69,9 @@ export default function StockStatusPage() {
         return allItems.map((item: Item) => ({ value: item.id, label: item.name }));
     }, [allItems]);
 
-    const handleGenerateReport = () => {
+    const reportData = useMemo(() => {
+        if (loading) return null;
+
         let results: any[] = [];
         
         const targetWarehouses = filters.warehouseId === 'all'
@@ -118,23 +119,31 @@ export default function StockStatusPage() {
                 
                 const latestCost = allCostTransactions.length > 0 ? allCostTransactions[0].cost : (item.cost || 0);
 
-                if (stock !== 0) { // Only add if there is stock
-                  results.push({
-                      id: `${warehouse.id}-${item.id}`,
-                      warehouseName: warehouse.name,
-                      itemName: item.name,
-                      unit: item.unit,
-                      price: item.price,
-                      cost: latestCost,
-                      currentStock: stock,
-                      reorderPoint: item.reorderPoint || 0,
-                  });
+                // Add item to results regardless of stock, if no specific item is filtered
+                if (!filters.itemId || stock !== 0 || item.id === filters.itemId) {
+                    results.push({
+                        id: `${warehouse.id}-${item.id}`,
+                        warehouseName: warehouse.name,
+                        itemName: item.name,
+                        unit: item.unit,
+                        price: item.price,
+                        cost: latestCost,
+                        currentStock: stock,
+                        reorderPoint: item.reorderPoint || 0,
+                    });
                 }
             });
         });
 
-        setReportData(results);
-    };
+        // If a specific item is filtered, only show that. Otherwise, hide zero-stock items.
+        if (!filters.itemId) {
+            return results.filter(item => item.currentStock !== 0);
+        }
+        
+        return results;
+
+    }, [filters, loading, allItems, warehouses, salesInvoices, stockInRecords, stockOutRecords, stockTransferRecords, stockAdjustmentRecords, salesReturns, purchaseReturns, stockIssuesToReps, stockReturnsFromReps, posSales, inventoryClosings, purchaseInvoices]);
+    
     
     const getUnitLabel = (unit: string) => {
         const units = { piece: "قطعة", weight: "لتر ", meter: "متر", kilo: "كيلو", gram: "جرام" };
@@ -157,6 +166,7 @@ export default function StockStatusPage() {
         <Card className="no-print">
             <CardHeader>
                 <CardTitle>فلاتر البحث</CardTitle>
+                <CardDescription>يتم تحديث التقرير تلقائيًا عند تغيير الفلاتر.</CardDescription>
             </CardHeader>
             <CardContent>
                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -184,15 +194,8 @@ export default function StockStatusPage() {
                     </div>
                 </div>
             </CardContent>
-            <CardFooter>
-                 <Button onClick={handleGenerateReport} disabled={loading}>
-                    {loading ? <Loader2 className="animate-spin ml-2" /> : null}
-                    عرض التقرير
-                </Button>
-            </CardFooter>
         </Card>
 
-        {reportData && (
         <Card className="printable-area">
           <CardHeader className="flex flex-row items-center justify-between">
               <div>
@@ -206,7 +209,7 @@ export default function StockStatusPage() {
               </Button>
           </CardHeader>
           <CardContent>
-            {loading ? (
+            {loading || !reportData ? (
                  <div className="w-full flex justify-center py-10">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
@@ -231,7 +234,7 @@ export default function StockStatusPage() {
                                 <TableCell className="text-center">{getUnitLabel(item.unit)}</TableCell>
                                 <TableCell className="text-center">{item.cost.toLocaleString()} ج.م</TableCell>
                                 <TableCell className="text-center font-bold">
-                                    <Badge variant={item.currentStock <= item.reorderPoint ? 'destructive' : 'default'}>
+                                    <Badge variant={item.currentStock <= item.reorderPoint && item.reorderPoint > 0 ? 'destructive' : 'default'}>
                                         {item.currentStock.toLocaleString()}
                                     </Badge>
                                 </TableCell>
@@ -262,7 +265,6 @@ export default function StockStatusPage() {
             )}
           </CardContent>
         </Card>
-        )}
       </main>
     </>
   );
