@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   title: "المحاسب الذكي",
   description: "نظام المخازن والمحاسبة",
-  viewport: "width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no",
+  viewport: "minimum-scale=1, initial-scale=1, width=device-width, shrink-to-fit=no, viewport-fit=cover",
   icons: {
     icon: "/favicon.ico",
     shortcut: "/favicon-16x16.png",

@@ -6,24 +6,6 @@ const withPWA = withPWAInit({
   dest: "public",
   disable: process.env.NODE_ENV === "development",
   cacheStartUrl: false,
-  reloadOnOnline: true,
-  swcMinify: true,
-  workboxOptions: {
-    disableDevLogs: true,
-    dynamicRoutesToCaches: [
-      {
-        urlPattern: /\/$/,
-        handler: 'NetworkFirst',
-        options: {
-          cacheName: 'start-url',
-          expiration: {
-            maxEntries: 1,
-            maxAgeSeconds: 24 * 60 * 60, // 24 hours
-          },
-        },
-      },
-    ],
-  },
 });
 
 const nextConfig: NextConfig = {
