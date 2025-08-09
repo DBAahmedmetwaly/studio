@@ -90,6 +90,8 @@ export const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({ invoice, compa
   const invoiceType = isPurchase ? 'فاتورة شراء' : 'فاتورة بيع';
   const partyLabel = isPurchase ? 'المورد' : 'العميل';
   const partyName = customer?.name || (isPurchase ? invoice.supplierName : invoice.customerName);
+  
+  const canGenerateBarcode = (value: string) => /^[A-Za-z0-9\-]*$/.test(value);
 
 
   return (
@@ -147,8 +149,12 @@ export const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({ invoice, compa
 
        <footer style={footerStyle}>
          {invoice.invoiceNumber && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', marginBottom: '10px' }}>
-                <Barcode value={invoice.invoiceNumber} height={40} displayValue={false} />
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', marginBottom: '10px', minHeight: '40px' }}>
+                {canGenerateBarcode(invoice.invoiceNumber) ? (
+                    <Barcode value={invoice.invoiceNumber} height={40} displayValue={false} />
+                ) : (
+                    <p style={{fontFamily: 'monospace', fontSize: '14px'}}>{invoice.invoiceNumber}</p>
+                )}
             </div>
          )}
         <p>{company?.invoiceFooter || 'شكرًا لتعاملكم معنا!'}</p>
