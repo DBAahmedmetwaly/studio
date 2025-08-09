@@ -36,7 +36,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useData } from '@/contexts/data-provider';
 import { Combobox } from '@/components/ui/combobox';
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { InvoiceTemplate } from '@/components/invoice-template';
 
 
@@ -113,10 +113,10 @@ export default function PurchaseInvoicesListPage() {
 
   const InvoiceDetails = ({ invoice }: { invoice: PurchaseInvoice }) => (
     <DialogContent className="max-w-2xl">
-      <CardHeader>
-        <CardTitle>تفاصيل الفاتورة: {invoice.invoiceNumber}</CardTitle>
-      </CardHeader>
-      <CardContent>
+      <DialogHeader>
+        <DialogTitle>تفاصيل الفاتورة: {invoice.invoiceNumber}</DialogTitle>
+      </DialogHeader>
+      <CardContent className="pt-4">
         <Table>
           <TableHeader>
             <TableRow>
@@ -219,19 +219,19 @@ export default function PurchaseInvoicesListPage() {
                       filteredInvoices.map((invoice:any) => {
                         const supplier = suppliers.find((s:any) => s.id === invoice.supplierId);
                         return (
-                        <Dialog key={invoice.id}>
-                            <TableRow className={invoice.isLocked ? 'bg-muted/30' : ''}>
-                                <TableCell className="font-mono">{invoice.invoiceNumber}</TableCell>
-                                <TableCell>{invoice.supplierName}</TableCell>
-                                <TableCell>{new Date(invoice.date).toLocaleDateString('ar-EG')}</TableCell>
-                                <TableCell>
-                                    <span className="flex items-center gap-2 text-muted-foreground">
-                                    <FileText className="h-4 w-4" />
-                                    <span>{`تحتوي على ${invoice.items.length} أصناف`}</span>
-                                    </span>
-                                </TableCell>
-                                <TableCell className="text-center">{invoice.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
-                                <TableCell className="text-center">
+                        <TableRow key={invoice.id} className={invoice.isLocked ? 'bg-muted/30' : ''}>
+                            <TableCell className="font-mono">{invoice.invoiceNumber}</TableCell>
+                            <TableCell>{invoice.supplierName}</TableCell>
+                            <TableCell>{new Date(invoice.date).toLocaleDateString('ar-EG')}</TableCell>
+                            <TableCell>
+                                <span className="flex items-center gap-2 text-muted-foreground">
+                                <FileText className="h-4 w-4" />
+                                <span>{`تحتوي على ${invoice.items.length} أصناف`}</span>
+                                </span>
+                            </TableCell>
+                            <TableCell className="text-center">{invoice.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
+                            <TableCell className="text-center">
+                                <Dialog>
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
                                             <Button aria-haspopup="true" size="icon" variant="ghost">
@@ -241,16 +241,32 @@ export default function PurchaseInvoicesListPage() {
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
                                             <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                                            <DialogTrigger asChild>
-                                                <DropdownMenuItem>
-                                                   <Eye className="ml-2 h-4 w-4" /> عرض التفاصيل
-                                                </DropdownMenuItem>
-                                             </DialogTrigger>
-                                            <DialogTrigger asChild>
-                                                <DropdownMenuItem>
-                                                   <Printer className="ml-2 h-4 w-4" /> عرض / طباعة
-                                                </DropdownMenuItem>
-                                             </DialogTrigger>
+                                            <Dialog>
+                                                <DialogTrigger asChild>
+                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                        <Eye className="ml-2 h-4 w-4" /> عرض التفاصيل
+                                                    </DropdownMenuItem>
+                                                </DialogTrigger>
+                                                <InvoiceDetails invoice={invoice} />
+                                            </Dialog>
+                                            <Dialog>
+                                                <DialogTrigger asChild>
+                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                        <Printer className="ml-2 h-4 w-4" /> عرض / طباعة
+                                                    </DropdownMenuItem>
+                                                </DialogTrigger>
+                                                <DialogContent className="max-w-4xl p-0">
+                                                    <DialogHeader>
+                                                        <DialogTitle className="sr-only">طباعة الفاتورة {invoice.invoiceNumber}</DialogTitle>
+                                                    </DialogHeader>
+                                                    <div className="printable-area bg-white text-black">
+                                                        <InvoiceTemplate invoice={invoice} company={companySettings} customer={supplier} isPurchase={true} />
+                                                    </div>
+                                                    <div className="p-4 border-t flex justify-end no-print">
+                                                        <Button onClick={handlePrint}><Printer className="ml-2 h-4 w-4" />طباعة</Button>
+                                                    </div>
+                                                </DialogContent>
+                                            </Dialog>
                                             <DropdownMenuSeparator />
                                             <DropdownMenuItem onClick={() => router.push(`/reports/supplier-statement?supplierId=${invoice.supplierId}&toDate=${invoice.date}`)} disabled={invoice.isLocked}>
                                                 <FileSearch className="ml-2 h-4 w-4" />
@@ -262,20 +278,9 @@ export default function PurchaseInvoicesListPage() {
                                             </DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
-                                </TableCell>
-                            </TableRow>
-                            {/* This Dialog is for the print template */}
-                             <DialogContent className="max-w-4xl p-0">
-                                <div className="printable-area bg-white text-black">
-                                    <InvoiceTemplate invoice={invoice} company={companySettings} customer={supplier} isPurchase={true} />
-                                </div>
-                                <div className="p-4 border-t flex justify-end no-print">
-                                    <Button onClick={handlePrint}><Printer className="ml-2 h-4 w-4" />طباعة</Button>
-                                </div>
-                            </DialogContent>
-                             {/* This Dialog is for the detailed view */}
-                            <InvoiceDetails invoice={invoice} />
-                        </Dialog>
+                                </Dialog>
+                            </TableCell>
+                        </TableRow>
                       )})
                     ) : (
                       <TableRow>
