@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useMemo } from "react";
@@ -112,19 +111,19 @@ const ItemForm = ({ item, onSave, onClose }: { item?: Item, onSave: (item: Omit<
             <Label htmlFor="item-cost" className="text-right">
             التكلفة
             </Label>
-            <Input id="item-cost" type="number" value={formData.cost} onChange={(e) => setFormData({...formData, cost: e.target.value as any})} className="col-span-3" />
+            <Input id="item-cost" type="number" value={formData.cost} onChange={(e) => setFormData({...formData, cost: Number(e.target.value) || 0})} className="col-span-3" />
         </div>
             <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="item-price" className="text-right">
             السعر
             </Label>
-            <Input id="item-price" type="number" value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value as any})} className="col-span-3" />
+            <Input id="item-price" type="number" value={formData.price} onChange={(e) => setFormData({...formData, price: Number(e.target.value) || 0})} className="col-span-3" />
         </div>
         <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="reorder-point" className="text-right">
             حد الطلب
             </Label>
-            <Input id="reorder-point" type="number" value={formData.reorderPoint} onChange={(e) => setFormData({...formData, reorderPoint: e.target.value as any})} className="col-span-3" />
+            <Input id="reorder-point" type="number" value={formData.reorderPoint} onChange={(e) => setFormData({...formData, reorderPoint: Number(e.target.value) || 0})} className="col-span-3" />
         </div>
         </div>
          <div className="flex justify-end">
@@ -231,7 +230,7 @@ export default function ItemsPage() {
                                     <TableCell className="font-medium">{item.name}</TableCell>
                                     <TableCell className="text-center">{getUnitLabel(item.unit)}</TableCell>
                                     <TableCell className="text-center">{item.cost?.toLocaleString() || '-'}</TableCell>
-                                    <TableCell className="text-center">{item.price.toLocaleString()}</TableCell>
+                                    <TableCell className="text-center">{item.price?.toLocaleString() || '-'}</TableCell>
                                     <TableCell className="text-center">
                                        <AlertDialog>
                                             <DropdownMenu>
