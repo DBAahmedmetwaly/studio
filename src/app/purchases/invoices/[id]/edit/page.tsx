@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import PageHeader from "@/components/page-header";
@@ -14,7 +13,7 @@ import { PlusCircle, Trash2, Printer, Save, Info, Loader2 } from "lucide-react";
 import React, { useState, useEffect, useMemo } from "react";
 import { useData } from "@/contexts/data-provider";
 import { useToast } from "@/hooks/use-toast";
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAuth } from "@/contexts/auth-context";
@@ -55,11 +54,12 @@ interface CashAccount {
     openingBalance: number;
 }
 
-export default function EditPurchaseInvoicePage({ params }: { params: { id: string } }) {
+export default function EditPurchaseInvoicePage() {
   const router = useRouter();
+  const params = useParams();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { id: invoiceId } = params;
+  const invoiceId = params.id as string;
   
   const { 
     items: availableItems, 
