@@ -241,14 +241,11 @@ export default function PurchaseInvoicesListPage() {
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
                                             <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                                            <Dialog>
-                                                <DialogTrigger asChild>
-                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                                        <Eye className="ml-2 h-4 w-4" /> عرض التفاصيل
-                                                    </DropdownMenuItem>
-                                                </DialogTrigger>
-                                                <InvoiceDetails invoice={invoice} />
-                                            </Dialog>
+                                            <DialogTrigger asChild>
+                                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                    <Eye className="ml-2 h-4 w-4" /> عرض التفاصيل
+                                                </DropdownMenuItem>
+                                            </DialogTrigger>
                                             <Dialog>
                                                 <DialogTrigger asChild>
                                                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
@@ -278,6 +275,8 @@ export default function PurchaseInvoicesListPage() {
                                             </DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
+                                    {/* This is the DialogContent for "View Details" */}
+                                    <InvoiceDetails invoice={invoice} />
                                 </Dialog>
                             </TableCell>
                         </TableRow>
