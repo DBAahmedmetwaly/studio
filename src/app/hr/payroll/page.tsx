@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -15,12 +14,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PlusCircle, Loader2, Calculator, Printer, FileText } from "lucide-react";
-import useFirebase from '@/hooks/use-firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AddEntityDialog } from '@/components/add-entity-dialog';
 import { useAuth } from '@/contexts/auth-context';
+import { useData } from '@/contexts/data-provider';
 
 interface Employee {
   id: string;
@@ -93,11 +92,7 @@ const PaymentDialogContent = ({ onConfirm, cashAccounts, onClose }: { onConfirm:
 
 
 export default function PayrollPage() {
-    const { data: employees, loading: loadingEmployees } = useFirebase<Employee>('employees');
-    const { data: advances, loading: loadingAdvances } = useFirebase<EmployeeAdvance>('employeeAdvances');
-    const { data: adjustments, loading: loadingAdjustments } = useFirebase<EmployeeAdjustment>('employeeAdjustments');
-    const { data: cashAccounts, loading: loadingCashAccounts } = useFirebase<CashAccount>('cashAccounts');
-    const { add: addExpense, getNextId } = useFirebase('expenses');
+    const { employees, employeeAdvances, employeeAdjustments, cashAccounts, dbAction, getNextId, loading } = useData();
     const { user } = useAuth();
     const { toast } = useToast();
     
@@ -105,8 +100,6 @@ export default function PayrollPage() {
     const [selectedYear, setSelectedYear] = useState<string>(String(new Date().getFullYear()));
     const [payrollData, setPayrollData] = useState<PayrollResult[] | null>(null);
     const [isPosting, setIsPosting] = useState(false);
-
-    const loading = loadingEmployees || loadingAdvances || loadingAdjustments || loadingCashAccounts;
 
     const handleCalculatePayroll = () => {
         if (!selectedMonth || !selectedYear) {
@@ -125,15 +118,15 @@ export default function PayrollPage() {
                        itemDate.getMonth() + 1 === month;
             }
 
-            const totalAdvances = advances
+            const totalAdvances = employeeAdvances
                 .filter(filterByMonth)
                 .reduce((sum, item) => sum + item.amount, 0);
 
-            const totalRewards = adjustments
+            const totalRewards = employeeAdjustments
                 .filter(item => item.type === 'reward' && filterByMonth(item))
                 .reduce((sum, item) => sum + item.amount, 0);
 
-            const totalPenalties = adjustments
+            const totalPenalties = employeeAdjustments
                 .filter(item => item.type === 'penalty' && filterByMonth(item))
                 .reduce((sum, item) => sum + item.amount, 0);
             
@@ -159,31 +152,28 @@ export default function PayrollPage() {
         setIsPosting(true);
 
         const monthName = months.find(m => m.value === selectedMonth)?.label;
+        const totalNet = payrollData.reduce((sum, p) => sum + p.netSalary, 0);
 
         try {
-            const expensePromises = payrollData.map(async (payroll) => {
-                if (payroll.netSalary > 0) {
-                    const receiptNumber = `م-${await getNextId('expense')}`;
-                    return addExpense({
-                        date: new Date(parseInt(selectedYear), parseInt(selectedMonth) -1, 28).toISOString(),
-                        amount: payroll.netSalary,
-                        description: `راتب شهر ${monthName} ${selectedYear} للموظف ${payroll.employeeName}`,
-                        expenseType: 'رواتب',
-                        paidFromAccountId: accountId,
-                        receiptNumber,
-                        createdById: user?.id,
-                        createdByName: user?.name,
-                    });
-                }
-            });
-
-            await Promise.all(expensePromises);
+            if (totalNet > 0) {
+                 await dbAction('treasuryTransactions', 'add', {
+                    date: new Date(parseInt(selectedYear), parseInt(selectedMonth) -1, 28).toISOString(),
+                    amount: totalNet,
+                    accountId: accountId,
+                    type: 'withdrawal',
+                    description: `صرف رواتب شهر ${monthName} ${selectedYear}`,
+                    receiptNumber: `م-${await getNextId('expense')}`, // Use expense counter for consistency
+                    createdById: user?.id,
+                    createdByName: user?.name,
+                    isPayroll: true // Special flag for journal entry
+                });
+            }
             
-            toast({ title: "تم الترحيل بنجاح", description: "تم إنشاء قيود المصروفات للرواتب." });
+            toast({ title: "تم الترحيل بنجاح", description: "تم تسجيل حركة صرف الرواتب من الخزينة." });
             setPayrollData(null); // Reset the view after posting
         } catch (error) {
             console.error(error);
-            toast({ variant: "destructive", title: "خطأ", description: "فشل ترحيل القيود." });
+            toast({ variant: "destructive", title: "خطأ", description: "فشل ترحيل قيد الرواتب." });
         } finally {
             setIsPosting(false);
         }
@@ -261,11 +251,11 @@ export default function PayrollPage() {
                         </Button>
                         <AddEntityDialog
                             title="تأكيد صرف الرواتب"
-                            description="اختر الحساب الذي سيتم صرف الرواتب منه لتسجيل قيد المصروف."
+                            description="اختر الحساب الذي سيتم صرف الرواتب منه لتسجيل حركة السحب من الخزينة."
                             triggerButton={
                                  <Button disabled={isPosting}>
                                     {isPosting ? <Loader2 className="animate-spin ml-2 h-4 w-4"/> : <FileText className="ml-2 h-4 w-4" />}
-                                    {isPosting ? 'جارٍ الترحيل...' : 'ترحيل قيد المصروف'}
+                                    {isPosting ? 'جارٍ الترحيل...' : 'ترحيل حركة الصرف'}
                                 </Button>
                             }
                         >

@@ -44,6 +44,7 @@ interface TreasuryTransaction {
     createdById?: string;
     createdByName?: string;
     linkedTransaction?: boolean;
+    isPayroll?: boolean;
 }
 
 interface Expense { id: string; amount: number; paidFromAccountId: string; expenseType: string; }
