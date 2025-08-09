@@ -59,7 +59,7 @@ export default function EditPurchaseInvoicePage({ params }: { params: { id: stri
   const router = useRouter();
   const { toast } = useToast();
   const { user } = useAuth();
-  const invoiceId = params.id;
+  const { id: invoiceId } = params;
   
   const { 
     items: availableItems, 
@@ -437,4 +437,3 @@ export default function EditPurchaseInvoicePage({ params }: { params: { id: stri
     </>
   );
 }
-
