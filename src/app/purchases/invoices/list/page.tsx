@@ -20,7 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { PlusCircle, Loader2, MoreHorizontal, FileText, Undo2, Printer, FileSearch } from "lucide-react";
+import { PlusCircle, Loader2, MoreHorizontal, FileText, Undo2, Printer, FileSearch, Eye } from "lucide-react";
 import useFirebase from "@/hooks/use-firebase";
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -30,6 +30,7 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -85,7 +86,7 @@ export default function PurchaseInvoicesListPage() {
   }, [warehouses, inventoryClosings]);
 
   const filteredInvoices = useMemo(() => {
-    return invoices.map(invoice => {
+    return invoices.map((invoice: any) => {
         const lastClosingDate = lastClosingDates.get(invoice.warehouseId);
         const isLocked = lastClosingDate && new Date(invoice.date) <= lastClosingDate;
         return { ...invoice, isLocked };
@@ -109,6 +110,36 @@ export default function PurchaseInvoicesListPage() {
   const handlePrint = () => {
     setTimeout(() => window.print(), 100);
   };
+
+  const InvoiceDetails = ({ invoice }: { invoice: PurchaseInvoice }) => (
+    <DialogContent className="max-w-2xl">
+      <CardHeader>
+        <CardTitle>تفاصيل الفاتورة: {invoice.invoiceNumber}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>الصنف</TableHead>
+              <TableHead className="text-center">الكمية</TableHead>
+              <TableHead className="text-center">سعر الشراء (التكلفة)</TableHead>
+              <TableHead className="text-center">سعر البيع</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {invoice.items.map((item, index) => (
+              <TableRow key={index}>
+                <TableCell>{item.name}</TableCell>
+                <TableCell className="text-center">{item.qty}</TableCell>
+                <TableCell className="text-center">{item.cost?.toLocaleString() || '-'}</TableCell>
+                <TableCell className="text-center">{item.sellingPrice?.toLocaleString() || '-'}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </DialogContent>
+  );
 
 
   return (
@@ -210,11 +241,17 @@ export default function PurchaseInvoicesListPage() {
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
                                             <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
-                                             <DialogTrigger asChild>
-                                                <DropdownMenuItem disabled={invoice.isLocked}>
-                                                    عرض / طباعة
+                                            <DialogTrigger asChild>
+                                                <DropdownMenuItem>
+                                                   <Eye className="ml-2 h-4 w-4" /> عرض التفاصيل
                                                 </DropdownMenuItem>
                                              </DialogTrigger>
+                                            <DialogTrigger asChild>
+                                                <DropdownMenuItem>
+                                                   <Printer className="ml-2 h-4 w-4" /> عرض / طباعة
+                                                </DropdownMenuItem>
+                                             </DialogTrigger>
+                                            <DropdownMenuSeparator />
                                             <DropdownMenuItem onClick={() => router.push(`/reports/supplier-statement?supplierId=${invoice.supplierId}&toDate=${invoice.date}`)} disabled={invoice.isLocked}>
                                                 <FileSearch className="ml-2 h-4 w-4" />
                                                 كشف حساب المورد
@@ -227,7 +264,8 @@ export default function PurchaseInvoicesListPage() {
                                     </DropdownMenu>
                                 </TableCell>
                             </TableRow>
-                            <DialogContent className="max-w-4xl p-0">
+                            {/* This Dialog is for the print template */}
+                             <DialogContent className="max-w-4xl p-0">
                                 <div className="printable-area bg-white text-black">
                                     <InvoiceTemplate invoice={invoice} company={companySettings} customer={supplier} isPurchase={true} />
                                 </div>
@@ -235,6 +273,8 @@ export default function PurchaseInvoicesListPage() {
                                     <Button onClick={handlePrint}><Printer className="ml-2 h-4 w-4" />طباعة</Button>
                                 </div>
                             </DialogContent>
+                             {/* This Dialog is for the detailed view */}
+                            <InvoiceDetails invoice={invoice} />
                         </Dialog>
                       )})
                     ) : (

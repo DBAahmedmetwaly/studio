@@ -24,8 +24,8 @@ interface InvoiceItem {
   id: string;
   name: string;
   qty: number;
-  price: number; // Cost price
-  sellingPrice: number; // Selling price
+  cost: number;
+  sellingPrice: number;
   total: number;
   unit: string;
 }
@@ -58,7 +58,7 @@ export default function PurchaseInvoicePage() {
   const router = useRouter();
   const { toast } = useToast();
   const [items, setItems] = useState<InvoiceItem[]>([]);
-  const [newItem, setNewItem] = useState({ id: "", name: "", qty: 1, price: 0, sellingPrice: 0, unit: "" });
+  const [newItem, setNewItem] = useState({ id: "", name: "", qty: 1, cost: 0, sellingPrice: 0, unit: "" });
   const [subtotal, setSubtotal] = useState(0);
   const [discount, setDiscount] = useState(0);
   const [tax, setTax] = useState(0);
@@ -157,7 +157,7 @@ export default function PurchaseInvoicePage() {
   }, []);
 
   const handleAddItem = () => {
-    if (!newItem.id || newItem.qty <= 0 || newItem.price <= 0) return;
+    if (!newItem.id || newItem.qty <= 0 || newItem.cost <= 0) return;
     const selectedItem = availableItems.find((i: Item) => i.id === newItem.id);
     if (!selectedItem) return;
 
@@ -167,11 +167,11 @@ export default function PurchaseInvoicePage() {
         ...newItem,
         id: `${selectedItem.id}-${Date.now()}`,
         name: selectedItem.name,
-        total: newItem.qty * newItem.price,
+        total: newItem.qty * newItem.cost,
         unit: selectedItem.unit,
       },
     ]);
-    setNewItem({ id: "", name: "", qty: 1, price: 0, sellingPrice: 0, unit: "" });
+    setNewItem({ id: "", name: "", qty: 1, cost: 0, sellingPrice: 0, unit: "" });
   };
 
   const handleRemoveItem = (id: string) => {
@@ -188,7 +188,7 @@ export default function PurchaseInvoicePage() {
         setNewItem({
             ...newItem,
             id: itemId,
-            price: selectedItem.cost || 0,
+            cost: selectedItem.cost || 0,
             sellingPrice: selectedItem.price || 0,
             unit: selectedItem.unit,
         });
@@ -231,8 +231,9 @@ export default function PurchaseInvoicePage() {
                         id: originalItemId,
                         name: item.name,
                         qty: item.qty,
-                        cost: item.price,
-                        price: item.price,
+                        cost: item.cost,
+                        price: item.cost, // Legacy support, price was used as cost.
+                        sellingPrice: item.sellingPrice,
                         total: item.total,
                     }
                 }),
@@ -255,7 +256,7 @@ export default function PurchaseInvoicePage() {
                 await dbAction('items', 'update', {
                     id: originalItemId,
                     data: {
-                        cost: item.price, // Cost for the item is the purchase price
+                        cost: item.cost, // Cost for the item is the purchase price
                         price: item.sellingPrice, // The new selling price
                     }
                 });
@@ -357,7 +358,7 @@ export default function PurchaseInvoicePage() {
                             <TableRow key={item.id}>
                                 <TableCell>{item.name}</TableCell>
                                 <TableCell className="text-center">{item.qty}</TableCell>
-                                <TableCell className="text-center">ج.م {item.price.toFixed(2)}</TableCell>
+                                <TableCell className="text-center">ج.م {item.cost.toFixed(2)}</TableCell>
                                 <TableCell className="text-center bg-green-50 dark:bg-green-900/20">
                                      <Input 
                                         type="number" 
@@ -392,7 +393,7 @@ export default function PurchaseInvoicePage() {
                                 <Input type="number" placeholder="الكمية" value={newItem.qty} onChange={e => setNewItem({...newItem, qty: parseInt(e.target.value) || 1})} className="text-center" />
                             </TableCell>
                             <TableCell className="p-2">
-                                <Input type="number" placeholder="التكلفة" value={newItem.price} onChange={e => setNewItem({...newItem, price: parseFloat(e.target.value) || 0})} className="text-center" />
+                                <Input type="number" placeholder="التكلفة" value={newItem.cost} onChange={e => setNewItem({...newItem, cost: parseFloat(e.target.value) || 0})} className="text-center" />
                             </TableCell>
                              <TableCell className="p-2 bg-green-50 dark:bg-green-900/20">
                                 <Input type="number" placeholder="البيع" value={newItem.sellingPrice} onChange={e => setNewItem({...newItem, sellingPrice: parseFloat(e.target.value) || 0})} className="text-center" />
