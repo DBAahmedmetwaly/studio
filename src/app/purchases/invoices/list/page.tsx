@@ -20,7 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { PlusCircle, Loader2, MoreHorizontal, FileText, Undo2, Printer, FileSearch, Eye } from "lucide-react";
+import { PlusCircle, Loader2, MoreHorizontal, FileText, Undo2, Printer, FileSearch, Eye, Edit } from "lucide-react";
 import useFirebase from "@/hooks/use-firebase";
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -53,10 +53,11 @@ interface PurchaseInvoice {
 interface Supplier { id: string; name: string; }
 interface Warehouse { id: string; name: string; }
 interface InventoryClosing { id: string; warehouseId: string; closingDate: string; }
+interface StockInRecord { id: string; purchaseInvoiceId?: string; }
 
 
 export default function PurchaseInvoicesListPage() {
-  const { purchaseInvoices: invoices, suppliers, warehouses, inventoryClosings, settings, loading } = useData();
+  const { purchaseInvoices: invoices, suppliers, warehouses, inventoryClosings, stockInRecords, settings, loading } = useData();
   const router = useRouter();
 
   const [filters, setFilters] = useState({
@@ -85,11 +86,17 @@ export default function PurchaseInvoicesListPage() {
     return dates;
   }, [warehouses, inventoryClosings]);
 
+  const receivedInvoiceIds = useMemo(() => {
+    return new Set(stockInRecords.filter((rec: StockInRecord) => rec.purchaseInvoiceId).map((rec: StockInRecord) => rec.purchaseInvoiceId));
+  }, [stockInRecords]);
+
+
   const filteredInvoices = useMemo(() => {
     return invoices.map((invoice: any) => {
         const lastClosingDate = lastClosingDates.get(invoice.warehouseId);
         const isLocked = lastClosingDate && new Date(invoice.date) <= lastClosingDate;
-        return { ...invoice, isLocked };
+        const isReceived = receivedInvoiceIds.has(invoice.id);
+        return { ...invoice, isLocked, isReceived };
     })
     .filter((invoice:any) => {
       const invoiceDate = new Date(invoice.date);
@@ -103,7 +110,7 @@ export default function PurchaseInvoicesListPage() {
       
       return true;
     }).sort((a:any, b:any) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [invoices, filters, lastClosingDates]);
+  }, [invoices, filters, lastClosingDates, receivedInvoiceIds]);
 
   const companySettings = useMemo(() => settings?.main?.general || {}, [settings]);
 
@@ -132,7 +139,7 @@ export default function PurchaseInvoicesListPage() {
                 <TableCell>{item.name}</TableCell>
                 <TableCell className="text-center">{item.qty}</TableCell>
                 <TableCell className="text-center">{item.cost?.toLocaleString() || '-'}</TableCell>
-                <TableCell className="text-center">{item.sellingPrice?.toLocaleString() || '-'}</TableCell>
+                <TableCell className="text-center">{(item as any).sellingPrice?.toLocaleString() || '-'}</TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -218,8 +225,9 @@ export default function PurchaseInvoicesListPage() {
                     {filteredInvoices && filteredInvoices.length > 0 ? (
                       filteredInvoices.map((invoice:any) => {
                         const supplier = suppliers.find((s:any) => s.id === invoice.supplierId);
+                        const isEditable = !invoice.isLocked && !invoice.isReceived;
                         return (
-                        <TableRow key={invoice.id} className={invoice.isLocked ? 'bg-muted/30' : ''}>
+                        <TableRow key={invoice.id} className={!isEditable ? 'bg-muted/30' : ''}>
                             <TableCell className="font-mono">{invoice.invoiceNumber}</TableCell>
                             <TableCell>{invoice.supplierName}</TableCell>
                             <TableCell>{new Date(invoice.date).toLocaleDateString('ar-EG')}</TableCell>
@@ -246,6 +254,9 @@ export default function PurchaseInvoicesListPage() {
                                                     <Eye className="ml-2 h-4 w-4" /> عرض التفاصيل
                                                 </DropdownMenuItem>
                                             </DialogTrigger>
+                                            <DropdownMenuItem onClick={() => router.push(`/purchases/invoices/${invoice.id}/edit`)} disabled={!isEditable}>
+                                                <Edit className="ml-2 h-4 w-4" /> تعديل
+                                            </DropdownMenuItem>
                                             <Dialog>
                                                 <DialogTrigger asChild>
                                                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
@@ -265,11 +276,11 @@ export default function PurchaseInvoicesListPage() {
                                                 </DialogContent>
                                             </Dialog>
                                             <DropdownMenuSeparator />
-                                            <DropdownMenuItem onClick={() => router.push(`/reports/supplier-statement?supplierId=${invoice.supplierId}&toDate=${invoice.date}`)} disabled={invoice.isLocked}>
+                                            <DropdownMenuItem onClick={() => router.push(`/reports/supplier-statement?supplierId=${invoice.supplierId}&toDate=${invoice.date}`)}>
                                                 <FileSearch className="ml-2 h-4 w-4" />
                                                 كشف حساب المورد
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => router.push(`/purchases/returns/new?invoiceId=${invoice.id}`)} disabled={invoice.isLocked}>
+                                            <DropdownMenuItem onClick={() => router.push(`/purchases/returns/new?invoiceId=${invoice.id}`)} disabled={!isEditable}>
                                                 <Undo2 className="ml-2 h-4 w-4" />
                                                 مرتجع
                                             </DropdownMenuItem>
