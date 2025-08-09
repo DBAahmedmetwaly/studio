@@ -9,8 +9,10 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
 import { useData } from "@/contexts/data-provider";
 import { Loader2, Printer } from "lucide-react";
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Combobox } from "@/components/ui/combobox";
+import { useSearchParams } from "next/navigation";
+
 
 interface Item { id: string; name: string; }
 interface Warehouse { id: string; name: string; }
@@ -24,8 +26,11 @@ interface SalesReturn { id: string; receiptNumber?: string; warehouseId: string;
 interface PurchaseReturn { id: string; receiptNumber?: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
 interface IssueToRep { id: string; receiptNumber?: string; warehouseId: string; items: { id: string; qty: number; }[]; date: string; }
 interface ReturnFromRep { id: string; receiptNumber?: string; warehouseId: string; items: { id: string; qty: number; }[]; date:string; }
+interface InventoryClosing { id: string; warehouseId: string; closingDate: string; balances: { itemId: string, balance: number }[] }
+
 
 export default function ItemLedgerPage() {
+    const searchParams = useSearchParams();
     const [filters, setFilters] = useState({
         itemId: "",
         warehouseId: "",
@@ -35,7 +40,23 @@ export default function ItemLedgerPage() {
     const [reportData, setReportData] = useState<any[] | null>(null);
     const [openingBalance, setOpeningBalance] = useState(0);
 
-    const { items, warehouses, salesInvoices, posSales, stockInRecords, stockOutRecords, stockTransferRecords, stockAdjustmentRecords, salesReturns, purchaseReturns, stockIssuesToReps, stockReturnsFromReps, loading } = useData();
+    const { items, warehouses, salesInvoices, posSales, stockInRecords, stockOutRecords, stockTransferRecords, stockAdjustmentRecords, salesReturns, purchaseReturns, stockIssuesToReps, stockReturnsFromReps, inventoryClosings, loading } = useData();
+    
+    useEffect(() => {
+        const itemId = searchParams.get('itemId');
+        const warehouseId = searchParams.get('warehouseId');
+        if (itemId && warehouseId) {
+            setFilters(prev => ({...prev, itemId, warehouseId}));
+        }
+    }, [searchParams]);
+
+    useEffect(() => {
+        if (filters.itemId && filters.warehouseId) {
+            handleGenerateReport();
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [filters]);
+
 
     const itemOptions = React.useMemo(() => items.map((i: Item) => ({ value: i.id, label: i.name })), [items]);
     const warehouseOptions = React.useMemo(() => warehouses.map((w: Warehouse) => ({ value: w.id, label: w.name })), [warehouses]);
@@ -51,34 +72,45 @@ export default function ItemLedgerPage() {
         }
 
         const { itemId, warehouseId, fromDate, toDate } = filters;
-        const fromDateObj = fromDate ? new Date(fromDate) : null;
-        if(fromDateObj) fromDateObj.setHours(0,0,0,0);
         
-        // 1. Calculate Opening Balance
-        let ob = 0;
-        const filterBefore = (t: any) => fromDateObj ? new Date(t.date) < fromDateObj : false;
-
-        stockInRecords.filter(t => t.warehouseId === warehouseId && filterBefore(t)).forEach(t => t.items.filter(i => i.itemId === itemId).forEach(i => ob += i.qty));
-        stockTransferRecords.filter(t => t.toSourceId === warehouseId && filterBefore(t)).forEach(t => t.items.filter(i => i.id === itemId).forEach(i => ob += i.qty));
-        salesReturns.filter(t => t.warehouseId === warehouseId && filterBefore(t)).forEach(t => t.items.filter(i => i.id === itemId).forEach(i => ob += i.qty));
-        stockReturnsFromReps.filter(t => t.warehouseId === warehouseId && filterBefore(t)).forEach(t => t.items.filter(i => i.id === itemId).forEach(i => ob += i.qty));
-        stockAdjustmentRecords.filter(t => t.warehouseId === warehouseId && filterBefore(t)).forEach(t => t.items.filter(i => i.itemId === itemId && i.difference > 0).forEach(i => ob += i.difference));
+        const closingsForWarehouse = inventoryClosings.filter((c: InventoryClosing) => c.warehouseId === warehouseId)
+            .sort((a,b) => new Date(b.closingDate).getTime() - new Date(a.closingDate).getTime());
         
-        stockOutRecords.filter(t => t.sourceId === warehouseId && filterBefore(t)).forEach(t => t.items.filter(i => i.id === itemId).forEach(i => ob -= i.qty));
-        stockTransferRecords.filter(t => t.fromSourceId === warehouseId && filterBefore(t)).forEach(t => t.items.filter(i => i.id === itemId).forEach(i => ob -= i.qty));
-        salesInvoices.filter(t => t.warehouseId === warehouseId && t.status === 'approved' && filterBefore(t)).forEach(t => t.items.filter(i => i.id === itemId).forEach(i => ob -= i.qty));
-        posSales.filter(t => t.warehouseId === warehouseId && filterBefore(t)).forEach(t => t.items.filter(i => i.id === itemId).forEach(i => ob -= i.qty));
-        purchaseReturns.filter(t => t.warehouseId === warehouseId && filterBefore(t)).forEach(t => t.items.filter(i => i.id === itemId).forEach(i => ob -= i.qty));
-        stockIssuesToReps.filter(t => t.warehouseId === warehouseId && filterBefore(t)).forEach(t => t.items.filter(i => i.id === itemId).forEach(i => ob -= i.qty));
-        stockAdjustmentRecords.filter(t => t.warehouseId === warehouseId && filterBefore(t)).forEach(t => t.items.filter(i => i.itemId === itemId && i.difference < 0).forEach(i => ob += i.difference)); // Difference is negative
+        const lastClosing = closingsForWarehouse[0] ?? null;
+        const lastClosingDate = lastClosing ? new Date(lastClosing.closingDate) : null;
+        
+        // Use the fromDate for opening balance calculation if it's later than the last closing date
+        const openingBalanceCutoffDate = fromDate && lastClosingDate && new Date(fromDate) > lastClosingDate
+            ? new Date(fromDate)
+            : lastClosingDate;
+            
+        let ob = lastClosing?.balances?.find((b: any) => b.itemId === itemId)?.balance || 0;
+        
+        if (openingBalanceCutoffDate && lastClosingDate && openingBalanceCutoffDate > lastClosingDate) {
+             const filterForOpening = (t: any) => new Date(t.date) > lastClosingDate && new Date(t.date) < openingBalanceCutoffDate;
+             // Calculate the delta between last closing and fromDate
+            stockInRecords.filter(t => t.warehouseId === warehouseId && t.items.some(i => i.itemId === itemId) && filterForOpening(t)).forEach(t => t.items.filter(i => i.itemId === itemId).forEach(i => ob += i.qty));
+            stockTransferRecords.filter(t => t.toSourceId === warehouseId && t.items.some(i => i.id === itemId) && filterForOpening(t)).forEach(t => t.items.filter(i => i.id === itemId).forEach(i => ob += i.qty));
+            salesReturns.filter(t => t.warehouseId === warehouseId && t.items.some(i => i.id === itemId) && filterForOpening(t)).forEach(t => t.items.filter(i => i.id === itemId).forEach(i => ob += i.qty));
+            stockReturnsFromReps.filter(t => t.warehouseId === warehouseId && t.items.some(i => i.id === itemId) && filterForOpening(t)).forEach(t => t.items.filter(i => i.id === itemId).forEach(i => ob += i.qty));
+            stockAdjustmentRecords.filter(t => t.warehouseId === warehouseId && t.items.some(i => i.itemId === itemId) && filterForOpening(t)).forEach(t => t.items.filter(i => i.itemId === itemId && i.difference > 0).forEach(i => ob += i.difference));
+            stockOutRecords.filter(t => t.sourceId === warehouseId && t.items.some(i => i.id === itemId) && filterForOpening(t)).forEach(t => t.items.filter(i => i.id === itemId).forEach(i => ob -= i.qty));
+            stockTransferRecords.filter(t => t.fromSourceId === warehouseId && t.items.some(i => i.id === itemId) && filterForOpening(t)).forEach(t => t.items.filter(i => i.id === itemId).forEach(i => ob -= i.qty));
+            salesInvoices.filter(t => t.warehouseId === warehouseId && t.status === 'approved' && t.items.some(i => i.id === itemId) && filterForOpening(t)).forEach(t => t.items.filter(i => i.id === itemId).forEach(i => ob -= i.qty));
+            posSales.filter(t => t.warehouseId === warehouseId && t.items.some(i => i.id === itemId) && filterForOpening(t)).forEach(t => t.items.filter(i => i.id === itemId).forEach(i => ob -= i.qty));
+            purchaseReturns.filter(t => t.warehouseId === warehouseId && t.items.some(i => i.id === itemId) && filterForOpening(t)).forEach(t => t.items.filter(i => i.id === itemId).forEach(i => ob -= i.qty));
+            stockIssuesToReps.filter(t => t.warehouseId === warehouseId && t.items.some(i => i.id === itemId) && filterForOpening(t)).forEach(t => t.items.filter(i => i.id === itemId).forEach(i => ob -= i.qty));
+            stockAdjustmentRecords.filter(t => t.warehouseId === warehouseId && t.items.some(i => i.itemId === itemId) && filterForOpening(t)).forEach(t => t.items.filter(i => i.itemId === itemId && i.difference < 0).forEach(i => ob += i.difference));
+        }
 
         setOpeningBalance(ob);
 
-        // 2. Collect Transactions for the period
         const allTransactions: any[] = [];
         const filterPeriod = (t: any) => {
             const itemDate = new Date(t.date);
+            const fromDateObj = fromDate ? new Date(fromDate) : null;
             const toDateObj = toDate ? new Date(toDate) : null;
+            if(fromDateObj) fromDateObj.setHours(0,0,0,0);
             if(toDateObj) toDateObj.setHours(23,59,59,999);
             if(fromDateObj && itemDate < fromDateObj) return false;
             if(toDateObj && itemDate > toDateObj) return false;
@@ -107,6 +139,17 @@ export default function ItemLedgerPage() {
             return { ...tx, balance: runningBalance };
         });
 
+        if (lastClosingDate) {
+             finalReport.unshift({
+                date: lastClosingDate.toLocaleDateString('ar-EG'),
+                type: 'رصيد مرحل من إقفال سابق',
+                ref: 'إقفال',
+                incoming: 0,
+                outgoing: 0,
+                balance: lastClosing?.balances.find(b=>b.itemId===itemId)?.balance || 0
+            })
+        }
+        
         setReportData(finalReport);
     };
     
@@ -126,12 +169,6 @@ export default function ItemLedgerPage() {
                             <div className="space-y-2"><Label>إلى تاريخ</Label><Input type="date" value={filters.toDate} onChange={(e) => handleFilterChange("toDate", e.target.value)} /></div>
                         </div>
                     </CardContent>
-                    <CardFooter>
-                        <Button onClick={handleGenerateReport} disabled={loading || !filters.itemId || !filters.warehouseId}>
-                            {loading ? <Loader2 className="animate-spin ml-2" /> : null}
-                            عرض التقرير
-                        </Button>
-                    </CardFooter>
                 </Card>
 
                 {reportData && (

@@ -28,6 +28,7 @@ import { Badge } from '@/components/ui/badge';
 import { useData } from '@/contexts/data-provider';
 import { Button } from '@/components/ui/button';
 import { Combobox } from '@/components/ui/combobox';
+import { useRouter } from 'next/navigation';
 
 // Data Interfaces
 interface Item { id: string; name: string; unit: string; price: number; cost?: number; reorderPoint?: number; }
@@ -46,6 +47,7 @@ interface ReturnFromRep { id: string; warehouseId: string; items: { id: string; 
 interface InventoryClosing { id: string; warehouseId: string; closingDate: string; balances: { itemId: string, balance: number }[] }
 
 export default function StockStatusPage() {
+    const router = useRouter();
     const [filters, setFilters] = useState({
         warehouseId: "all",
         itemId: ""
@@ -94,7 +96,7 @@ export default function StockStatusPage() {
                 let stock = lastClosing?.balances?.find((b:any) => b.itemId === item.id)?.balance || 0;
                 
                 const filterTransactions = (t: any) => new Date(t.date) > lastClosingDate;
-
+                
                 // Increases
                 stockInRecords.filter((si:any) => si.warehouseId === warehouse.id && filterTransactions(si)).forEach((si:any) => si.items.filter((i:any) => i.itemId === item.id).forEach((i:any) => stock += i.qty));
                 stockTransferRecords.filter((t:any) => t.toSourceId === warehouse.id && filterTransactions(t)).forEach((t:any) => t.items.filter((i:any) => i.id === item.id).forEach((i:any) => stock += i.qty));
@@ -123,6 +125,8 @@ export default function StockStatusPage() {
                 if (!filters.itemId || stock !== 0 || item.id === filters.itemId) {
                     results.push({
                         id: `${warehouse.id}-${item.id}`,
+                        itemId: item.id,
+                        warehouseId: warehouse.id,
                         warehouseName: warehouse.name,
                         itemName: item.name,
                         unit: item.unit,
@@ -157,6 +161,10 @@ export default function StockStatusPage() {
 
     const handlePrint = () => {
       window.print();
+    }
+    
+    const handleRowClick = (itemId: string, warehouseId: string) => {
+        router.push(`/reports/item-ledger?itemId=${itemId}&warehouseId=${warehouseId}`);
     }
 
   return (
@@ -201,7 +209,7 @@ export default function StockStatusPage() {
               <div>
                 <CardTitle>الأرصدة الحالية</CardTitle>
                 <CardDescription>
-                  عرض تفصيلي للأرصدة الحالية لكل صنف في المخازن بناءً على الفلاتر.
+                  عرض تفصيلي للأرصدة الحالية لكل صنف في المخازن بناءً على الفلاتر. اضغط على أي صف لعرض كارت الحركة.
                 </CardDescription>
               </div>
               <Button variant="outline" size="icon" onClick={handlePrint} className="no-print">
@@ -228,7 +236,7 @@ export default function StockStatusPage() {
                         </TableHeader>
                         <TableBody>
                             {reportData.length > 0 ? reportData.map((item) => (
-                            <TableRow key={item.id}>
+                            <TableRow key={item.id} onClick={() => handleRowClick(item.itemId, item.warehouseId)} className="cursor-pointer">
                                 <TableCell>{item.warehouseName}</TableCell>
                                 <TableCell className="font-medium">{item.itemName}</TableCell>
                                 <TableCell className="text-center">{getUnitLabel(item.unit)}</TableCell>
@@ -269,3 +277,4 @@ export default function StockStatusPage() {
     </>
   );
 }
+
