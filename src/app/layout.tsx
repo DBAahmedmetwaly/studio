@@ -25,6 +25,11 @@ export const metadata: Metadata = {
   title: "المحاسب الذكي",
   description: "نظام المخازن والمحاسبة",
   viewport: "width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no",
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon-16x16.png",
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export default function RootLayout({

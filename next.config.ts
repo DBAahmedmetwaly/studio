@@ -1,16 +1,28 @@
+
 import type { NextConfig } from 'next';
 import withPWAInit from "@ducanh2912/next-pwa";
 
 const withPWA = withPWAInit({
   dest: "public",
   disable: process.env.NODE_ENV === "development",
-  // add your own strategies here
-  // cacheOnFrontEndNav: true,
-  // aggressiveFrontEndNavCaching: true,
+  cacheStartUrl: false,
   reloadOnOnline: true,
   swcMinify: true,
   workboxOptions: {
     disableDevLogs: true,
+    dynamicRoutesToCaches: [
+      {
+        urlPattern: /\/$/,
+        handler: 'NetworkFirst',
+        options: {
+          cacheName: 'start-url',
+          expiration: {
+            maxEntries: 1,
+            maxAgeSeconds: 24 * 60 * 60, // 24 hours
+          },
+        },
+      },
+    ],
   },
 });
 
